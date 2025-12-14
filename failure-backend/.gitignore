@@ -1,0 +1,11 @@
+# Python Files
+__pycache__/
+*.py[cod]
+
+# Virtual Environment (DO NOT UPLOAD)
+venv/
+env/
+
+# Secrets (DO NOT UPLOAD)
+.env
+serviceAccountKey.json
