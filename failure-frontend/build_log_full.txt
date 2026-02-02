@@ -1,0 +1,258 @@
+﻿
+> failure-frontend@0.1.0 build
+> next build
+
+npm : [baseline-brows
+er-mapping] The data 
+in this module is 
+over two months old. 
+ To ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+At line:1 char:1
++ npm run build *>&1 
+| Out-File 
+build_log_full.txt 
+-Encoding utf8
++ ~~~~~~~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: ([baseli   
+ ne-brows...ping@    
+latest -D`:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+   Γû▓ Next.js 16.0.10 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+ Γ£ô Compiled successfully in 4.1s
+   Running TypeScript ...
+   Collecting page data using 11 workers ...
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+   Generating static pages using 11 workers (0/14) ...
+[baseline-browser-map
+ping] The data in 
+this module is over 
+two months old.  To 
+ensure accurate 
+Baseline data, 
+please update: `npm 
+i baseline-browser-ma
+pping@latest -D`
+   Generating static pages using 11 workers (3/14) 
+   Generating static pages using 11 workers (6/14) 
+ Γ¿» 
+useSearchParams() 
+should be wrapped in 
+a suspense boundary 
+at page "/search". 
+Read more: https://ne
+xtjs.org/docs/message
+s/missing-suspense-wi
+th-csr-bailout
+    at S (D:\PROJECTS
+\Upcomming\Failure-Sh
+aring-Site\failure-fr
+ontend\.next\server\c
+hunks\ssr\node_module
+s_1340dc78._.js:2:211
+1)
+    at p (D:\PROJECTS
+\Upcomming\Failure-Sh
+aring-Site\failure-fr
+ontend\.next\server\c
+hunks\ssr\node_module
+s_1340dc78._.js:4:484
+7)
+    at h (D:\PROJECTS
+\Upcomming\Failure-Sh
+aring-Site\failure-fr
+ontend\.next\server\c
+hunks\ssr\[root-of-th
+e-server]__407ad1bc._
+.js:1:6087)
+    at ar (D:\PROJECT
+S\Upcomming\Failure-S
+haring-Site\failure-f
+rontend\node_modules\
+next\dist\compiled\ne
+xt-server\app-page-tu
+rbo.runtime.prod.js:2
+:84366)
+    at aa (D:\PROJECT
+S\Upcomming\Failure-S
+haring-Site\failure-f
+rontend\node_modules\
+next\dist\compiled\ne
+xt-server\app-page-tu
+rbo.runtime.prod.js:2
+:86185)
+    at as (D:\PROJECT
+S\Upcomming\Failure-S
+haring-Site\failure-f
+rontend\node_modules\
+next\dist\compiled\ne
+xt-server\app-page-tu
+rbo.runtime.prod.js:2
+:107952)
+    at ao (D:\PROJECT
+S\Upcomming\Failure-S
+haring-Site\failure-f
+rontend\node_modules\
+next\dist\compiled\ne
+xt-server\app-page-tu
+rbo.runtime.prod.js:2
+:105374)
+    at an (D:\PROJECT
+S\Upcomming\Failure-S
+haring-Site\failure-f
+rontend\node_modules\
+next\dist\compiled\ne
+xt-server\app-page-tu
+rbo.runtime.prod.js:2
+:84718)
+    at aa (D:\PROJECT
+S\Upcomming\Failure-S
+haring-Site\failure-f
+rontend\node_modules\
+next\dist\compiled\ne
+xt-server\app-page-tu
+rbo.runtime.prod.js:2
+:86234)
+    at aa (D:\PROJECT
+S\Upcomming\Failure-S
+haring-Site\failure-f
+rontend\node_modules\
+next\dist\compiled\ne
+xt-server\app-page-tu
+rbo.runtime.prod.js:2
+:104714)
+Error occurred 
+prerendering page 
+"/search". Read 
+more: https://nextjs.
+org/docs/messages/pre
+render-error
+Export encountered 
+an error on 
+/search/page: 
+/search, exiting the 
+build.
+ Γ¿» Next.js build 
+worker exited with 
+code: 1 and signal: 
+null

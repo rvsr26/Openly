@@ -1,0 +1,120 @@
+﻿
+> failure-frontend@0.1.0 lint
+> eslint
+
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\admin\page.tsx
+  9:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\bookmarks\page.tsx
+  15:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\components\Navbar.tsx
+  136:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\components\PostItem.tsx
+   18:52  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   22:50  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   50:6   warning  React Hook useEffect has a missing dependency: 'recordView'. Either include it or remove the dependency array                                                                                                                                                                            react-hooks/exhaustive-deps
+   76:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+  183:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  183:11  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+  219:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  219:11  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+  254:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  254:17  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\components\SearchBar.tsx
+   7:10  warning  'isLoading' is assigned a value but never used                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+  31:31  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  60:31  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  66:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  66:15  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\create-post\page.tsx
+  62:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\layout.tsx
+   6:7  warning  'geistSans' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  11:7  warning  'geistMono' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\login\page.tsx
+  41:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  58:14  warning  'err' is defined but never used           @typescript-eslint/no-unused-vars
+  58:19  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\notifications\page.tsx
+  15:54  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\page.tsx
+   34:3   error    Error: Cannot access variable before it is declared
+
+`fetchFeed` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\page.tsx:34:3
+  32 |
+  33 | useEffect(() => { 
+> 34 |   fetchFeed("All"); 
+     |   ^^^^^^^^^ `fetchFeed` accessed before it is declared
+  35 |   const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+  36 |     setUser(currentUser);
+  37 |     if (currentUser) {
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\page.tsx:50:3
+  48 | }, []);
+  49 |
+> 50 |   const fetchFeed = async (category: string) => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 51 |     try {
+     | ^^^^^^^^^
+> 52 |       let url = 'http://127.0.0.1:8000/feed/';
+     ΓÇª
+     | ^^^^^^^^^
+> 59 |     }
+     | ^^^^^^^^^
+> 60 |   };
+     | ^^^^^ `fetchFeed` is declared here
+  61 |
+  62 |   const handleSubmit = async () => {
+  63 |     if (!user) return;   react-hooks/immutability
+  103:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @next/next/no-img-element
+  140:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @next/next/no-img-element
+  140:17  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    jsx-a11y/alt-text
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\profile\[id]\page.tsx
+  11:42  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  43:12  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  79:56  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                                                                                                                                                                                                          react/no-unescaped-entities
+  82:37  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\profile\edit\page.tsx
+  76:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\profile\page.tsx
+   17:50  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   34:6   warning  React Hook useEffect has a missing dependency: 'fetchProfile'. Either include it or remove the dependency array                                                                                                                                                                          react-hooks/exhaustive-deps
+  121:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  121:15  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+  198:43  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\search\page.tsx
+  14:42  error  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  79:34  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  79:42  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\setup-username\page.tsx
+   14:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   65:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  101:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\signup\page.tsx
+  55:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\u\[username]\page.tsx
+   11:42  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   55:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+   55:13  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+  106:37  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+
+Γ£û 50 problems (26 errors, 24 warnings)
+

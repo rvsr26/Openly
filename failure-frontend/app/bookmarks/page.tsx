@@ -2,17 +2,20 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import api from "../lib/api";
+
 import { auth } from "../firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import Navbar from "../components/Navbar";
 import PostItem from "../components/PostItem";
 import { useRouter } from "next/navigation";
+import { Post } from "../types";
 
 export default function BookmarksPage() {
   const router = useRouter();
 
   const [user, setUser] = useState<User | null>(null);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
   /* ---------------- AUTH ---------------- */
@@ -33,8 +36,8 @@ export default function BookmarksPage() {
 
     const fetchBookmarks = async () => {
       try {
-        const res = await axios.get(
-          `http://127.0.0.1:8000/users/${user.uid}/bookmarks`
+        const res = await api.get(
+          `/users/${user.uid}/bookmarks`
         );
         setPosts(res.data);
       } catch (err) {
@@ -55,14 +58,14 @@ export default function BookmarksPage() {
     );
 
   return (
-    <div className="min-h-screen bg-[#F3F2EF]">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
 
       <main className="pt-24 max-w-3xl mx-auto px-4 pb-10">
-        <h1 className="text-2xl font-bold mb-6">🔖 Saved Posts</h1>
+        <h1 className="text-3xl font-bold mb-8 text-foreground">Saved Posts</h1>
 
         {posts.length === 0 && (
-          <div className="bg-white rounded-lg border border-gray-300 p-6 text-center text-gray-500">
+          <div className="glass-card rounded-2xl p-12 text-center border-dashed border-2 border-border/50 bg-secondary/20 text-muted-foreground">
             You haven’t saved any posts yet.
           </div>
         )}

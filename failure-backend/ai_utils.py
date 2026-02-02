@@ -1,6 +1,7 @@
 import os
 import requests
 from dotenv import load_dotenv
+import yake
 
 # 1. Load Environment Variables
 load_dotenv()
@@ -45,3 +46,19 @@ def is_toxic(text: str) -> bool:
         return False
         
     return False
+
+def extract_keywords(text: str) -> list:
+    """
+    Extracts top keywords from text using YAKE.
+    """
+    if not text or len(text) < 10:
+        return []
+
+    try:
+        kw_extractor = yake.KeywordExtractor(lan="en", n=2, dedupLim=0.9, top=5, features=None)
+        keywords = kw_extractor.extract_keywords(text)
+        # Return top 5 keywords [key, score] - lower score is better
+        return [kw[0] for kw in keywords]
+    except Exception as e:
+        print(f"YAKE Error: {e}")
+        return []

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { auth } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
 import axios from "axios";
+import api from "../lib/api";
+
 
 export default function AdminGuard({
   children,
@@ -21,8 +23,8 @@ export default function AdminGuard({
       }
 
       try {
-        const res = await axios.get(
-          `http://127.0.0.1:8000/users/${user.uid}/profile`
+        const res = await api.get(
+          `/users/${user.uid}/profile`
         );
 
         // 🔴 TEMP ADMIN CHECK

@@ -9,6 +9,8 @@ import {
   signInWithPopup,
   onAuthStateChanged,
 } from "firebase/auth";
+import { motion } from "framer-motion";
+import { Mail, Lock, CheckCircle, AlertCircle, ArrowRight, UserPlus, Shield } from "lucide-react";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -52,8 +54,9 @@ export default function SignupPage() {
     try {
       await createUserWithEmailAndPassword(auth, email, password);
       router.push("/setup-username");
-    } catch (err: any) {
-      setError(getSignupErrorMessage(err.code));
+    } catch (err: unknown) {
+      const errorCode = (err as { code?: string }).code || "unknown";
+      setError(getSignupErrorMessage(errorCode));
     } finally {
       setLoading(false);
     }
@@ -76,171 +79,168 @@ export default function SignupPage() {
   };
 
   return (
-    <main className="signup-wrapper">
-      <form className="signup-card" onSubmit={handleSignup}>
-        <h1>Create Account 🚀</h1>
-        <p className="subtitle">
-          Share your failures, learn together, grow stronger
-        </p>
+    <div className="min-h-screen flex w-full bg-background">
 
-        {error && <div className="error">{error}</div>}
+      {/* --- LEFT SIDE: ARTWORK --- */}
+      <div className="hidden lg:flex w-1/2 bg-zinc-900 text-white relative items-center justify-center p-12 overflow-hidden">
+        {/* Abstract Background Shapes */}
+        <div className="absolute top-0 left-0 w-full h-full opacity-20 z-0">
+          <div className="absolute top-10 right-10 w-80 h-80 bg-orange-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
+          <div className="absolute bottom-10 left-10 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
+          <div className="absolute top-1/2 left-1/4 w-72 h-72 bg-yellow-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
+        </div>
 
-        <input
-          type="email"
-          placeholder="Email address"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        <div className="relative z-10 max-w-lg">
+          <div className="mb-10">
+            <img src="/assets/logo.png" alt="Openly" className="h-16 w-auto mb-8 object-contain" />
+            <h1 className="text-5xl font-black mb-6 tracking-tight leading-none">
+              Join the <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">Revolution.</span>
+            </h1>
+            <p className="text-xl text-zinc-300 font-light leading-relaxed">
+              "Your voice matters. Give suggestions that spark change."
+            </p>
+            <p className="mt-4 text-zinc-500 font-mono text-sm">— Open Space</p>
+          </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          <div className="grid gap-4">
+            <div className="flex items-center gap-4 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 transition hover:bg-white/10">
+              <div className="p-2 bg-orange-500/20 rounded-lg text-orange-400"><UserPlus size={20} /></div>
+              <div>
+                <h4 className="font-bold">Transparent Insights</h4>
+                <p className="text-xs text-zinc-400">Honest reviews from real users</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 transition hover:bg-white/10">
+              <div className="p-2 bg-pink-500/20 rounded-lg text-pink-400"><Shield size={20} /></div>
+              <div>
+                <h4 className="font-bold">Impactful Advice</h4>
+                <p className="text-xs text-zinc-400">Share suggestions that matter</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        <input
-          type="password"
-          placeholder="Confirm password"
-          required
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-        />
+      {/* --- RIGHT SIDE: FORM --- */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative overflow-y-auto">
+        {/* Mobile BG Elements */}
+        <div className="lg:hidden absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-primary/5 via-background to-background -z-10" />
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Creating account..." : "Sign Up"}
-        </button>
-
-        <div className="divider">OR</div>
-
-        <button
-          type="button"
-          className="google-btn"
-          onClick={handleGoogleSignup}
-          disabled={loading}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md space-y-6 my-auto"
         >
-          Sign up with Google
-        </button>
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight text-foreground">Create Account 🚀</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Give suggestions, read reviews, build better products
+            </p>
+          </div>
 
-        <p className="switch">
-          Already have an account?
-          <span onClick={() => router.push("/login")}> Login</span>
-        </p>
-      </form>
+          <form onSubmit={handleSignup} className="space-y-5">
 
-      {/* STYLES */}
-      <style jsx>{`
-        .signup-wrapper {
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, #fff7f0, #fdecea);
-          padding: 1rem;
-        }
+            {/* Error Message */}
+            {error && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-destructive/15 text-destructive text-sm p-3 rounded-lg flex items-center gap-2">
+                <AlertCircle size={16} /> {error}
+              </motion.div>
+            )}
 
-        .signup-card {
-          width: 100%;
-          max-width: 440px;
-          background: #ffffff;
-          padding: 2.6rem;
-          border-radius: 20px;
-          box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
-          animation: fadeUp 0.4s ease;
-        }
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium leading-none">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="flex h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all"
+                    placeholder="name@example.com"
+                  />
+                </div>
+              </div>
 
-        h1 {
-          text-align: center;
-          font-size: 1.85rem;
-          margin-bottom: 0.4rem;
-        }
+              <div className="space-y-2">
+                <label className="text-sm font-medium leading-none">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="flex h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
 
-        .subtitle {
-          text-align: center;
-          color: #7d8a9a;
-          margin-bottom: 2rem;
-          font-size: 0.95rem;
-        }
+              <div className="space-y-2">
+                <label className="text-sm font-medium leading-none">Confirm Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                  <input
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="flex h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+            </div>
 
-        input {
-          width: 100%;
-          padding: 14px 16px;
-          margin-bottom: 1.1rem;
-          border-radius: 12px;
-          border: 1px solid #e5e7eb;
-          font-size: 1rem;
-        }
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-8 w-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 duration-300"
+              >
+                {loading ? "Creating account..." : (
+                  <span className="flex items-center gap-2">Sign Up <ArrowRight size={16} /></span>
+                )}
+              </button>
+            </div>
 
-        input:focus {
-          outline: none;
-          border-color: #e92c40;
-        }
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or sign up with
+                </span>
+              </div>
+            </div>
 
-        button {
-          width: 100%;
-          padding: 14px;
-          border-radius: 12px;
-          border: none;
-          background: linear-gradient(135deg, #e92c40, #cc2535);
-          color: white;
-          font-size: 1rem;
-          font-weight: 600;
-          cursor: pointer;
-        }
+            <button
+              type="button"
+              disabled={loading}
+              onClick={handleGoogleSignup}
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-11 px-8 w-full"
+            >
+              <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
+                <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path>
+              </svg>
+              Google
+            </button>
+          </form>
 
-        button:disabled {
-          opacity: 0.7;
-          cursor: not-allowed;
-        }
-
-        .google-btn {
-          background: #121826;
-        }
-
-        .divider {
-          text-align: center;
-          margin: 1.4rem 0;
-          color: #9aa4b2;
-          font-size: 0.85rem;
-        }
-
-        .error {
-          background: #fdecea;
-          color: #e74c3c;
-          padding: 10px;
-          border-radius: 10px;
-          margin-bottom: 1.1rem;
-          text-align: center;
-          font-size: 0.9rem;
-        }
-
-        .switch {
-          text-align: center;
-          margin-top: 1.8rem;
-          font-size: 0.9rem;
-          color: #7d8a9a;
-        }
-
-        .switch span {
-          color: #e92c40;
-          font-weight: 600;
-          cursor: pointer;
-        }
-
-        @keyframes fadeUp {
-          from {
-            opacity: 0;
-            transform: translateY(12px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
-    </main>
+          <p className="px-8 text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <button onClick={() => router.push("/login")} className="underline underline-offset-4 hover:text-primary font-medium text-foreground">
+              Login
+            </button>
+          </p>
+        </motion.div>
+      </div>
+    </div>
   );
 }
 

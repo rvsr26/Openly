@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import axios from "axios";
+import api from "../lib/api";
+
 import Navbar from "../components/Navbar";
 import PostItem from "../components/PostItem";
 import { useSearchParams } from "next/navigation";
+import { Post } from "../types";
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
 
   const [query, setQuery] = useState(initialQuery);
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -26,7 +29,7 @@ export default function SearchPage() {
     setError("");
 
     try {
-      const res = await axios.get("http://127.0.0.1:8000/search", {
+      const res = await api.get("/search", {
         params: { q },
       });
       setResults(res.data);
@@ -46,11 +49,11 @@ export default function SearchPage() {
   }, [initialQuery]);
 
   return (
-    <div className="min-h-screen bg-[#F3F2EF]">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
 
       <main className="pt-24 max-w-4xl mx-auto px-4 pb-10">
-        <h1 className="text-2xl font-bold mb-6">🔍 Search</h1>
+        <h1 className="text-2xl font-bold mb-6 text-foreground">🔍 Search</h1>
 
         {/* SEARCH INPUT */}
         <div className="mb-6">
@@ -58,25 +61,25 @@ export default function SearchPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && performSearch(query)}
-            placeholder="Search failures, topics, keywords..."
-            className="w-full p-4 border rounded-lg"
+            placeholder="Search reviews, topics, keywords..."
+            className="w-full p-4 bg-secondary/50 border-transparent focus:bg-background focus:ring-2 focus:ring-primary/20 rounded-xl outline-none transition-all placeholder:text-muted-foreground text-foreground shadow-sm"
           />
         </div>
 
         {/* STATES */}
         {loading && (
-          <div className="text-center text-gray-500">Searching...</div>
+          <div className="text-center text-muted-foreground animate-pulse">Searching...</div>
         )}
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded mb-4 text-sm">
+          <div className="bg-destructive/10 text-destructive p-3 rounded-lg mb-4 text-sm font-medium border border-destructive/20">
             {error}
           </div>
         )}
 
         {!loading && results.length === 0 && query && (
-          <div className="bg-white border rounded-lg p-6 text-center text-gray-500">
-            No results found for "{query}"
+          <div className="glass-card rounded-xl p-8 text-center text-muted-foreground border border-dashed border-border">
+            No results found for &quot;{query}&quot;
           </div>
         )}
 
@@ -88,5 +91,13 @@ export default function SearchPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className="pt-24 text-center text-muted-foreground">Loading search...</div>}>
+      <SearchContent />
+    </Suspense>
   );
 }

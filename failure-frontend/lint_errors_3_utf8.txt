@@ -1,0 +1,65 @@
+﻿
+> failure-frontend@0.1.0 lint
+> eslint
+
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\components\Navbar.tsx
+  136:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\components\PostItem.tsx
+   44:6   warning  React Hook useEffect has a missing dependency: 'recordView'. Either include it or remove the dependency array                                                                                                                                                                            react-hooks/exhaustive-deps
+   70:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+  177:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  177:11  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+  213:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  213:11  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+  248:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  248:17  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\components\SearchBar.tsx
+   8:10  warning  'isLoading' is assigned a value but never used                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+  67:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  67:15  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\layout.tsx
+   6:7  warning  'geistSans' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  11:7  warning  'geistMono' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\login\page.tsx
+  58:14  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\page.tsx
+   36:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\page.tsx:36:5
+  34 |
+  35 |   useEffect(() => {
+> 36 |     fetchFeed("All");
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  37 |     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+  38 |       setUser(currentUser);
+  39 |       if (currentUser) {  react-hooks/set-state-in-effect
+   93:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @next/next/no-img-element
+  130:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @next/next/no-img-element
+  130:17  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    jsx-a11y/alt-text
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\profile\[id]\page.tsx
+  43:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\profile\page.tsx
+   34:6   warning  React Hook useEffect has a missing dependency: 'fetchProfile'. Either include it or remove the dependency array                                                                                                                                                                          react-hooks/exhaustive-deps
+  121:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  121:15  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\u\[username]\page.tsx
+  55:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  55:13  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+
+Γ£û 25 problems (1 error, 24 warnings)
+

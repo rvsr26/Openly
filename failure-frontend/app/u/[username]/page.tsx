@@ -2,23 +2,68 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import api, { getAbsUrl } from "../../lib/api";
+
 import Navbar from "../../components/Navbar";
 import PostItem from "../../components/PostItem";
 import { useParams } from "next/navigation";
+import { auth } from "../../firebase";
+import { onAuthStateChanged, User } from "firebase/auth";
+import { UserPlus, Check, Clock, MessageSquare, Briefcase } from "lucide-react";
+import Link from "next/link";
+import { Post } from "../../types";
 
 export default function PublicProfilePage() {
   const { username } = useParams();
-  const [profile, setProfile] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const [profile, setProfile] = useState<{
+    user_info: {
+      id: string;
+      username: string;
+      display_name: string;
+      photo?: string;
+      headline?: string;
+    };
+    stats: {
+      total_posts: number;
+      total_views: number;
+      reputation: number;
+    };
+    posts: Post[];
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [connectionStatus, setConnectionStatus] = useState<"none" | "pending" | "accepted" | "self">("none");
+  const [isSender, setIsSender] = useState(false);
+
   useEffect(() => {
-    const fetchProfile = async () => {
+    const unsubscribe = onAuthStateChanged(auth, (u) => setCurrentUser(u));
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
       try {
-        const res = await axios.get(
-          `http://127.0.0.1:8000/users/username/${username}`
-        );
+        // 1. Get Profile
+        const res = await api.get(`/users/username/${username}`);
         setProfile(res.data);
+        const profileId = res.data.user_info.id;
+
+        // 2. Check Connection Status if logged in
+        if (currentUser && currentUser.uid !== profileId) {
+          try {
+            const statusRes = await api.get(`/network/${currentUser.uid}/status/${profileId}`);
+            setConnectionStatus(statusRes.data.status);
+            setIsSender(statusRes.data.is_sender);
+          } catch (e) {
+            console.error("Failed to fetch connection status", e);
+          }
+        } else if (currentUser && currentUser.uid === profileId) {
+          setConnectionStatus("self");
+        }
+
       } catch (err) {
         console.error("Failed to load public profile", err);
         setError("User not found");
@@ -27,86 +72,155 @@ export default function PublicProfilePage() {
       }
     };
 
-    fetchProfile();
-  }, [username]);
+    if (username) fetchData();
+  }, [username, currentUser]);
 
-  if (loading)
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading profile...
-      </div>
-    );
+  const handleConnect = async () => {
+    if (!currentUser || !profile) return;
+    try {
+      await api.post(`/connect/${profile.user_info.id}`, {
+        requester_id: currentUser.uid
+      });
+      setConnectionStatus("pending");
+      setIsSender(true);
+    } catch (e) {
+      alert("Failed to send request");
+    }
+  };
 
-  if (error)
-    return (
-      <div className="min-h-screen flex items-center justify-center text-gray-500">
-        {error}
-      </div>
-    );
+  const handleAccept = async () => {
+    if (!currentUser || !profile) return;
+    try {
+      await api.post(`/connect/${currentUser.uid}/accept`, {
+        requester_id: profile.user_info.id
+      });
+      setConnectionStatus("accepted");
+    } catch (e) {
+      alert("Failed to accept");
+    }
+  };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+
+  if (error) return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <Navbar />
+      <h2 className="text-2xl font-bold text-destructive mb-2">{error}</h2>
+      <Link href="/" className="text-primary hover:underline">Go Home</Link>
+    </div>
+  );
+
+  if (!profile) return null;
 
   return (
-    <div className="min-h-screen bg-[#F3F2EF]">
+    <div className="min-h-screen bg-background text-foreground">
       <Navbar />
 
-      <main className="pt-24 max-w-4xl mx-auto px-4 pb-10">
+      <main className="pt-24 max-w-4xl mx-auto px-4 pb-12">
         {/* HEADER */}
-        <div className="bg-white rounded-lg border border-gray-300 shadow-sm p-6 mb-6">
-          <div className="flex items-center gap-4">
-            <img
-              src={profile.user_info.photo || "https://via.placeholder.com/100"}
-              className="w-20 h-20 rounded-full border"
-            />
+        <div className="glass-card rounded-xl overflow-hidden mb-6 border border-border">
+          <div className="h-32 bg-gradient-to-r from-slate-700 to-slate-900 dark:from-zinc-900 dark:to-black"></div>
 
-            <div>
-              <h1 className="text-2xl font-bold">
+          <div className="px-8 pb-8 relative">
+            <div className="flex justify-between items-end -mt-12 mb-4">
+              <img
+                src={getAbsUrl(profile.user_info.photo)}
+                className="w-32 h-32 rounded-full border-4 border-background shadow-md bg-secondary object-cover"
+              />
+
+              {/* ACTION BUTTONS */}
+              <div className="mb-2">
+                {connectionStatus === "self" && (
+                  <Link href="/profile" className="px-4 py-2 rounded-full border border-border bg-background hover:bg-secondary font-semibold transition">
+                    Edit Profile
+                  </Link>
+                )}
+
+                {connectionStatus === "none" && currentUser && (
+                  <button
+                    onClick={handleConnect}
+                    className="px-6 py-2 rounded-full bg-primary text-primary-foreground font-bold hover:opacity-90 transition flex items-center gap-2"
+                  >
+                    <UserPlus size={18} /> Connect
+                  </button>
+                )}
+
+                {connectionStatus === "pending" && isSender && (
+                  <button disabled className="px-6 py-2 rounded-full bg-secondary text-muted-foreground font-semibold border border-border flex items-center gap-2 cursor-not-allowed">
+                    <Clock size={18} /> Pending
+                  </button>
+                )}
+
+                {connectionStatus === "pending" && !isSender && (
+                  <button
+                    onClick={handleAccept}
+                    className="px-6 py-2 rounded-full bg-green-600 text-white font-bold hover:bg-green-700 transition flex items-center gap-2"
+                  >
+                    <Check size={18} /> Accept Invitation
+                  </button>
+                )}
+
+                {connectionStatus === "accepted" && (
+                  <div className="flex gap-2">
+                    <button className="px-4 py-2 rounded-full border border-primary text-primary font-semibold hover:bg-primary/10 transition flex items-center gap-2">
+                      <MessageSquare size={18} /> Message
+                    </button>
+                    <span className="px-4 py-2 rounded-full bg-secondary text-secondary-foreground font-semibold flex items-center gap-2">
+                      <Check size={18} /> Connected
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <h1 className="text-3xl font-bold text-foreground">
                 {profile.user_info.display_name}
               </h1>
-              <p className="text-gray-500">@{profile.user_info.username}</p>
-              {profile.user_info.bio && (
-                <p className="text-sm text-gray-600 mt-2">
-                  {profile.user_info.bio}
-                </p>
-              )}
-            </div>
-          </div>
+              <p className="text-muted-foreground">@{profile.user_info.username}</p>
 
-          {/* STATS */}
-          <div className="flex gap-6 mt-6 border-t pt-4">
-            <div>
-              <span className="block text-xl font-bold">
-                {profile.stats.total_posts}
-              </span>
-              <span className="text-xs text-gray-500">Posts</span>
+              {/* Phase 3 Placeholder */}
+              <p className="mt-2 text-foreground/80 flex items-center gap-2">
+                <Briefcase size={16} className="text-muted-foreground" />
+                {profile.user_info.headline || "Member"}
+              </p>
             </div>
-            <div>
-              <span className="block text-xl font-bold">
-                {profile.stats.total_views}
-              </span>
-              <span className="text-xs text-gray-500">Views</span>
-            </div>
-            <div>
-              <span className="block text-xl font-bold">
-                {profile.stats.reputation}
-              </span>
-              <span className="text-xs text-gray-500">Reputation</span>
+
+            {/* STATS */}
+            <div className="flex gap-8 border-t border-border mt-6 pt-6">
+              <div>
+                <span className="block text-2xl font-bold">{profile.stats.total_posts}</span>
+                <span className="text-xs text-muted-foreground uppercase font-semibold">Posts</span>
+              </div>
+              <div>
+                <span className="block text-2xl font-bold">{profile.stats.total_views}</span>
+                <span className="text-xs text-muted-foreground uppercase font-semibold">Views</span>
+              </div>
+              <div>
+                <span className="block text-2xl font-bold">{profile.stats.reputation}</span>
+                <span className="text-xs text-muted-foreground uppercase font-semibold">Reputation</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* POSTS */}
-        <h2 className="text-xl font-bold mb-4">Failures Shared</h2>
+        <h2 className="text-xl font-bold mb-4">Reviews Shared</h2>
 
         {profile.posts.length === 0 && (
-          <div className="bg-white border rounded-lg p-6 text-center text-gray-500">
-            No public posts yet.
+          <div className="glass-card rounded-xl p-8 text-center text-muted-foreground">
+            No public posts shared yet.
           </div>
         )}
 
-        <div className="space-y-6">
-          {profile.posts.map((post: any) => (
-            <PostItem key={post.id} post={post} />
+        <div className="space-y-4">
+          {profile.posts.map((post: Post) => (
+            <div key={post.id} className={post.is_rejected ? "opacity-75 grayscale" : ""}>
+              <PostItem post={post} />
+            </div>
           ))}
         </div>
+
       </main>
     </div>
   );

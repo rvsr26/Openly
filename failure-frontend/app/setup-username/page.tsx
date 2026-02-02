@@ -4,14 +4,16 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "../firebase";
 import axios from "axios";
-import { onAuthStateChanged } from "firebase/auth";
+import api from "../lib/api";
+
+import { onAuthStateChanged, User } from "firebase/auth";
 
 const USERNAME_REGEX = /^[a-z0-9_]{3,15}$/;
 
 export default function SetupUsername() {
   const router = useRouter();
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -29,8 +31,8 @@ export default function SetupUsername() {
       setUser(u);
 
       try {
-        const res = await axios.get(
-          `http://127.0.0.1:8000/users/${u.uid}/profile`
+        const res = await api.get(
+          `/users/${u.uid}/profile`
         );
 
         if (res.data?.user_info?.username) {
@@ -56,14 +58,14 @@ export default function SetupUsername() {
 
     const timeout = setTimeout(async () => {
       try {
-        const res = await axios.get(
-          `http://127.0.0.1:8000/users/username/${username}`
+        const res = await api.get(
+          `/users/username/${username}`
         );
 
         // If user exists → taken
         if (res.data) setAvailable(false);
-      } catch (err: any) {
-        if (err.response?.status === 404) {
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err) && err.response?.status === 404) {
           setAvailable(true); // username free
         }
       }
@@ -92,18 +94,18 @@ export default function SetupUsername() {
     setLoading(true);
 
     try {
-      await axios.post("http://127.0.0.1:8000/users/set-username", {
+      await api.post("/users/set-username", {
         user_id: user.uid,
         username,
       });
 
       router.push("/profile");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Username error:", err);
 
-      if (err.response?.data?.detail) {
+      if (axios.isAxiosError(err) && err.response?.data?.detail) {
         setError(err.response.data.detail);
-      } else if (err.request) {
+      } else if (axios.isAxiosError(err) && err.request) {
         setError("Cannot connect to server. Is backend running?");
       } else {
         setError("Unexpected error occurred.");
@@ -123,14 +125,17 @@ export default function SetupUsername() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F3F2EF] px-4">
-      <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-2 text-gray-900">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="bg-card p-8 rounded-2xl shadow-xl w-full max-w-md border border-border">
+        <div className="flex justify-center mb-6">
+          <img src="/assets/logo.png" alt="Openly" className="h-12 w-auto object-contain" />
+        </div>
+        <h1 className="text-2xl font-bold mb-2 text-foreground text-center">
           Choose your username
         </h1>
 
-        <p className="text-sm text-gray-500 mb-6">
-          This will be your public identity on FailureIn
+        <p className="text-secondary-foreground/60 mb-8 text-center text-sm">
+          This will be your public identity on Open Space
         </p>
 
         {error && (
@@ -144,14 +149,13 @@ export default function SetupUsername() {
           onChange={(e) =>
             setUsername(e.target.value.toLowerCase().trim())
           }
-          placeholder="e.g. failure_king"
-          className={`w-full border p-3 rounded-lg mb-2 focus:outline-none ${
-            available === false
-              ? "border-red-500"
-              : available === true
+          placeholder="e.g. reviewer_pro"
+          className={`w-full border p-3 rounded-lg mb-2 focus:outline-none ${available === false
+            ? "border-red-500"
+            : available === true
               ? "border-green-500"
               : "border-gray-300"
-          }`}
+            }`}
         />
 
         {/* STATUS TEXT */}

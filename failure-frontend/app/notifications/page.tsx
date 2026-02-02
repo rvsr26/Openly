@@ -1,89 +1,114 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import axios from "axios";
-import { auth } from "../firebase";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { onAuthStateChanged, User } from "firebase/auth";
-import Navbar from "../components/Navbar";
+import { auth } from "../firebase";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import api, { getAbsUrl } from "../lib/api";
+
+import { Bell, Heart, MessageSquare, UserPlus, Check } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { formatDistanceToNow } from "date-fns";
+
+interface Notification {
+  id: string;
+  type: string;
+  actor_name: string;
+  actor_pic: string;
+  resource_id: string;
+  message?: string;
+  is_read: boolean;
+  created_at: string;
+}
 
 export default function NotificationsPage() {
-  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const queryClient = useQueryClient();
 
-  const [user, setUser] = useState<User | null>(null);
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  /* ---------------- AUTH ---------------- */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      if (!u) {
-        router.push("/login");
-        return;
-      }
-      setUser(u);
-    });
-    return () => unsub();
-  }, [router]);
+    const unsubscribe = onAuthStateChanged(auth, (u) => setCurrentUser(u));
+    return () => unsubscribe();
+  }, []);
 
-  /* ---------------- FETCH ---------------- */
-  useEffect(() => {
-    if (!user) return;
+  const { data: notifications = [] } = useQuery<Notification[]>({
+    queryKey: ["notifications", currentUser?.uid],
+    queryFn: async () => {
+      if (!currentUser) return [];
+      const res = await api.get(`/notifications?user_id=${currentUser.uid}`);
+      return res.data;
+    },
+    enabled: !!currentUser,
+    refetchInterval: 30000 // Poll every 30s
+  });
 
-    const fetchNotifications = async () => {
-      try {
-        const res = await axios.get(
-          `http://127.0.0.1:8000/users/${user.uid}/notifications`
-        );
-        setNotifications(res.data);
-      } catch (err) {
-        console.error("Failed to load notifications", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const readMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.post(`/notifications/${id}/read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    }
+  });
 
-    fetchNotifications();
-  }, [user]);
-
-  if (loading)
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading notifications...
-      </div>
-    );
+  if (!currentUser) return <div className="p-10 text-center">Please login to view notifications</div>;
 
   return (
-    <div className="min-h-screen bg-[#F3F2EF]">
-      <Navbar />
+    <div className="min-h-screen bg-background pt-20 pb-10 px-4 md:px-8 max-w-2xl mx-auto">
+      <h1 className="text-3xl font-bold mb-8 text-foreground">Notifications</h1>
 
-      <main className="pt-24 max-w-3xl mx-auto px-4 pb-10">
-        <h1 className="text-2xl font-bold mb-6">🔔 Notifications</h1>
-
-        {notifications.length === 0 && (
-          <div className="bg-white rounded-lg border border-gray-300 p-6 text-center text-gray-500">
-            You’re all caught up 🎉
+      <div className="space-y-2">
+        {notifications.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground glass-card rounded-xl">
+            No notifications yet.
           </div>
-        )}
-
-        <div className="space-y-4">
-          {notifications.map((n) => (
-            <Link
-              key={n.id}
-              href={n.post_id ? `/post/${n.post_id}` : "#"}
-              className={`block bg-white border rounded-lg p-4 hover:bg-gray-50 transition ${
-                !n.read ? "border-blue-500" : "border-gray-300"
-              }`}
+        ) : (
+          notifications.map((notif) => (
+            <div
+              key={notif.id}
+              onClick={() => !notif.is_read && readMutation.mutate(notif.id)}
+              className={`p-4 rounded-xl border flex gap-4 cursor-pointer transition ${notif.is_read
+                ? "bg-background border-border/50 opacity-80 hover:bg-secondary/50"
+                : "bg-primary/5 border-primary/20 hover:bg-primary/10"
+                }`}
             >
-              <p className="text-sm text-gray-800">{n.message}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {new Date(n.created_at).toLocaleString()}
-              </p>
-            </Link>
-          ))}
-        </div>
-      </main>
+              <div className="mt-1">
+                {notif.type === "like" && <Heart size={20} className="text-red-500 fill-red-500" />}
+                {notif.type === "comment" && <MessageSquare size={20} className="text-blue-500 fill-blue-500" />}
+                {notif.type === "connection_request" && <UserPlus size={20} className="text-green-500" />}
+                {notif.type === "connection_accepted" && <Check size={20} className="text-green-500" />}
+              </div>
+
+              <img
+                src={getAbsUrl(notif.actor_pic)}
+                className="w-12 h-12 rounded-full object-cover border"
+                alt="p"
+              />
+
+              <div className="flex-1">
+                <p className="text-sm text-foreground">
+                  <span className="font-bold">{notif.actor_name}</span>
+                  {" "}
+                  {notif.type === "like" && "liked your post."}
+                  {notif.type === "comment" && "commented on your post."}
+                  {notif.type === "connection_request" && "sent you a connection request."}
+                  {notif.type === "connection_accepted" && "accepted your connection request."}
+                </p>
+                {notif.message && (
+                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">"{notif.message}"</p>
+                )}
+                <p className="text-xs text-primary/60 mt-2">
+                  {formatDistanceToNow(new Date(notif.created_at), { addSuffix: true })}
+                </p>
+              </div>
+
+              {!notif.is_read && (
+                <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }

@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import api from "../lib/api";
+
 import Navbar from "../components/Navbar";
 import PostItem from "../components/PostItem";
+import { Post } from "../types";
 
 export default function AdminPage() {
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,8 +18,8 @@ export default function AdminPage() {
 
   const fetchFlaggedPosts = async () => {
     try {
-      const res = await axios.get(
-        "http://127.0.0.1:8000/feed?flagged=true"
+      const res = await api.get(
+        "/feed?flagged=true"
       );
       setPosts(res.data);
     } catch (err) {
@@ -30,8 +33,8 @@ export default function AdminPage() {
     if (!confirm("Delete this post permanently?")) return;
 
     try {
-      await axios.delete(
-        `http://127.0.0.1:8000/posts/${postId}?user_id=admin`
+      await api.delete(
+        `/posts/${postId}?user_id=admin`
       );
       setPosts((prev) => prev.filter((p) => p.id !== postId));
     } catch {
