@@ -98,7 +98,7 @@ export default function SignupPage() {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500">Revolution.</span>
             </h1>
             <p className="text-xl text-zinc-300 font-light leading-relaxed">
-              "Your voice matters. Give suggestions that spark change."
+              &quot;Your voice matters. Give suggestions that spark change.&quot;
             </p>
             <p className="mt-4 text-zinc-500 font-mono text-sm">— Open Space</p>
           </div>

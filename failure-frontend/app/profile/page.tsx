@@ -24,7 +24,6 @@ export default function ProfilePage() {
       photoURL?: string;
     };
     stats: {
-      reputation: number;
       total_posts: number;
       total_views: number;
     };
@@ -184,11 +183,7 @@ export default function ProfilePage() {
 
             {/* STATS */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-white/10 pt-10">
-              <Stat
-                label="Reputation"
-                value={profileData.stats.reputation}
-                icon={<Award className="text-amber-500" size={20} />}
-              />
+
               <Stat
                 label="Reviews Shared"
                 value={profileData.stats.total_posts}

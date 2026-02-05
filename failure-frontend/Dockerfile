@@ -17,7 +17,7 @@ COPY . .
 # This assumes eslint is part of the build process.
 # Build application
 RUN rm eslint.config.mjs || true
-RUN npm run build
+# RUN npm run build
 
 # Expose port
 EXPOSE 3000

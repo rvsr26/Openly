@@ -28,7 +28,6 @@ export default function PublicProfilePage() {
     stats: {
       total_posts: number;
       total_views: number;
-      reputation: number;
     };
     posts: Post[];
   } | null>(null);
@@ -46,24 +45,19 @@ export default function PublicProfilePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // 1. Get Profile
-        const res = await api.get(`/users/username/${username}`);
-        setProfile(res.data);
-        const profileId = res.data.user_info.id;
-
-        // 2. Check Connection Status if logged in
-        if (currentUser && currentUser.uid !== profileId) {
-          try {
-            const statusRes = await api.get(`/network/${currentUser.uid}/status/${profileId}`);
-            setConnectionStatus(statusRes.data.status);
-            setIsSender(statusRes.data.is_sender);
-          } catch (e) {
-            console.error("Failed to fetch connection status", e);
-          }
-        } else if (currentUser && currentUser.uid === profileId) {
-          setConnectionStatus("self");
+        setLoading(true);
+        // 1. Try fetching by username
+        try {
+          const res = await api.get(`/users/username/${username}`);
+          setProfile(res.data);
+          checkConnection(res.data.user_info.id);
+        } catch (usernameError) {
+          // 2. Fallback: Try fetching by User ID
+          console.log("Username fetch failed, trying by ID...");
+          const res = await api.get(`/users/${username}/profile`);
+          setProfile(res.data);
+          checkConnection(res.data.user_info.id);
         }
-
       } catch (err) {
         console.error("Failed to load public profile", err);
         setError("User not found");
@@ -72,8 +66,24 @@ export default function PublicProfilePage() {
       }
     };
 
+    const checkConnection = async (profileId: string) => {
+      if (currentUser && currentUser.uid !== profileId) {
+        try {
+          const statusRes = await api.get(`/network/${currentUser.uid}/status/${profileId}`);
+          setConnectionStatus(statusRes.data.status);
+          setIsSender(statusRes.data.is_sender);
+        } catch (e) {
+          console.error("Failed to fetch connection status", e);
+        }
+      } else if (currentUser && currentUser.uid === profileId) {
+        setConnectionStatus("self");
+      }
+    };
+
     if (username) fetchData();
   }, [username, currentUser]);
+
+
 
   const handleConnect = async () => {
     if (!currentUser || !profile) return;
@@ -196,10 +206,7 @@ export default function PublicProfilePage() {
                 <span className="block text-2xl font-bold">{profile.stats.total_views}</span>
                 <span className="text-xs text-muted-foreground uppercase font-semibold">Views</span>
               </div>
-              <div>
-                <span className="block text-2xl font-bold">{profile.stats.reputation}</span>
-                <span className="text-xs text-muted-foreground uppercase font-semibold">Reputation</span>
-              </div>
+
             </div>
           </div>
         </div>

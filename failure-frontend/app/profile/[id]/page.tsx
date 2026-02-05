@@ -1,15 +1,20 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation"; // <--- This gets the ID from URL
+import { useParams, useRouter } from "next/navigation"; // <--- This gets the ID from URL
 import axios from "axios";
 import api from "../../lib/api";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../../firebase";
+import { MessageCircle } from "lucide-react";
 
 import Navbar from "../../components/Navbar";
 import { Post } from "../../types";
 
 export default function PublicProfile() {
   const params = useParams();
+  const router = useRouter();
   const userId = params.id; // The user ID from the URL
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const [profile, setProfile] = useState<{
     user_info: {
@@ -18,12 +23,18 @@ export default function PublicProfile() {
     };
     stats: {
       total_posts: number;
-      reputation: number;
       total_views: number;
     };
     posts: Post[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -43,9 +54,19 @@ export default function PublicProfile() {
     fetchProfile();
   }, [userId]);
 
+  const handleSendMessage = () => {
+    if (!currentUser) {
+      router.push('/login');
+      return;
+    }
+    router.push(`/messages?user=${userId}`);
+  };
+
   if (loading) return <div className="min-h-screen bg-gray-50 flex justify-center items-center">Loading...</div>;
 
   if (!profile) return <div className="min-h-screen bg-gray-50 flex justify-center items-center">User not found.</div>;
+
+  const isOwnProfile = currentUser?.uid === userId;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -59,7 +80,7 @@ export default function PublicProfile() {
             alt={`${profile.user_info.display_name || "User"}'s profile`}
             className="w-24 h-24 rounded-full border-4 border-gray-100"
           />
-          <div className="text-center md:text-left">
+          <div className="text-center md:text-left flex-1">
             <h1 className="text-3xl font-bold text-gray-900">
               {profile.user_info.display_name || "Anonymous User"}
             </h1>
@@ -73,16 +94,24 @@ export default function PublicProfile() {
                 <span className="block text-xl font-bold text-gray-900">{profile.stats.total_posts}</span>
                 <span className="text-xs text-gray-500 uppercase tracking-wide">Stories</span>
               </div>
-              <div className="text-center">
-                <span className="block text-xl font-bold text-gray-900">{profile.stats.reputation}</span>
-                <span className="text-xs text-gray-500 uppercase tracking-wide">Reputation</span>
-              </div>
+
               <div className="text-center">
                 <span className="block text-xl font-bold text-gray-900">{profile.stats.total_views}</span>
                 <span className="text-xs text-gray-500 uppercase tracking-wide">Views</span>
               </div>
             </div>
           </div>
+
+          {/* Send Message Button */}
+          {!isOwnProfile && currentUser && (
+            <button
+              onClick={handleSendMessage}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all"
+            >
+              <MessageCircle size={20} />
+              Send Message
+            </button>
+          )}
         </div>
 
         {/* POSTS FEED */}

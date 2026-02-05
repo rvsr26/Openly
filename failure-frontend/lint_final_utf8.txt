@@ -1,0 +1,105 @@
+
+> failure-frontend@0.1.0 lint
+> eslint
+
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\admin\AdminGuard.tsx
+  6:8  warning  'axios' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\admin\page.tsx
+  4:8  warning  'axios' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\bookmarks\page.tsx
+  4:8  warning  'axios' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\components\CreatePost.tsx
+  37:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\components\LeftSidebar.tsx
+   5:10  warning  'UserCircle' is defined but never used                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+   5:49  warning  'Compass' is defined but never used                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+   5:68  warning  'FileText' is defined but never used                                                                                                                                                                                                                                                     @typescript-eslint/no-unused-vars
+  33:29  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\components\Navbar.tsx
+   2:10  warning  'loginWithGoogle' is defined but never used                                                                                                                                                                                                                                              @typescript-eslint/no-unused-vars
+   2:27  warning  'logout' is defined but never used                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+  14:3   warning  'Plus' is defined but never used                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  18:8   warning  'SearchBar' is defined but never used                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+  23:11  warning  'theme' is assigned a value but never used                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+  97:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  97:15  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\components\PostItem.tsx
+    3:31  warning  'useRef' is defined but never used                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+   14:3   warning  'Flag' is defined but never used                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+   15:3   warning  'Trash2' is defined but never used                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+   16:3   warning  'ImageIcon' is defined but never used                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+   23:8   warning  'ShareImageTemplate' is defined but never used                                                                                                                                                                                                                                           @typescript-eslint/no-unused-vars
+   24:10  warning  'toPng' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  115:14  warning  'err' is defined but never used                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  147:9   warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  171:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  234:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\components\ReportModal.tsx
+  5:8  warning  'axios' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\components\SearchBar.tsx
+  65:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\components\ShareImageTemplate.tsx
+   53:29  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  106:29  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\login\page.tsx
+   65:14  warning  'err' is defined but never used                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  102:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\network\page.tsx
+    7:8   warning  'axios' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+   80:33  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  124:37  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\notifications\page.tsx
+   7:8   warning  'axios' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  10:10  warning  'Bell' is defined but never used                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  11:8   warning  'Link' is defined but never used                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  82:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\page.tsx
+  16:8  warning  'Link' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\profile\[id]\page.tsx
+   4:8   warning  'axios' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  57:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\profile\edit\page.tsx
+    4:8   warning  'axios' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+   94:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+  123:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\profile\page.tsx
+    4:8   warning  'axios' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+  147:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  147:17  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\search\page.tsx
+  4:8  warning  'axios' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\setup-username\page.tsx
+  131:11  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\signup\page.tsx
+  13:22  warning  'CheckCircle' is defined but never used                                                                                                                                                                                                                                                  @typescript-eslint/no-unused-vars
+  95:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+D:\PROJECTS\Upcomming\Failure-Sharing-Site\failure-frontend\app\u\[username]\page.tsx
+    4:8   warning  'axios' is defined but never used                                                                                                                                                                                                                                                        @typescript-eslint/no-unused-vars
+   86:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+   98:14  warning  'e' is defined but never used                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+  126:15  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  126:15  warning  img elements must have an alt prop, either with meaningful text, or an empty string for decorative images                                                                                                                                                                                jsx-a11y/alt-text
+
+Γ£û 56 problems (0 errors, 56 warnings)
+

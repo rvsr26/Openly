@@ -1,6 +1,6 @@
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import math
 
 async def test_hot_algo():
@@ -13,7 +13,7 @@ async def test_hot_algo():
     await collection.delete_many({"test": True})
     
     print("--- Inserting test posts ---")
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     
     # Post A: New, 1 reaction (Score ~ now/45000)
     post_a = {
@@ -59,7 +59,7 @@ async def test_hot_algo():
                 "hot_score": {
                     "$add": [
                         {"$log10": {"$max": ["$reaction_count", 1]}},
-                        {"$divide": ["$ts", 45000000.0]} 
+                        {"$divide": ["$ts", 100000000.0]} 
                     ]
                 }
             }

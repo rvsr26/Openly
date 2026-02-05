@@ -10,9 +10,11 @@ import { onAuthStateChanged, User } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { Save, ArrowLeft, Camera, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function EditProfilePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [user, setUser] = useState<User | null>(null);
@@ -71,6 +73,8 @@ export default function EditProfilePage() {
         }
       );
       setPhotoURL(res.data.photoURL);
+      // Invalidate cache so Navbar and other components update immediately
+      queryClient.invalidateQueries({ queryKey: ["userProfile", user.uid] });
     } catch (err) {
       console.error("Upload failed", err);
       alert("Failed to upload photo.");
@@ -90,6 +94,7 @@ export default function EditProfilePage() {
         website,
         location
       });
+      queryClient.invalidateQueries({ queryKey: ["userProfile", user.uid] });
       router.push("/profile");
     } catch (e) {
       alert("Failed to save changes.");

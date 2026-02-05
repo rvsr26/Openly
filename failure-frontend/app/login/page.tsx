@@ -101,7 +101,7 @@ export default function LoginPage() {
           <div className="mb-8">
             <img src="/assets/logo.png" alt="Openly" className="h-16 w-auto mb-6 object-contain" />
             <p className="text-xl text-zinc-300 font-light leading-relaxed">
-              "Productive feedback is the breakfast of champions."
+              &quot;Productive feedback is the breakfast of champions.&quot;
             </p>
             <p className="mt-4 text-zinc-500 font-mono text-sm">— Community Wisdom</p>
           </div>
@@ -226,7 +226,7 @@ export default function LoginPage() {
           </form>
 
           <p className="px-8 text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <button onClick={() => router.push("/signup")} className="underline underline-offset-4 hover:text-primary font-medium text-foreground">
               Sign up
             </button>
