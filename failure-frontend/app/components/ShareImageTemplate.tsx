@@ -88,7 +88,7 @@ const ShareImageTemplate = React.forwardRef<HTMLDivElement, ShareImageTemplatePr
                                 textShadow: "0 2px 4px rgba(0,0,0,0.1)",
                             }}
                         >
-                            "{post.content}"
+                            &quot;{post.content}&quot;
                         </p>
                     </div>
 

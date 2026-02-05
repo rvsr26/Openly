@@ -1,0 +1,104 @@
+﻿python : D:\PROJECTS\
+Upcomming\Failure-Sha
+ring-Site\failure-bac
+kend\test_hot_algo.py
+:16: 
+DeprecationWarning: d
+atetime.datetime.utcn
+ow() is deprecated 
+and scheduled for 
+removal in a future 
+version. Use 
+timezone-aware 
+objects to represent 
+datetimes in UTC: dat
+etime.datetime.now(da
+tetime.UTC).
+At line:1 char:1
++ python 
+test_hot_algo.py > 
+test_result.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (D:\PROJ   
+ ECTS\Upc...(date    
+time.UTC).:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+  now = 
+datetime.utcnow()
+--- Cleaning up test data ---
+--- Inserting test posts ---
+--- Running aggregation ---
+
+Results (Ordered by Hot Score):
+1. Post B: Mid-age (20 reacts) | Reactions: 20 | Score: 39333.1629
+2. Post A: Fresh (1 react) | Reactions: 1 | Score: 39332.8619
+3. Post C: Old but Viral (1000 reacts) | Reactions: 1000 | Score: 39332.0219
+Traceback (most 
+recent call last):
+  File "D:\PROJECTS\U
+pcomming\Failure-Shar
+ing-Site\failure-back
+end\test_hot_algo.py"
+, line 86, in 
+<module>
+    asyncio.run(test_
+hot_algo())
+    ~~~~~~~~~~~^^^^^^
+^^^^^^^^^^^
+  File "C:\Python314\
+Lib\asyncio\runners.p
+y", line 204, in run
+    return 
+runner.run(main)
+           
+~~~~~~~~~~^^^^^^
+  File "C:\Python314\
+Lib\asyncio\runners.p
+y", line 127, in run
+    return self._loop
+.run_until_complete(t
+ask)
+           ~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~^^
+^^^^
+  File "C:\Python314\
+Lib\asyncio\base_even
+ts.py", line 719, in 
+run_until_complete
+    return 
+future.result()
+           
+~~~~~~~~~~~~~^^
+  File "D:\PROJECTS\U
+pcomming\Failure-Shar
+ing-Site\failure-back
+end\test_hot_algo.py"
+, line 77, in 
+test_hot_algo
+    assert results[0]
+['content'] == 
+post_c['content']
+           ^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^
+AssertionError
+
+--- Testing Utility Function ---
+Text: I failed my math exam because I didn't study enough for the calculus section.
+Keywords: ['calculus section', 'math exam', 'section', 'failed', 'math']
+Text: Startup funding is really hard to get these days. Investors are looking for profitability.
+Keywords: ['Startup funding', 'Startup', 'days', 'funding', 'hard']
+
+
+--- Testing API Endpoint ---
+API Connection Error: HTTPConnectionPool(host='127.0.0.1', port=8000): Max retries exceeded with url: /posts/ (Caused by NewConnectionError("HTTPConnection(host='127.0.0.1', port=8000): Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it"))
+

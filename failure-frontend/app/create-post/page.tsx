@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import api from "../lib/api";
+import api, { uploadImage, getAbsUrl } from "../lib/api";
+import { Image as ImageIcon, X, Loader2 } from "lucide-react";
 
 import { auth } from "../firebase";
 
@@ -14,9 +15,27 @@ export default function CreatePostPage() {
 
   const [content, setContent] = useState("");
   const [anonymous, setAnonymous] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setUploading(true);
+      try {
+        const url = await uploadImage(e.target.files[0]);
+        setImageUrl(url);
+      } catch (err) {
+        console.error("Upload failed", err);
+        setError("Failed to upload image");
+      } finally {
+        setUploading(false);
+      }
+    }
+  };
 
   /* ---------------- SUBMIT ---------------- */
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,6 +77,7 @@ export default function CreatePostPage() {
         user_pic: user.photoURL || null,
         content: content.trim(),
         is_anonymous: anonymous,
+        image_url: imageUrl
       });
 
       router.push("/");
@@ -90,6 +110,48 @@ export default function CreatePostPage() {
           rows={6}
           className="w-full px-4 py-4 mb-2 rounded-xl border border-input bg-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium placeholder:text-muted-foreground resize-none"
         />
+
+        {/* IMAGE PREVIEW */}
+        {imageUrl && (
+          <div className="relative w-full h-48 mb-4 bg-secondary/50 rounded-xl overflow-hidden group/image">
+            <img src={getAbsUrl(imageUrl)} alt="Preview" className="w-full h-full object-cover" />
+            <button
+              type="button"
+              onClick={() => setImageUrl("")}
+              className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full hover:bg-destructive transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+
+        {/* UPLOAD PROGRESS */}
+        {uploading && (
+          <div className="w-full h-12 mb-4 flex items-center justify-center bg-primary/10 rounded-xl">
+            <Loader2 className="animate-spin text-primary mr-2" size={16} />
+            <span className="text-xs font-bold text-primary">Uploading...</span>
+          </div>
+        )}
+
+        {/* TOOLBAR */}
+        <div className="flex items-center gap-2 mb-4">
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept="image/*"
+            onChange={handleFileSelect}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || loading}
+            className="p-2.5 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground transition-all flex items-center gap-2 text-sm font-medium"
+          >
+            <ImageIcon size={18} />
+            <span>Add Image</span>
+          </button>
+        </div>
 
         {/* CHARACTER COUNT */}
         <div className="text-right text-xs text-muted-foreground mb-6 font-medium">

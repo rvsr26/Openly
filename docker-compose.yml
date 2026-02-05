@@ -1,4 +1,32 @@
 services:
+  mongodb:
+    image: mongo:7.0
+    container_name: mongodb
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=failure_sharing
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   backend:
     build: 
       context: ./failure-backend
@@ -11,6 +39,13 @@ services:
       - /app/__pycache__
     environment:
       - PORT=8000
+      - REDIS_URL=redis://redis:6379
+      - MONGODB_URL=mongodb://mongodb:27017/failure_sharing
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     # Use reload for development if needed, but Dockerfile has CMD. 
     # Overriding CMD for dev experience to ensure hot reload if volumes work
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
@@ -28,5 +63,10 @@ services:
     volumes:
       - ./failure-frontend:/app
       - /app/.next
+      - /app/node_modules
     # Force dependency sync and run dev server
-    command: sh -c "npm install && npm run dev"
+    command: sh -c "npm install && npm run dev -- -H 0.0.0.0"
+
+volumes:
+  mongodb_data:
+  redis_data:
