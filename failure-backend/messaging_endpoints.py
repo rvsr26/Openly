@@ -1,9 +1,25 @@
-# Messaging API Endpoints - Add to main.py
-
-# --- MESSAGING SYSTEM ---
-
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
+from pydantic import BaseModel
+from typing import Optional, List
+from datetime import datetime
+import json
+from bson import ObjectId
 from websocket_manager import manager
-from database import follows_collection
+from database import (
+    follows_collection, 
+    conversations_collection, 
+    messages_collection, 
+    users_collection
+)
+
+router = APIRouter()
+
+# Helper function
+def serialize_doc(doc):
+    if not doc: return None
+    doc["id"] = str(doc["_id"])
+    del doc["_id"]
+    return doc
 
 class ConversationRequest(BaseModel):
     user_id: str
@@ -17,7 +33,7 @@ class ReadRequest(BaseModel):
     user_id: str
 
 # WebSocket endpoint for real-time messaging
-@app.websocket("/ws/{user_id}")
+@router.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: str):
     await manager.connect(user_id, websocket)
     try:
@@ -41,7 +57,7 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
         manager.disconnect(user_id)
 
 # Create or get existing conversation
-@app.post("/conversations/")
+@router.post("/conversations/")
 async def create_or_get_conversation(req: ConversationRequest):
     # Sort participant IDs for consistency
     participants = sorted([req.user_id, req.target_user_id])
@@ -107,7 +123,7 @@ async def create_or_get_conversation(req: ConversationRequest):
     }
 
 # Get all conversations for a user
-@app.get("/conversations/")
+@router.get("/conversations/")
 async def get_conversations(user_id: str):
     # Find all conversations where user is a participant
     cursor = conversations_collection.find({
@@ -137,7 +153,7 @@ async def get_conversations(user_id: str):
     return conversations
 
 # Get messages in a conversation
-@app.get("/conversations/{conversation_id}/messages")
+@router.get("/conversations/{conversation_id}/messages")
 async def get_messages(conversation_id: str, limit: int = 50, before: Optional[str] = None):
     try:
         conv_oid = ObjectId(conversation_id)
@@ -177,7 +193,7 @@ async def get_messages(conversation_id: str, limit: int = 50, before: Optional[s
     return messages
 
 # Send a message
-@app.post("/conversations/{conversation_id}/messages")
+@router.post("/conversations/{conversation_id}/messages")
 async def send_message(conversation_id: str, req: MessageRequest):
     try:
         conv_oid = ObjectId(conversation_id)
@@ -254,7 +270,7 @@ async def send_message(conversation_id: str, req: MessageRequest):
     }
 
 # Mark messages as read
-@app.put("/conversations/{conversation_id}/read")
+@router.put("/conversations/{conversation_id}/read")
 async def mark_as_read(conversation_id: str, req: ReadRequest):
     try:
         conv_oid = ObjectId(conversation_id)
@@ -280,7 +296,7 @@ async def mark_as_read(conversation_id: str, req: ReadRequest):
     return {"status": "marked_read"}
 
 # Delete a message
-@app.delete("/messages/{message_id}")
+@router.delete("/messages/{message_id}")
 async def delete_message(message_id: str, user_id: str):
     try:
         msg_oid = ObjectId(message_id)
@@ -304,7 +320,7 @@ async def delete_message(message_id: str, user_id: str):
     return {"status": "deleted"}
 
 # Get total unread message count for a user
-@app.get("/users/{user_id}/unread-count")
+@router.get("/users/{user_id}/unread-count")
 async def get_unread_count(user_id: str):
     # Sum up unread counts across all conversations
     cursor = conversations_collection.find({"participants": user_id})

@@ -9,3 +9,5 @@ python-multipart
 yake
 redis>=5.0.0
 aioredis>=2.0.1
+pyjwt
+email-validator
