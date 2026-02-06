@@ -17,6 +17,7 @@ from database import (
 )
 from bson import ObjectId
 from cache_utils import get_cached_feed, set_cached_feed, generate_cache_key, invalidate_category_cache
+from messaging_endpoints import router as messaging_router
 
 # Import authentication and middleware (optional - won't break app if missing)
 AUTH_ENABLED = False
@@ -38,20 +39,26 @@ except Exception as e:
     print(f"⚠️ Authentication module not available: {e}")
     print("⚠️ App will run without Phase 1 auth features")
     # Define dummy functions to prevent errors
-    class EmailVerificationRequest:
+    class EmailVerificationRequest(BaseModel):
         pass
-    class VerifyEmailRequest:
+    class VerifyEmailRequest(BaseModel):
         pass
-    class PasswordResetRequest:
+    class PasswordResetRequest(BaseModel):
         pass
-    class PasswordResetConfirm:
+    class PasswordResetConfirm(BaseModel):
         pass
-    class OAuthLoginRequest:
+    class OAuthLoginRequest(BaseModel):
         pass
+    
+    async def get_current_user(): 
+        return None
 
 
 # --- 1. SETUP ---
 app = FastAPI(title="Openly API", version="1.0.0")
+
+# Include Messaging Router
+app.include_router(messaging_router)
 
 # Add security middleware (if available)
 if AUTH_ENABLED:
@@ -86,6 +93,12 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # --- STARTUP: DATABASE INDEXING ---
 @app.on_event("startup")
+async def startup_event():
+    """Start background tasks on startup."""
+    import asyncio
+    # Run index creation in background so it doesn't block startup
+    asyncio.create_task(create_indexes())
+
 async def create_indexes():
     """Create database indexes for optimized query performance."""
     try:

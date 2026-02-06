@@ -3,7 +3,7 @@
 import { User } from "firebase/auth";
 import { motion } from "framer-motion";
 import { getAbsUrl, uploadImage } from "../lib/api";
-import { memo, useRef, useState } from "react";
+import { memo, useRef, useState, useMemo } from "react";
 import { Image as ImageIcon, X, Loader2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import "easymde/dist/easymde.min.css";
@@ -40,7 +40,7 @@ function CreatePost({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
 
-    const mdeOptions = {
+    const mdeOptions = useMemo(() => ({
         autofocus: false,
         spellChecker: false,
         placeholder: "What's your suggestion? Share a failure, a review, or an insight...",
@@ -51,7 +51,7 @@ function CreatePost({
         },
         toolbar: ["bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|", "link", "guide"],
         minHeight: "150px"
-    };
+    }), []);
 
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,7 +68,26 @@ function CreatePost({
             }
         }
     };
-    if (!user) return null;
+    if (!user) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass-card mb-8 p-8 text-center"
+            >
+                <h3 className="text-xl font-black text-foreground mb-2">Join the Conversation</h3>
+                <p className="text-muted-foreground text-sm mb-6">Share your own reviews, failures, and insights with the community.</p>
+                <div className="flex gap-4 justify-center">
+                    <a href="/login" className="px-6 py-2.5 rounded-xl bg-primary text-white font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all">
+                        Log In
+                    </a>
+                    <a href="/signup" className="px-6 py-2.5 rounded-xl bg-white/5 text-foreground font-bold text-xs uppercase tracking-wider hover:bg-white/10 transition-all">
+                        Sign Up
+                    </a>
+                </div>
+            </motion.div>
+        );
+    }
 
     return (
         <motion.div

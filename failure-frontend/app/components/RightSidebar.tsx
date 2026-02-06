@@ -5,7 +5,6 @@ import api from "../lib/api";
 import { TrendingUp, X, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { User } from "firebase/auth";
-import CreatePost from "./CreatePost";
 import { memo } from "react";
 
 interface TrendingTopic {
@@ -16,29 +15,11 @@ interface TrendingTopic {
 interface RightSidebarProps {
     user: User | null;
     userPhoto?: string;
-    content: string;
-    setContent: (val: string) => void;
-    isAnonymous: boolean;
-    setIsAnonymous: (val: boolean) => void;
-    handleSubmit: () => void;
-    handleSaveDraft: () => void;
-    loading: boolean;
-    imageUrl: string;
-    setImageUrl: (val: string) => void;
 }
 
 function RightSidebar({
     user,
     userPhoto,
-    content,
-    setContent,
-    isAnonymous,
-    setIsAnonymous,
-    handleSubmit,
-    handleSaveDraft,
-    loading,
-    imageUrl,
-    setImageUrl
 }: RightSidebarProps) {
 
     const { data: trending = [], isLoading } = useQuery<TrendingTopic[]>({
@@ -63,20 +44,7 @@ function RightSidebar({
 
 
 
-            {/* CREATE POST FORM (Visible if user is logged in) */}
-            <CreatePost
-                user={user}
-                userPhoto={userPhoto}
-                content={content}
-                setContent={setContent}
-                isAnonymous={isAnonymous}
-                setIsAnonymous={setIsAnonymous}
-                handleSubmit={handleSubmit}
-                handleSaveDraft={handleSaveDraft}
-                loading={loading}
-                imageUrl={imageUrl}
-                setImageUrl={setImageUrl}
-            />
+
 
 
             {/* 2. TRENDING TOPICS */}

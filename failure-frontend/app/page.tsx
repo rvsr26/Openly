@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import api from './lib/api';
 
 import PostItem from './components/PostItem';
+import CreatePost from './components/CreatePost';
 import LeftSidebar from './components/LeftSidebar';
 import RightSidebar from './components/RightSidebar';
 import TopInsightsBanner from './components/TopInsightsBanner';
@@ -24,7 +25,7 @@ export default function Home() {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
-  const [sortBy, setSortBy] = useState("hot");
+  const [sortBy, setSortBy] = useState<"new" | "hot" | "top" | "for-you">("hot");
 
   const [user, setUser] = useState<User | null>(null);
   const [isPrefetching, setIsPrefetching] = useState(false);
@@ -82,7 +83,7 @@ export default function Home() {
       const res = await api.post('/posts/', {
         content: content,
         user_id: user.uid,
-        user_name: user.displayName,
+        user_name: user.displayName || "Anonymous User", // Fallback for missing display name
         user_pic: userPhoto || user.photoURL,
         is_anonymous: isAnonymous,
         image_url: imageUrl
@@ -96,9 +97,19 @@ export default function Home() {
       setImageUrl('');
       fetchFeed(activeFilter, sortBy);
 
-    } catch (error) {
-      console.error(error);
-      alert("System Error: Could not connect to backend.");
+    } catch (error: any) {
+      console.error("Post submission error:", error);
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        alert(`Error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+      } else if (error.request) {
+        // The request was made but no response was received
+        alert("Network Error: Could not connect to backend. Please ensure the server is running.");
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        alert(`System Error: ${error.message}`);
+      }
     }
     setLoading(false);
   };
@@ -175,6 +186,21 @@ export default function Home() {
             {/* Top Insights Banner */}
             <TopInsightsBanner />
 
+            {/* CREATE POST - CENTERED */}
+            <CreatePost
+              user={user}
+              userPhoto={userPhoto}
+              content={content}
+              setContent={setContent}
+              isAnonymous={isAnonymous}
+              setIsAnonymous={setIsAnonymous}
+              handleSubmit={handleSubmit}
+              handleSaveDraft={handleSaveDraft}
+              loading={loading}
+              imageUrl={imageUrl}
+              setImageUrl={setImageUrl}
+            />
+
             {/* FILTER & SORT SECTION */}
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -209,10 +235,10 @@ export default function Home() {
                   ].map((s) => (
                     <button
                       key={s.id}
-                      onClick={() => setSortBy(s.id as any)}
+                      onClick={() => setSortBy(s.id as "new" | "hot" | "top")}
                       className={`flex-1 flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300 ${sortBy === s.id
-                          ? "bg-primary text-white shadow-lg shadow-primary/30 scale-105"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        ? "bg-primary text-white shadow-lg shadow-primary/30 scale-105"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                         }`}
                     >
                       <s.icon className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -308,15 +334,6 @@ export default function Home() {
             <RightSidebar
               user={user}
               userPhoto={userPhoto}
-              content={content}
-              setContent={setContent}
-              isAnonymous={isAnonymous}
-              setIsAnonymous={setIsAnonymous}
-              handleSubmit={handleSubmit}
-              handleSaveDraft={handleSaveDraft}
-              loading={loading}
-              imageUrl={imageUrl}
-              setImageUrl={setImageUrl}
             />
           </aside>
 
