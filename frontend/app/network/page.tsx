@@ -14,14 +14,11 @@ import { motion } from "framer-motion";
 
 import Navbar from "../components/Navbar";
 
-export default function MyNetworkPage() {
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
-    const queryClient = useQueryClient();
+import { useAuth } from "@/context/AuthContext";
 
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (u) => setCurrentUser(u));
-        return () => unsubscribe();
-    }, []);
+export default function MyNetworkPage() {
+    const { user: currentUser } = useAuth();
+    const queryClient = useQueryClient();
 
     // 1. Fetch Pending Requests
     const { data: requests = [] } = useQuery<ConnectionRequest[]>({
@@ -123,7 +120,7 @@ export default function MyNetworkPage() {
                     ) : (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {connections.map((conn) => (
-                                <Link href={`/profile?uid=${conn.user_id}`} key={conn.user_id}>
+                                <Link href={`/u/${conn.username}`} key={conn.user_id}>
                                     <div className="glass-card p-4 rounded-xl flex flex-col items-center text-center cursor-pointer hover:border-primary/50 transition h-full">
                                         <img
                                             src={getAbsUrl(conn.user_pic)}

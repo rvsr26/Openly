@@ -79,7 +79,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex w-full bg-background">
+    <div className="min-h-screen flex w-full relative overflow-hidden">
 
       {/* --- LEFT SIDE: ARTWORK --- */}
       <div className="hidden lg:flex w-1/2 bg-zinc-900 text-white relative items-center justify-center p-12 overflow-hidden">
@@ -123,18 +123,19 @@ export default function SignupPage() {
       </div>
 
       {/* --- RIGHT SIDE: FORM --- */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative overflow-y-auto">
-        {/* Mobile BG Elements */}
-        <div className="lg:hidden absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_bottom,_var(--tw-gradient-stops))] from-primary/5 via-background to-background -z-10" />
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-12 relative z-10">
 
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md space-y-6 my-auto"
+          className="w-full max-w-md glass-card p-8 sm:p-10 shadow-2xl"
         >
-          <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-foreground">Create Account 🚀</h2>
+          <div className="text-center mb-8">
+            <div className="lg:hidden mb-6 flex justify-center">
+              <img src="/assets/logo.png" alt="Openly" className="h-12 w-auto" />
+            </div>
+            <h2 className="text-3xl font-black tracking-tight text-foreground">Create Account</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               Give suggestions, read reviews, build better products
             </p>
@@ -151,7 +152,7 @@ export default function SignupPage() {
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium leading-none">Email</label>
+                <label className="text-sm font-bold ml-1">Email</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
                   <input
@@ -159,14 +160,14 @@ export default function SignupPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="flex h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all"
+                    className="input-field pl-10"
                     placeholder="name@example.com"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium leading-none">Password</label>
+                <label className="text-sm font-bold ml-1">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
                   <input
@@ -174,14 +175,14 @@ export default function SignupPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="flex h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all"
+                    className="input-field pl-10"
                     placeholder="••••••••"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium leading-none">Confirm Password</label>
+                <label className="text-sm font-bold ml-1">Confirm Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
                   <input
@@ -189,28 +190,26 @@ export default function SignupPage() {
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="flex h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-all"
+                    className="input-field pl-10"
                     placeholder="••••••••"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-8 w-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 duration-300"
-              >
-                {loading ? "Creating account..." : (
-                  <span className="flex items-center gap-2">Sign Up <ArrowRight size={16} /></span>
-                )}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full flex items-center justify-center gap-2"
+            >
+              {loading ? "Creating account..." : (
+                <span className="flex items-center gap-2">Sign Up <ArrowRight size={18} /></span>
+              )}
+            </button>
 
-            <div className="relative">
+            <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
+                <span className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-background px-2 text-muted-foreground">
@@ -223,18 +222,18 @@ export default function SignupPage() {
               type="button"
               disabled={loading}
               onClick={handleGoogleSignup}
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-11 px-8 w-full"
+              className="btn-secondary w-full flex items-center justify-center gap-2 border border-border"
             >
-              <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
-                <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path>
+              <svg className="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M12.0003 20.45c4.656 0 8.556-3.218 9.973-7.65h-9.973v-4.524h15.222c.159.833.242 1.693.242 2.578 0 8.019-5.748 13.913-13.828 13.913-7.729 0-14-6.271-14-14s6.271-14 14-14c3.784 0 7.211 1.396 9.872 3.882l-4.133 3.493c-1.554-1.121-3.601-1.785-5.739-1.785-5.188 0-9.471 3.978-11.042 9.006h-.033l-4.665-3.587-.146.108c1.677 5.95 7.152 10.354 13.671 10.354z" fill="currentColor" />
               </svg>
               Google
             </button>
           </form>
 
-          <p className="px-8 text-center text-sm text-muted-foreground">
+          <p className="mt-8 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <button onClick={() => router.push("/login")} className="underline underline-offset-4 hover:text-primary font-medium text-foreground">
+            <button onClick={() => router.push("/login")} className="font-bold text-primary hover:underline">
               Login
             </button>
           </p>

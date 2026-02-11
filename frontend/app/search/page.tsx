@@ -6,10 +6,12 @@ import { useQuery } from '@tanstack/react-query';
 import api, { getAbsUrl } from '../lib/api';
 import PostItem from '../components/PostItem';
 import { Post } from '../types';
-import { User, MessageCircle, Search as SearchIcon, Users } from 'lucide-react';
+import { User, MessageCircle, Search as SearchIcon, Users, UserPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/context/AuthContext';
 
 function SearchResults() {
+  const { user: currentUser } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const query = searchParams.get('q') || '';
@@ -127,7 +129,7 @@ function SearchResults() {
                     <div
                       key={user.id}
                       className="glass-card p-4 flex items-center gap-4 hover:border-primary/30 transition-colors cursor-pointer group"
-                      onClick={() => router.push(`/users/username/${user.username?.replace('@', '')}`)}
+                      onClick={() => router.push(`/u/${user.username?.replace('@', '')}`)}
                     >
                       <div className="w-12 h-12 rounded-full bg-secondary overflow-hidden shrink-0 border border-border group-hover:scale-105 transition-transform">
                         {user.user_pic ? (
@@ -146,16 +148,34 @@ function SearchResults() {
                         <h3 className="font-bold text-foreground truncate">{user.display_name}</h3>
                         <p className="text-sm text-muted-foreground truncate">@{user.username}</p>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          router.push(`/messages?user=${user.id}`);
-                        }}
-                        className="p-2 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors"
-                        title="Send Message"
-                      >
-                        <MessageCircle size={16} />
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!currentUser) return alert("Please login to connect");
+                            try {
+                              await api.post(`/connect/${user.id}`, { requester_id: currentUser.uid });
+                              alert("Connection request sent!");
+                            } catch (err) {
+                              alert("Failed to send request");
+                            }
+                          }}
+                          className="p-2 rounded-full bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors"
+                          title="Connect"
+                        >
+                          <UserPlus size={16} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/messages?user=${user.id}`);
+                          }}
+                          className="p-2 rounded-full bg-secondary text-foreground border border-border hover:bg-secondary/80 transition-colors"
+                          title="Send Message"
+                        >
+                          <MessageCircle size={16} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -174,7 +194,7 @@ function SearchResults() {
 
 export default function SearchPage() {
   return (
-    <div className="min-h-screen bg-background pt-24 pb-12">
+    <div className="min-h-screen pt-24 pb-12">
       <Suspense fallback={<div className="text-center pt-20">Loading search...</div>}>
         <SearchResults />
       </Suspense>

@@ -72,7 +72,14 @@ export default function ProfileHeader({ user, profileData, isOwner }: ProfileHea
                                             <span>Edit Profile</span>
                                         </Link>
                                     )}
-                                    <button className="btn-primary flex-1 md:flex-none flex items-center justify-center gap-2">
+                                    <button
+                                        onClick={() => {
+                                            const url = `${window.location.origin}/profile/${user.uid}`;
+                                            navigator.clipboard.writeText(url);
+                                            alert("Profile link copied to clipboard!");
+                                        }}
+                                        className="btn-primary flex-1 md:flex-none flex items-center justify-center gap-2"
+                                    >
                                         <Share2 size={16} />
                                         <span>Share</span>
                                     </button>

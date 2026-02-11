@@ -10,15 +10,16 @@ import RightSidebar from './components/RightSidebar';
 import TopInsightsBanner from './components/TopInsightsBanner';
 
 import { auth } from './firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
 import { Post } from './types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, Clock, Flame, Trophy, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 
 const CATEGORIES = ["All", "Career", "Startup", "Academic", "Relationship", "Health"];
 
 export default function Home() {
+  const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [content, setContent] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -27,17 +28,16 @@ export default function Home() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [sortBy, setSortBy] = useState<"new" | "hot" | "top" | "for-you">("hot");
 
-  const [user, setUser] = useState<User | null>(null);
   const [isPrefetching, setIsPrefetching] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  const fetchFeed = useCallback(async (category: string, sort: string) => {
+  const fetchFeed = useCallback(async (category: string, sort: string, userId?: string) => {
     try {
       setLoading(true);
       let url = `/feed/?sort_by=${sort}`;
       if (category !== "All") url += `&category=${category}`;
-      if (auth.currentUser) url += `&user_id=${auth.currentUser.uid}`;
+      if (userId) url += `&user_id=${userId}`;
       const res = await api.get(url);
       setPosts(res.data);
     } catch (error) {
@@ -51,11 +51,6 @@ export default function Home() {
     const params = new URLSearchParams(window.location.search);
     const catParam = params.get("category");
     if (catParam) setActiveFilter(catParam);
-
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
   }, []);
 
   const { data: profile } = useQuery({
@@ -72,8 +67,8 @@ export default function Home() {
   const userPhoto = profile?.user_info?.photoURL || user?.photoURL || "";
 
   useEffect(() => {
-    fetchFeed(activeFilter, sortBy);
-  }, [activeFilter, sortBy, fetchFeed]);
+    fetchFeed(activeFilter, sortBy, user?.uid);
+  }, [activeFilter, sortBy, fetchFeed, user?.uid]);
 
   const handleSubmit = async () => {
     if (!user) return;
@@ -168,7 +163,7 @@ export default function Home() {
     <div className="min-h-screen relative">
 
       {/* Hero Section with Gradient */}
-      <div className="absolute top-0 left-0 right-0 h-[40vh] bg-gradient-to-b from-primary/5 via-transparent to-transparent pointer-events-none" />
+
 
       <main className="relative z-10 mt-24 sm:mt-28 mb-12 max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-8">
 

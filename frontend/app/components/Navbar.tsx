@@ -6,7 +6,8 @@ import { auth } from "../firebase";
 import { useState, useEffect, useCallback, memo, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import api, { getAbsUrl } from "../lib/api";
+import api, { getAbsUrl } from "@/app/lib/api";
+import { getStoredAccounts, saveAccount, removeAccount } from "@/app/lib/accountUtils";
 
 import {
   Bell,
@@ -24,16 +25,58 @@ import {
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/context/AuthContext";
 
 function Navbar() {
   const router = useRouter();
-  const [authUser, setAuthUser] = useState<User | null>(null);
+  const { user: authUser, refreshSession } = useAuth();
   const { theme } = useTheme();
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [storedAccounts, setStoredAccounts] = useState<any[]>([]);
+
+  useEffect(() => {
+    setStoredAccounts(getStoredAccounts());
+  }, [showDropdown]); // Refresh when dropdown opens
+
+  const handleAddAccount = async () => {
+    if (authUser) {
+      saveAccount(authUser, localStorage.getItem('token'));
+    }
+    await logout();
+    setShowDropdown(false);
+    router.push("/login");
+  };
+
+  const handleSwitchAccount = async (account: any) => {
+    if (authUser) {
+      saveAccount(authUser, localStorage.getItem('token'));
+    }
+
+    // Switch token in localStorage
+    if (account.token) {
+      localStorage.setItem('token', account.token);
+    } else {
+      // If no token stored, we might need a re-login for this specific account,
+      // but let's try to refresh anyway.
+      // Usually, saveAccount will have stored the token.
+    }
+
+    // Refresh context session
+    await refreshSession();
+
+    setShowDropdown(false);
+    // No need to redirect to login if we have a token!
+  };
+
+  const handleRemoveAccount = (uid: string) => {
+    removeAccount(uid);
+    setStoredAccounts(getStoredAccounts());
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -54,12 +97,6 @@ function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setAuthUser(user);
-    });
-    return () => unsubscribe();
-  }, []);
 
   const { data: profile } = useQuery({
     queryKey: ["userProfile", authUser?.uid],
@@ -89,7 +126,11 @@ function Navbar() {
 
   const handleLogout = async () => {
     try {
+      if (authUser) saveAccount(authUser, localStorage.getItem('token')); // Remember account on logout too
       await logout();
+      localStorage.removeItem('token');
+      // Force refresh of the context
+      await refreshSession();
       setShowDropdown(false);
       router.push('/login');
     } catch (error) {
@@ -99,8 +140,8 @@ function Navbar() {
 
   return (
     <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${isScrolled
-      ? "glass-premium shadow-xl shadow-black/5"
-      : "bg-transparent"
+      ? "glass-premium shadow-xl shadow-black/10"
+      : "bg-background/20 backdrop-blur-sm border-b border-white/5"
       }`}>
       <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20 gap-3 sm:gap-4">
@@ -254,6 +295,41 @@ function Navbar() {
                           <Settings className="w-4 h-4 text-muted-foreground" />
                           <span>Settings</span>
                         </Link>
+                      </div>
+
+                      {/* SWITCH ACCOUNTS SECTION */}
+                      <div className="border-t border-border/50 py-2">
+                        <p className="px-4 text-xs font-bold text-muted-foreground uppercase mb-1">Switch Accounts</p>
+                        {storedAccounts.filter((acc: any) => acc.uid !== authUser.uid).map((acc: any) => (
+                          <div key={acc.uid} className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 group transition-colors cursor-pointer" onClick={() => handleSwitchAccount(acc)}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full overflow-hidden relative border border-border">
+                                <Image src={getAbsUrl(acc.photoURL) || '/assets/default-user.png'} fill alt={acc.displayName || 'User'} className="object-cover" />
+                              </div>
+                              <div className="max-w-[100px]">
+                                <p className="text-sm font-medium text-foreground truncate">{acc.displayName || 'User'}</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveAccount(acc.uid);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-red-500 transition-all"
+                              title="Remove account"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+
+                        <button
+                          onClick={handleAddAccount}
+                          className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          <span>Add Account</span>
+                        </button>
                       </div>
 
                       <div className="border-t border-border/50">

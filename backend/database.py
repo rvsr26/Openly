@@ -27,3 +27,6 @@ conversations_collection = db.get_collection("conversations")
 # Authentication collections
 verification_tokens_collection = db.get_collection("verification_tokens")
 password_reset_tokens_collection = db.get_collection("password_reset_tokens")
+
+# Activity tracking
+user_activity_collection = db.get_collection("user_activity")

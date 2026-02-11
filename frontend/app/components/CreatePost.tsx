@@ -13,7 +13,7 @@ import "easymde/dist/easymde.min.css";
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
 
 interface CreatePostProps {
-    user: User | null;
+    user: any | null;
     userPhoto?: string;
     content: string;
     setContent: (val: string) => void;
@@ -75,15 +75,15 @@ function CreatePost({
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-card mb-8 p-8 text-center"
+                className="glass-card mb-8 p-10 text-center"
             >
-                <h3 className="text-xl font-black text-foreground mb-2">Join the Conversation</h3>
-                <p className="text-muted-foreground text-sm mb-6">Share your own reviews, failures, and insights with the community.</p>
+                <h3 className="text-2xl font-black text-foreground mb-3">Join the Community</h3>
+                <p className="text-muted-foreground text-sm mb-8 max-w-md mx-auto">Share your reviews, failures, and insights to help others build better products.</p>
                 <div className="flex gap-4 justify-center">
-                    <a href="/login" className="px-6 py-2.5 rounded-xl bg-primary text-white font-bold text-xs uppercase tracking-wider hover:brightness-110 transition-all">
+                    <a href="/login" className="btn-primary px-8">
                         Log In
                     </a>
-                    <a href="/signup" className="px-6 py-2.5 rounded-xl bg-white/5 text-foreground font-bold text-xs uppercase tracking-wider hover:bg-white/10 transition-all">
+                    <a href="/signup" className="btn-secondary px-8 border border-border">
                         Sign Up
                     </a>
                 </div>
@@ -141,11 +141,11 @@ function CreatePost({
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-between items-center pt-2">
                     <label className="flex items-center space-x-3 text-muted-foreground text-xs cursor-pointer select-none group/anon hover:text-primary transition-colors">
-                        <div className={`w-5 h-5 rounded-lg border-2 transition-all flex items-center justify-center ${isAnonymous ? "bg-primary border-primary rotate-12 shadow-sm" : "border-muted-foreground/30 group-hover/anon:border-primary/50"}`}>
+                        <div className={`w-5 h-5 rounded-lg border-2 transition-all flex items-center justify-center ${isAnonymous ? "bg-primary border-primary rotate-12 shadow-sm" : "border-border/50 group-hover/anon:border-primary/50"}`}>
                             {isAnonymous && <span className="text-white text-[10px] font-black">✓</span>}
                         </div>
                         <input type="checkbox" checked={isAnonymous} onChange={(e) => setIsAnonymous(e.target.checked)} className="hidden" />
-                        <span className="font-black uppercase tracking-widest opacity-70 group-hover/anon:opacity-100 transition-all">Post Anonymously</span>
+                        <span className="font-bold uppercase tracking-widest opacity-80 group-hover/anon:opacity-100 transition-all">Post Anonymously</span>
                     </label>
 
                     <div className="flex items-center gap-2">
@@ -170,14 +170,14 @@ function CreatePost({
                         <button
                             onClick={handleSaveDraft}
                             disabled={loading || !content.trim()}
-                            className="flex-1 sm:flex-none px-6 py-3 bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-white rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all"
+                            className="flex-1 sm:flex-none btn-secondary border border-border/50 px-6 py-2.5 text-[10px] uppercase tracking-widest"
                         >
                             Save Draft
                         </button>
                         <button
                             onClick={handleSubmit}
                             disabled={loading || !content.trim()}
-                            className="flex-1 sm:flex-none px-8 py-3 bg-primary text-primary-foreground rounded-xl font-black text-[10px] uppercase tracking-[0.2em] premium-shadow hover:brightness-110 active:scale-95 disabled:opacity-30 disabled:scale-100 transition-all duration-200"
+                            className="flex-1 sm:flex-none btn-primary px-8 py-3 text-[10px] uppercase tracking-[0.2em]"
                         >
                             {loading ? "POSTING..." : "SHARE REVIEW"}
                         </button>

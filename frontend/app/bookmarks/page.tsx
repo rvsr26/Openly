@@ -11,24 +11,20 @@ import PostItem from "../components/PostItem";
 import { useRouter } from "next/navigation";
 import { Post } from "../types";
 
+import { useAuth } from "@/context/AuthContext";
+
 export default function BookmarksPage() {
   const router = useRouter();
-
-  const [user, setUser] = useState<User | null>(null);
+  const { user, loading: authLoading } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /* ---------------- AUTH ---------------- */
+  /* ---------------- AUTH check ---------------- */
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      if (!u) {
-        router.push("/login");
-        return;
-      }
-      setUser(u);
-    });
-    return () => unsub();
-  }, [router]);
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, authLoading, router]);
 
   /* ---------------- FETCH BOOKMARKS ---------------- */
   useEffect(() => {

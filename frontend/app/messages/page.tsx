@@ -19,12 +19,14 @@ import api from '../lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+import { useAuth } from '@/context/AuthContext';
+
 export default function MessagesPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const targetUserId = searchParams.get('user');
 
-    const [currentUser, setCurrentUser] = useState<any>(null);
+    const { user: currentUser, loading: authLoading } = useAuth();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -40,15 +42,10 @@ export default function MessagesPage() {
 
     // Auth check
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                setCurrentUser(user);
-            } else {
-                router.push('/login');
-            }
-        });
-        return () => unsubscribe();
-    }, [router]);
+        if (!authLoading && !currentUser) {
+            router.push('/login');
+        }
+    }, [currentUser, authLoading, router]);
 
     // Scroll to bottom
     const scrollToBottom = () => {
@@ -293,7 +290,7 @@ export default function MessagesPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background pt-24 pb-10 px-4 md:px-8 max-w-[1600px] mx-auto overflow-hidden h-[100vh]">
+        <div className="min-h-screen pt-24 pb-10 px-4 md:px-8 max-w-[1600px] mx-auto overflow-hidden h-[100vh]">
             <div className="grid grid-cols-1 md:grid-cols-[380px_1fr] gap-6 h-full max-h-[calc(100vh-140px)]">
 
                 {/* 1. SIDEBAR (Conversation List) */}
@@ -339,8 +336,8 @@ export default function MessagesPage() {
                                         onClick={() => setActiveConversation(conv)}
                                         whileHover={{ backgroundColor: "rgba(255,255,255,0.05)" }}
                                         className={`w-full p-4 rounded-xl flex items-start gap-4 transition-all text-left group relative overflow-hidden ${activeConversation?.id === conv.id
-                                                ? 'bg-primary/10 border border-primary/20 shadow-lg shadow-primary/5'
-                                                : 'border border-transparent hover:border-white/5'
+                                            ? 'bg-primary/10 border border-primary/20 shadow-lg shadow-primary/5'
+                                            : 'border border-transparent hover:border-white/5'
                                             }`}
                                     >
                                         {/* Avatar */}
@@ -454,8 +451,8 @@ export default function MessagesPage() {
                                                     )}
 
                                                     <div className={`group relative p-3 sm:p-4 rounded-2xl shadow-sm text-sm leading-relaxed ${isMe
-                                                            ? 'bg-primary text-primary-foreground rounded-tr-none'
-                                                            : 'bg-white/10 backdrop-blur-md text-foreground rounded-tl-none border border-white/5'
+                                                        ? 'bg-primary text-primary-foreground rounded-tr-none'
+                                                        : 'bg-white/10 backdrop-blur-md text-foreground rounded-tl-none border border-white/5'
                                                         }`}>
                                                         {msg.content}
 
