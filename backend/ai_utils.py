@@ -1,7 +1,8 @@
 import os
 import requests
 from dotenv import load_dotenv
-import yake
+import re
+from collections import Counter
 
 # 1. Load Environment Variables
 load_dotenv()
@@ -49,16 +50,39 @@ def is_toxic(text: str) -> bool:
 
 def extract_keywords(text: str) -> list:
     """
-    Extracts top keywords from text using YAKE.
+    Extracts top keywords from text using simple frequency analysis.
     """
     if not text or len(text) < 10:
         return []
 
     try:
-        kw_extractor = yake.KeywordExtractor(lan="en", n=2, dedupLim=0.9, top=5, features=None)
-        keywords = kw_extractor.extract_keywords(text)
-        # Return top 5 keywords [key, score] - lower score is better
-        return [kw[0] for kw in keywords]
+        # Simple stopword list
+        stopwords = {
+            "the", "a", "an", "and", "or", "but", "is", "are", "was", "were",
+            "in", "on", "at", "to", "for", "with", "by", "from", "of", "that",
+            "this", "these", "those", "it", "he", "she", "they", "we", "you",
+            "i", "me", "my", "your", "his", "her", "their", "our", "us", "be",
+            "been", "being", "have", "has", "had", "do", "does", "did", "can",
+            "could", "should", "would", "will", "may", "might", "must", "not",
+            "no", "yes", "if", "then", "else", "when", "where", "why", "how",
+            "all", "any", "some", "few", "many", "more", "most", "other", "such",
+            "so", "as", "than", "just", "about", "up", "out", "down", "over",
+            "under", "into", "through", "after", "before", "while", "until"
+        }
+
+        # Normalize text: lowercase and remove non-alphanumeric characters
+        words = re.findall(r'\b\w+\b', text.lower())
+        
+        # Filter out stopwords and short words
+        filtered_words = [w for w in words if w not in stopwords and len(w) > 2]
+        
+        # Count frequency
+        counter = Counter(filtered_words)
+        
+        # Get top 5 most common words
+        most_common = counter.most_common(5)
+        
+        return [word for word, count in most_common]
     except Exception as e:
-        print(f"YAKE Error: {e}")
+        print(f"Keyword Extraction Error: {e}")
         return []

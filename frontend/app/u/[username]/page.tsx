@@ -8,14 +8,17 @@ import Navbar from "../../components/Navbar";
 import PostItem from "../../components/PostItem";
 import { useParams } from "next/navigation";
 import { auth } from "../../firebase";
-import { onAuthStateChanged, User } from "firebase/auth";
 import { UserPlus, Check, Clock, MessageSquare, Briefcase } from "lucide-react";
 import Link from "next/link";
 import { Post } from "../../types";
+import { useAuth } from "@/context/AuthContext";
+import ProfileTabs from "../../profile/ProfileTabs";
+import ProfileContent from "../../profile/ProfileContent";
+import ProfileStats from "../../profile/ProfileStats";
 
 export default function PublicProfilePage() {
   const { username } = useParams();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { user: currentUser, loading: authLoading } = useAuth();
 
   const [profile, setProfile] = useState<{
     user_info: {
@@ -24,6 +27,9 @@ export default function PublicProfilePage() {
       display_name: string;
       photo?: string;
       headline?: string;
+      experiences?: any[];
+      education?: any[];
+      skills?: any[];
     };
     stats: {
       total_posts: number;
@@ -36,11 +42,7 @@ export default function PublicProfilePage() {
 
   const [connectionStatus, setConnectionStatus] = useState<"none" | "pending" | "accepted" | "self">("none");
   const [isSender, setIsSender] = useState(false);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => setCurrentUser(u));
-    return () => unsubscribe();
-  }, []);
+  const [activeTab, setActiveTab] = useState("Overview");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -81,7 +83,7 @@ export default function PublicProfilePage() {
     };
 
     if (username) fetchData();
-  }, [username, currentUser]);
+  }, [username, currentUser, authLoading]);
 
 
 
@@ -211,22 +213,20 @@ export default function PublicProfilePage() {
           </div>
         </div>
 
-        {/* POSTS */}
-        <h2 className="text-xl font-bold mb-4">Reviews Shared</h2>
+        {/* CONTENT TABS */}
+        <ProfileTabs activeTab={activeTab} setActiveTab={setActiveTab} />
 
-        {profile.posts.length === 0 && (
-          <div className="glass-card rounded-xl p-8 text-center text-muted-foreground">
-            No public posts shared yet.
-          </div>
-        )}
-
-        <div className="space-y-4">
-          {profile.posts.map((post: Post) => (
-            <div key={post.id} className={post.is_rejected ? "opacity-75 grayscale" : ""}>
-              <PostItem post={post} />
-            </div>
-          ))}
-        </div>
+        <ProfileContent
+          activeTab={activeTab}
+          posts={profile.posts}
+          user={profile.user_info}
+          isOwner={currentUser?.uid === profile.user_info.id}
+          onRefresh={() => {
+            if (username) {
+              api.get(`/users/username/${username}`).then(res => setProfile(res.data));
+            }
+          }}
+        />
 
       </main>
     </div>

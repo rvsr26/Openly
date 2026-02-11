@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback, memo, useMemo } from "react";
 import { Post, Comment } from "../types";
-import { User } from "firebase/auth";
 import { auth } from "../firebase";
-import { onAuthStateChanged } from "firebase/auth";
 import Link from "next/link";
 import Image from "next/image";
+import { useAuth } from "@/context/AuthContext";
 import {
   ThumbsUp,
   ThumbsDown,
@@ -43,7 +42,7 @@ const CommentItem = ({
   depth = 0
 }: {
   comment: Comment,
-  currentUser: User | null,
+  currentUser: any | null,
   onReply: (parentId: string, content: string) => void,
   depth?: number
 }) => {
@@ -68,28 +67,28 @@ const CommentItem = ({
           src={getAbsUrl(comment.user_pic) || '/assets/default-user.png'}
           width={24}
           height={24}
-          className="rounded-full ring-1 ring-white/10 object-cover"
+          className="rounded-full ring-2 ring-primary/20 object-cover shadow-sm"
           alt={comment.user_name}
         />
         <div className="flex-1">
-          <div className="bg-white/5 rounded-2xl rounded-tl-none px-3 py-2 inline-block max-w-full">
-            <span className="font-bold text-xs text-white mr-2 block mb-0.5">{comment.user_name}</span>
-            <span className="text-xs text-indigo-100/80 leading-relaxed block whitespace-pre-wrap break-words">{comment.content}</span>
+          <div className="bg-white/5 backdrop-blur-md border border-white/5 rounded-2xl rounded-tl-none px-3 py-2 inline-block max-w-full shadow-sm">
+            <span className="font-bold text-xs text-foreground mr-2 block mb-0.5">{comment.user_name}</span>
+            <span className="text-xs text-foreground/80 leading-relaxed block whitespace-pre-wrap break-words">{comment.content}</span>
           </div>
 
           <div className="flex items-center gap-4 mt-1 ml-1">
-            <span className="text-[10px] text-white/30 font-bold uppercase tracking-wider">
+            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
               {comment.created_at ? formatDistanceToNow(new Date(comment.created_at), { addSuffix: true }) : 'Just now'}
             </span>
             {currentUser && (
               <button
                 onClick={() => setIsReplying(!isReplying)}
-                className="text-[10px] text-white/50 hover:text-primary font-bold uppercase tracking-wider transition-colors"
+                className="text-[10px] text-primary hover:text-primary/80 font-bold uppercase tracking-wider transition-colors"
               >
                 Reply
               </button>
             )}
-            {comment.id.startsWith('temp-') && <span className="text-[10px] text-white/30 italic">(Posting...)</span>}
+            {comment.id.startsWith('temp-') && <span className="text-[10px] text-muted-foreground italic">(Posting...)</span>}
           </div>
         </div>
       </div>
@@ -144,7 +143,7 @@ function buildCommentTree(comments: Comment[]): Comment[] {
 
 function PostItem({ post }: { post: Post }) {
   /* ---------------- STATE ---------------- */
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { user: currentUser } = useAuth();
 
   // Stats
   // Real view count from DB + local increment
@@ -198,21 +197,15 @@ function PostItem({ post }: { post: Post }) {
 
   /* ---------------- AUTH & VIEW ---------------- */
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setCurrentUser(u);
-
-      // Record view only once per session/mount and preferably if user is loaded (or guest)
-      if (!viewRecorded.current) {
-        viewRecorded.current = true;
-        // Fire and forget
-        api.post(`/posts/${post.id}/view`, { user_id: u ? u.uid : "guest" })
-          .catch(err => console.error("View count error", err));
-        setViewCount(v => v + 1); // Optimistic increment
-      }
-    });
-
-    return () => unsubscribe();
-  }, [post.id]);
+    // Record view only once per session/mount and preferably if user is loaded (or guest)
+    if (!viewRecorded.current) {
+      viewRecorded.current = true;
+      // Fire and forget
+      api.post(`/posts/${post.id}/view`, { user_id: currentUser ? currentUser.uid : "guest" })
+        .catch(err => console.error("View count error", err));
+      setViewCount(v => v + 1); // Optimistic increment
+    }
+  }, [post.id, currentUser?.uid]);
 
 
   /* ---------------- HANDLERS ---------------- */

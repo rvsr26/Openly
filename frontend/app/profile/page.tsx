@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import api from "../lib/api";
 
-import Navbar from "../components/Navbar";
 import { auth } from "../firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -14,10 +13,11 @@ import ProfileStats from "./ProfileStats";
 import ProfileTabs from "./ProfileTabs";
 import ProfileContent from "./ProfileContent";
 
+import { useAuth } from "@/context/AuthContext";
+
 export default function ProfilePage() {
   const router = useRouter();
-
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState<{
     user_info: {
@@ -33,47 +33,38 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("Overview");
 
-  /* ---------------- AUTH ---------------- */
-  useEffect(() => {
-    /* ---------------- FETCH PROFILE ---------------- */
-    const fetchProfile = async (uid: string) => {
-      try {
-        const res = await api.get(
-          `/users/${uid}/profile`
-        );
+  /* ---------------- FETCH PROFILE ---------------- */
+  const fetchProfile = useCallback(async (uid: string) => {
+    try {
+      setLoading(true);
+      const res = await api.get(`/users/${uid}/profile`);
 
-        if (!res.data?.user_info) {
-          setError("Profile not initialized.");
-          return;
-        }
-
-        if (!res.data.user_info.username) {
-          router.push("/setup-username");
-          return;
-        }
-
-        setProfileData(res.data);
-      } catch (e) {
-        console.error(e);
-        setError("Failed to load profile.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-
-      if (!currentUser) {
-        setLoading(false);
+      if (!res.data?.user_info) {
+        setError("Profile not initialized.");
         return;
       }
 
-      fetchProfile(currentUser.uid);
-    });
+      if (!res.data.user_info.username) {
+        router.push("/setup-username");
+        return;
+      }
 
-    return () => unsubscribe();
+      setProfileData(res.data);
+    } catch (e) {
+      console.error(e);
+      setError("Failed to load profile.");
+    } finally {
+      setLoading(false);
+    }
   }, [router]);
+
+  useEffect(() => {
+    if (user) {
+      fetchProfile(user.uid);
+    } else {
+      setLoading(false);
+    }
+  }, [user, fetchProfile]);
 
 
   /* ---------------- STATES ---------------- */
@@ -88,7 +79,6 @@ export default function ProfilePage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar />
         <div className="flex items-center justify-center h-[80vh]">
           <div className="glass-card p-8 text-center rounded-2xl border border-border">
             <h2 className="text-2xl font-bold text-foreground">
@@ -105,8 +95,7 @@ export default function ProfilePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
+      <div className="min-h-screen">
         <div className="flex items-center justify-center h-[80vh]">
           <div className="text-center text-destructive">{error}</div>
         </div>
@@ -117,8 +106,7 @@ export default function ProfilePage() {
   if (!profileData) return null;
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20">
-      <Navbar />
+    <div className="min-h-screen pb-20">
 
       <main className="mt-28 max-w-6xl mx-auto px-4">
 
@@ -157,7 +145,9 @@ export default function ProfilePage() {
             <ProfileContent
               activeTab={activeTab}
               posts={profileData.posts}
-              user={user}
+              user={profileData.user_info}
+              isOwner={true}
+              onRefresh={() => fetchProfile(user.uid)}
             />
           </div>
         </div>

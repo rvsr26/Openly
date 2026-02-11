@@ -16,6 +16,7 @@ interface Notification {
   id: string;
   type: string;
   actor_name: string;
+  actor_username: string;
   actor_pic: string;
   resource_id: string;
   message?: string;
@@ -23,15 +24,12 @@ interface Notification {
   created_at: string;
 }
 
+import { useAuth } from "@/context/AuthContext";
+
 export default function NotificationsPage() {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const { user: currentUser } = useAuth();
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => setCurrentUser(u));
-    return () => unsubscribe();
-  }, []);
 
   const { data: notifications = [] } = useQuery<Notification[]>({
     queryKey: ["notifications", currentUser?.uid],
@@ -72,7 +70,7 @@ export default function NotificationsPage() {
                 onClick={() => {
                   if (!notif.is_read) readMutation.mutate(notif.id);
                   if (notif.type === "connection_request" || notif.type === "connection_accepted") {
-                    router.push(`/u/${notif.actor_name}`);
+                    router.push(`/u/${notif.actor_username || notif.actor_name}`);
                   } else {
                     router.push(`/post/${notif.resource_id}`);
                   }

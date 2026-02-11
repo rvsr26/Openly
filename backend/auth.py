@@ -15,6 +15,10 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from database import users_collection, verification_tokens_collection, password_reset_tokens_collection
 import jwt
+import pyotp
+import qrcode
+import io
+import base64
 
 # Configuration
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
@@ -77,8 +81,9 @@ def verify_token(token: str) -> dict:
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
-    except jwt.JWTError:
+    except jwt.PyJWTError:  # Use PyJWTError for PyJWT library
         raise HTTPException(status_code=401, detail="Invalid token")
+
 
 async def get_current_user(authorization: str = Header(None)):
     """Get current user from JWT token"""
@@ -361,3 +366,109 @@ async def handle_oauth_login(provider: str, access_token: str, user_info: dict):
         "token_type": "bearer",
         "user_id": user_id
     }
+
+# Account Management
+async def verify_password(user_id: str, password: str) -> bool:
+    """Verify user password"""
+    user = await users_collection.find_one({"_id": user_id})
+    if not user or "password_hash" not in user:
+        return False
+    
+    # Hash provided password
+    hashed = hashlib.sha256(password.encode()).hexdigest()
+    return hashed == user["password_hash"]
+
+async def change_password(user_id: str, new_password: str):
+    """Update user password"""
+    hashed = hashlib.sha256(new_password.encode()).hexdigest()
+    await users_collection.update_one(
+        {"_id": user_id},
+        {
+            "$set": {
+                "password_hash": hashed,
+                "password_updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+
+async def toggle_two_factor(user_id: str, enable: bool):
+    """Toggle 2FA status"""
+    await users_collection.update_one(
+        {"_id": user_id},
+        {"$set": {"two_factor_enabled": enable}}
+    )
+
+async def deactivate_user(user_id: str):
+    """Soft delete user"""
+    await users_collection.update_one(
+        {"_id": user_id},
+        {"$set": {"is_active": False, "deactivated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+
+async def delete_user(user_id: str):
+    """Hard delete user and related data"""
+    # Delete user
+    await users_collection.delete_one({"_id": user_id})
+    # Delete sessions/tokens
+    await verification_tokens_collection.delete_many({"user_id": user_id})
+    await password_reset_tokens_collection.delete_many({"user_id": user_id})
+    # We might want to keep posts/comments but anonymize them, or delete them.
+    # The request says "Permanently removes all data".
+    await posts_collection.delete_many({"user_id": user_id})
+    await comments_collection.delete_many({"user_id": user_id})
+    await reactions_collection.delete_many({"user_id": user_id})
+
+# MFA / 2FA Logic
+def generate_2fa_secret() -> str:
+    """Generate a random base32 secret for TOTP"""
+    return pyotp.random_base32()
+
+def get_2fa_qr_code(email: str, secret: str) -> str:
+    """Generate a QR code for the TOTP secret (returns base64 image)"""
+    totp = pyotp.TOTP(secret)
+    provisioning_uri = totp.provisioning_uri(name=email, issuer_name="Openly")
+    
+    # Generate QR code
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(provisioning_uri)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Convert to base64
+    buffered = io.BytesIO()
+    img.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    
+    return f"data:image/png;base64,{img_str}"
+
+def verify_2fa_code(secret: str, code: str) -> bool:
+    """Verify a TOTP code against the secret"""
+    totp = pyotp.TOTP(secret)
+    return totp.verify(code)
+
+async def authenticate_user(email: str, password: str):
+    """
+    Authenticate user with email and password.
+    Returns:
+        - dict: User document if successful and no 2FA
+        - dict: {"2fa_required": True, "user_id": ...} if 2FA is enabled
+        - None: If authentication fails
+    """
+    user = await users_collection.find_one({"email": email})
+    if not user:
+        return None
+        
+    if "password_hash" not in user:
+        # User might have signed up with OAuth only
+        return None
+        
+    hashed_password = hashlib.sha256(password.encode()).hexdigest()
+    if hashed_password != user["password_hash"]:
+        return None
+        
+    # Check if 2FA is enabled
+    if user.get("two_factor_enabled", False):
+        return {"2fa_required": True, "user_id": str(user["_id"])}
+        
+    return user

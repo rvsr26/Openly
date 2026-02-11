@@ -15,20 +15,21 @@ interface Draft {
     updated_at: string;
 }
 
+import { useAuth } from "@/context/AuthContext";
+
 export default function DraftsPage() {
-    const [user, setUser] = useState<User | null>(null);
+    const { user, loading: authLoading } = useAuth();
     const [drafts, setDrafts] = useState<Draft[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (u) => {
-            setUser(u);
-            if (u) fetchDrafts(u.uid);
-            else setLoading(false);
-        });
-        return () => unsubscribe();
-    }, []);
+        if (user) {
+            fetchDrafts(user.uid);
+        } else if (!authLoading) {
+            setLoading(false);
+        }
+    }, [user, authLoading]);
 
     const fetchDrafts = async (uid: string) => {
         try {

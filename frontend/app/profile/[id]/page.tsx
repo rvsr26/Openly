@@ -5,7 +5,7 @@ import axios from "axios";
 import api from "../../lib/api";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Share2 } from "lucide-react";
 
 import Navbar from "../../components/Navbar";
 import { Post } from "../../types";
@@ -103,15 +103,28 @@ export default function PublicProfile() {
           </div>
 
           {/* Send Message Button */}
-          {!isOwnProfile && currentUser && (
+          <div className="flex gap-3 mt-4 md:mt-0 w-full md:w-auto">
+            {!isOwnProfile && currentUser && (
+              <button
+                onClick={handleSendMessage}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all"
+              >
+                <MessageCircle size={20} />
+                <span>Message</span>
+              </button>
+            )}
             <button
-              onClick={handleSendMessage}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg hover:scale-105 transition-all"
+              onClick={() => {
+                const url = window.location.href;
+                navigator.clipboard.writeText(url);
+                alert("Profile link copied!");
+              }}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
             >
-              <MessageCircle size={20} />
-              Send Message
+              <Share2 size={20} />
+              <span>Share</span>
             </button>
-          )}
+          </div>
         </div>
 
         {/* POSTS FEED */}

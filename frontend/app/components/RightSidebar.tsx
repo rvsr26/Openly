@@ -13,7 +13,7 @@ interface TrendingTopic {
 }
 
 interface RightSidebarProps {
-    user: User | null;
+    user: any | null;
     userPhoto?: string;
 }
 
@@ -32,16 +32,30 @@ function RightSidebar({
     });
 
     // Fetch Suggested Users
-    const { data: suggestedUsers = [] } = useQuery({
+    const { data: suggestedUsers = [], refetch: refetchSuggested } = useQuery({
         queryKey: ["suggestedUsers", user?.uid],
         queryFn: async () => {
-            // Fetch users, passing current user ID to exclude them
             const res = await api.get(`/users/suggested?user_id=${user?.uid || ''}`);
             return res.data;
         },
-        staleTime: 1000 * 60 * 5, // 5 mins
+        staleTime: 1000 * 60 * 5,
         enabled: true
     });
+
+    const handleConnect = async (targetId: string) => {
+        if (!user) {
+            alert("Please login to connect");
+            return;
+        }
+        try {
+            await api.post(`/connect/${targetId}`, {
+                requester_id: user.uid
+            });
+            refetchSuggested();
+        } catch (e) {
+            console.error("Failed to connect", e);
+        }
+    };
 
     return (
         <div className="w-full space-y-6">
@@ -119,7 +133,10 @@ function RightSidebar({
                                         <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-wide truncate">@{u.username}</p>
                                     </div>
                                 </div>
-                                <button className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all">
+                                <button
+                                    onClick={() => handleConnect(u.uid)}
+                                    className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-[9px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all"
+                                >
                                     Follow
                                 </button>
                             </div>

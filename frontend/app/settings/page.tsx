@@ -1,308 +1,474 @@
 "use client";
 
-import Navbar from "../components/Navbar";
-import { Settings, Save, User, FileText, Lock, LogOut, Bell, Shield, Smartphone, ChevronRight } from "lucide-react";
+import { Settings, User, Lock, LogOut, Shield, Activity, Save, AlertTriangle, Key, Trash2, Camera, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
-import { useAuth } from "../context/AuthContext";
-import api from "../lib/api";
-import { auth } from "../firebase";
+import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { profileApi } from "../lib/profileApi";
+import { authApi } from "../lib/authApi";
+import { uploadImage } from "../lib/api";
 
 export default function SettingsPage() {
+    const { user } = useAuth();
+    const router = useRouter();
+    const [activeTab, setActiveTab] = useState("profile");
     const [isLoading, setIsLoading] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState("profile"); // profile, account, notifications, security
 
-    // Form States
+    // Profile Fields
     const [displayName, setDisplayName] = useState("");
     const [bio, setBio] = useState("");
     const [photoURL, setPhotoURL] = useState("");
-    const [currentUser, setCurrentUser] = useState<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const router = useRouter();
+    // Password Fields
+    const [oldPassword, setOldPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+
+    // Activity Log
+    const [activityLog, setActivityLog] = useState<any[]>([]);
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                setCurrentUser(user);
-                fetchProfile(user.uid);
-            } else {
-                router.push("/login");
-            }
-        });
-        return () => unsubscribe();
-    }, []);
+        if (user) {
+            loadProfile();
+            if (activeTab === "account") loadActivity();
+        }
+    }, [user, activeTab]);
 
-    const fetchProfile = async (uid: string) => {
+    const loadProfile = async () => {
+        if (user) {
+            try {
+                const data = await profileApi.getProfile(user.uid);
+                if (data && data.user_info) {
+                    setDisplayName(data.user_info.display_name || user.displayName || "");
+                    setBio(data.user_info.bio || "");
+                    setPhotoURL(data.user_info.photoURL || user.photoURL || "");
+                }
+            } catch (e) {
+                console.error("Failed to load profile", e);
+                // Fallback to auth data
+                setDisplayName(user.displayName || "");
+                setPhotoURL(user.photoURL || "");
+            }
+        }
+    };
+
+    const loadActivity = async () => {
+        try {
+            const logs = await profileApi.getActivity();
+            setActivityLog(logs);
+        } catch (error) {
+            console.error("Failed to load activity", error);
+        }
+    };
+
+    const handleUpdateProfile = async (e: React.FormEvent) => {
+        e.preventDefault();
         setIsLoading(true);
         try {
-            const res = await api.get(`/users/${uid}/profile`);
-            if (res.data && res.data.user_info) {
-                setDisplayName(res.data.user_info.display_name || "");
-                setBio(res.data.user_info.bio || "");
-                setPhotoURL(res.data.user_info.photoURL || "");
-            }
+            await profileApi.updateProfile(user!.uid, {
+                display_name: displayName,
+                bio: bio,
+                photoURL: photoURL
+            });
+            toast.success("Profile updated successfully");
         } catch (error) {
-            console.error("Failed to fetch profile", error);
-            toast.error("Failed to load profile data.");
+            toast.error("Failed to update profile");
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleSave = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!currentUser) return;
-
-        setIsSaving(true);
-        try {
-            await api.put(`/users/${currentUser.uid}`, {
-                display_name: displayName,
-                bio: bio,
-                photoURL: photoURL
-            });
-            toast.success("Profile updated successfully!");
-        } catch (error) {
-            console.error("Failed to update profile", error);
-            toast.error("Failed to update profile.");
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Optimistic update (optional) or loading state
-        const loadingToast = toast.loading("Uploading avatar...");
-
-        const formData = new FormData();
-        formData.append("file", file);
-
+        const toastId = toast.loading("Uploading avatar...");
         try {
-            const res = await api.post("/upload", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-
-            if (res.data.url) {
-                setPhotoURL(res.data.url);
-                toast.success("Avatar uploaded!", { id: loadingToast });
-            }
+            const url = await uploadImage(file);
+            setPhotoURL(url);
+            toast.success("Avatar uploaded", { id: toastId });
         } catch (error) {
-            console.error("Upload failed", error);
-            toast.error("Failed to upload avatar.", { id: loadingToast });
+            toast.error("Upload failed", { id: toastId });
         }
     };
 
-    const handleAvatarClick = () => {
-        fileInputRef.current?.click();
+    const handleChangePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newPassword !== confirmPassword) {
+            toast.error("New passwords do not match");
+            return;
+        }
+        setIsLoading(true);
+        try {
+            await authApi.changePassword(oldPassword, newPassword);
+            toast.success("Password changed successfully");
+            setOldPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+        } catch (error: any) {
+            toast.error(error.response?.data?.detail || "Failed to change password");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const handleLogout = async () => {
-        if (confirm("Are you sure you want to log out?")) {
-            try {
-                await auth.signOut();
-                router.push("/login");
-            } catch (error) {
-                console.error("Logout failed", error);
-                toast.error("Logout failed");
-            }
+    const handleToggle2FA = async (enabled: boolean) => {
+        try {
+            await authApi.toggle2FA(enabled);
+            toast.success(`Two-Factor Authentication ${enabled ? 'enabled' : 'disabled'}`);
+        } catch (error) {
+            toast.error("Failed to update 2FA settings");
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        if (!confirm("Are you sure you want to permanently delete your account? This cannot be undone.")) return;
+        try {
+            await profileApi.deleteAccount();
+            router.push("/login");
+            toast.success("Account deleted");
+        } catch (error) {
+            toast.error("Failed to delete account");
         }
     };
 
     const settingsTabs = [
         { id: "profile", label: "Edit Profile", icon: User },
-        { id: "notifications", label: "Notifications", icon: Bell },
-        { id: "security", label: "Privacy & Security", icon: Shield },
-        { id: "account", label: "Account Actions", icon: Settings },
+        { id: "account", label: "Account & Activity", icon: Settings },
+        { id: "privacy", label: "Privacy & Security", icon: Shield },
+        { id: "reports", label: "Activity Reports", icon: Activity },
     ];
 
+    if (!user) return null;
+
     return (
-        <div className="min-h-screen bg-background text-foreground pb-20">
-            <Navbar />
+        <div className="min-h-screen bg-background text-foreground pb-20 relative overflow-hidden">
 
-            <main className="pt-28 max-w-6xl mx-auto px-4 md:px-8">
-                {/* Header Section */}
-                <div className="mb-10">
-                    <h1 className="text-4xl font-black mb-2 bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent inline-block">
-                        Settings
-                    </h1>
-                    <p className="text-muted-foreground font-medium text-lg">
-                        Manage your profile, preferences, and account security.
-                    </p>
-                </div>
 
-                <div className="flex flex-col md:flex-row gap-8">
-                    {/* Sidebar Navigation */}
-                    <div className="w-full md:w-64 flex-shrink-0 space-y-2">
+
+            <main className="relative z-10 pt-32 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row gap-10">
+
+                {/* Sidebar Navigation */}
+                <aside className="w-full lg:w-72 flex-shrink-0">
+                    <div className="sticky top-32 glass-premium p-4 space-y-2">
+                        <div className="px-4 py-3 mb-2">
+                            <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Settings</h2>
+                        </div>
                         {settingsTabs.map((tab) => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`w-full flex items-center justify-between p-4 rounded-xl transition-all duration-200 font-bold text-sm ${activeTab === tab.id
-                                    ? "bg-primary text-white shadow-lg shadow-primary/25"
-                                    : "bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+                                className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl font-medium transition-all duration-300 group ${activeTab === tab.id
+                                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25 translate-x-1"
+                                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:translate-x-1"
                                     }`}
                             >
-                                <div className="flex items-center gap-3">
-                                    <tab.icon size={18} />
-                                    <span>{tab.label}</span>
-                                </div>
-                                {activeTab === tab.id && <ChevronRight size={16} />}
+                                <tab.icon size={20} className={activeTab === tab.id ? "animate-pulse" : "group-hover:scale-110 transition-transform"} />
+                                {tab.label}
+                                {activeTab === tab.id && (
+                                    <motion.div layoutId="active-indicator" className="ml-auto w-1.5 h-1.5 rounded-full bg-white" />
+                                )}
                             </button>
                         ))}
-
-                        <div className="pt-6 mt-6 border-t border-white/5">
-                            <button
-                                onClick={handleLogout}
-                                className="w-full flex items-center gap-3 p-4 rounded-xl text-red-500 hover:bg-red-500/10 transition-colors font-bold text-sm"
-                            >
-                                <LogOut size={18} />
-                                <span>Sign Out</span>
-                            </button>
-                        </div>
                     </div>
+                </aside>
 
-                    {/* Content Area */}
-                    <div className="flex-1">
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={activeTab}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                {activeTab === "profile" && (
-                                    <div className="glass-card p-6 md:p-10 space-y-8">
-                                        <div className="flex items-center gap-4 mb-2">
-                                            <div
-                                                onClick={handleAvatarClick}
-                                                className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-2xl font-black text-white shadow-xl cursor-pointer hover:opacity-80 transition-opacity relative overflow-hidden group"
-                                            >
-                                                {photoURL ? (
-                                                    <img src={photoURL} alt="Profile" className="w-full h-full object-cover" />
-                                                ) : displayName ? displayName[0] : <User />}
+                {/* Main Content */}
+                <div className="flex-1 min-w-0">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={activeTab}
+                            initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -20, scale: 0.98 }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                            className="space-y-6"
+                        >
+                            {/* --- PROFILE TAB --- */}
+                            {activeTab === "profile" && (
+                                <div className="glass-card p-8 md:p-10 space-y-10 relative overflow-hidden">
+                                    {/* Decorative top gradient */}
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-purple-500 to-primary/0" />
 
-                                                {/* Hover Overlay */}
-                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <span className="text-[10px] uppercase font-bold text-white">Edit</span>
-                                                </div>
-                                            </div>
-                                            <input
-                                                type="file"
-                                                ref={fileInputRef}
-                                                className="hidden"
-                                                accept="image/*"
-                                                onChange={handleFileChange}
-                                            />
-                                            <div>
-                                                <h2 className="text-2xl font-bold">Profile Details</h2>
-                                                <p className="text-muted-foreground text-sm">Update your public profile information.</p>
-                                            </div>
-                                        </div>
-
-                                        {isLoading ? (
-                                            <div className="animate-pulse space-y-4">
-                                                <div className="h-12 bg-white/5 rounded-xl w-full"></div>
-                                                <div className="h-32 bg-white/5 rounded-xl w-full"></div>
-                                            </div>
-                                        ) : (
-                                            <form onSubmit={handleSave} className="space-y-6">
-                                                <div className="grid gap-2">
-                                                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Display Name</label>
-                                                    <div className="relative">
-                                                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                                                        <input
-                                                            type="text"
-                                                            value={displayName}
-                                                            onChange={(e) => setDisplayName(e.target.value)}
-                                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
-                                                            placeholder="Your Name"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid gap-2">
-                                                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Bio</label>
-                                                    <div className="relative">
-                                                        <FileText className="absolute left-4 top-4 text-muted-foreground" size={18} />
-                                                        <textarea
-                                                            value={bio}
-                                                            onChange={(e) => setBio(e.target.value)}
-                                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 h-32 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium resize-none leading-relaxed"
-                                                            placeholder="Tell the community about yourself..."
-                                                        />
-                                                    </div>
-                                                    <p className="text-xs text-muted-foreground text-right">{bio.length}/160 characters</p>
-                                                </div>
-
-                                                <div className="flex justify-end pt-4">
-                                                    <button
-                                                        type="submit"
-                                                        disabled={isSaving}
-                                                        className="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-primary/25 disabled:opacity-50 flex items-center gap-2"
-                                                    >
-                                                        {isSaving ? <span className="animate-spin">⏳</span> : <Save size={18} />}
-                                                        Save Changes
-                                                    </button>
-                                                </div>
-                                            </form>
-                                        )}
+                                    <div>
+                                        <h2 className="text-3xl font-bold tracking-tight mb-2">Public Profile</h2>
+                                        <p className="text-muted-foreground">Manage how you appear to the community.</p>
                                     </div>
-                                )}
 
-                                {activeTab === "notifications" && (
-                                    <div className="glass-card p-6 md:p-10 text-center py-20">
-                                        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 text-primary">
-                                            <Bell size={40} />
+                                    <div className="flex flex-col sm:flex-row items-center gap-8 pb-8 border-b border-border/40">
+                                        <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                                            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-background shadow-2xl ring-2 ring-border/50 group-hover:ring-primary/50 transition-all">
+                                                <img src={photoURL || "/assets/default_avatar.png"} alt="Avatar" className="w-full h-full object-cover" />
+                                            </div>
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all rounded-full backdrop-blur-sm">
+                                                <Camera size={32} className="text-white drop-shadow-md" />
+                                            </div>
+                                            <input type="file" ref={fileInputRef} onChange={handleAvatarChange} className="hidden" accept="image/*" />
                                         </div>
-                                        <h3 className="text-xl font-bold mb-2">Notifications Coming Soon</h3>
-                                        <p className="text-muted-foreground max-w-md mx-auto">
-                                            We're working on giving you granular control over your push and email notifications. Stay tuned!
-                                        </p>
-                                    </div>
-                                )}
-
-                                {activeTab === "security" && (
-                                    <div className="glass-card p-6 md:p-10 text-center py-20">
-                                        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6 text-primary">
-                                            <Shield size={40} />
-                                        </div>
-                                        <h3 className="text-xl font-bold mb-2">Privacy & Security</h3>
-                                        <p className="text-muted-foreground max-w-md mx-auto">
-                                            Advanced security features like 2FA and session management are currently in development.
-                                        </p>
-                                    </div>
-                                )}
-
-                                {activeTab === "account" && (
-                                    <div className="glass-card p-6 md:p-10 space-y-8">
-                                        <h2 className="text-2xl font-bold text-red-500 flex items-center gap-2">
-                                            <Lock size={24} />
-                                            Danger Zone
-                                        </h2>
-
-                                        <div className="border border-red-500/20 bg-red-500/5 rounded-2xl p-6">
-                                            <h3 className="font-bold text-lg mb-2">Delete Account</h3>
-                                            <p className="text-muted-foreground text-sm mb-6">
-                                                Permanently delete your account and all of your content. This action cannot be undone.
-                                            </p>
-                                            <button className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-6 py-2.5 rounded-xl font-bold transition-all text-sm border border-red-500/20 hover:border-red-500">
-                                                Delete Account
+                                        <div className="text-center sm:text-left space-y-2">
+                                            <h3 className="font-bold text-xl">{user.email}</h3>
+                                            <div className="flex items-center gap-2 justify-center sm:justify-start text-sm text-muted-foreground">
+                                                <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                                                Online Status: Visible
+                                            </div>
+                                            <button onClick={() => fileInputRef.current?.click()} className="text-primary text-sm font-medium hover:underline">
+                                                Change Profile Photo
                                             </button>
                                         </div>
                                     </div>
-                                )}
-                            </motion.div>
-                        </AnimatePresence>
-                    </div>
+
+                                    <form onSubmit={handleUpdateProfile} className="space-y-8 max-w-2xl">
+                                        <div className="space-y-4">
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-bold ml-1">Display Name</label>
+                                                <input
+                                                    value={displayName}
+                                                    onChange={(e) => setDisplayName(e.target.value)}
+                                                    className="input-field"
+                                                    placeholder="e.g. Alex Doe"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-bold ml-1">Bio</label>
+                                                <textarea
+                                                    value={bio}
+                                                    onChange={(e) => setBio(e.target.value)}
+                                                    className="input-field min-h-[150px] resize-y"
+                                                    placeholder="Share a bit about yourself..."
+                                                />
+                                                <p className="text-xs text-muted-foreground text-right">{bio.length}/500</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-end pt-4">
+                                            <button
+                                                type="submit"
+                                                disabled={isLoading}
+                                                className="btn-primary w-full sm:w-auto min-w-[150px] flex items-center justify-center gap-2"
+                                            >
+                                                {isLoading ? "Saving..." : <><Save size={18} /> Save Changes</>}
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            )}
+
+                            {/* --- ACCOUNT TAB --- */}
+                            {activeTab === "account" && (
+                                <div className="space-y-8">
+                                    {/* Activity Log */}
+                                    <div className="glass-card p-8">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div>
+                                                <h2 className="text-2xl font-bold">Recent Activity</h2>
+                                                <p className="text-muted-foreground text-sm">Your latest actions and security events.</p>
+                                            </div>
+                                            <button className="text-primary text-sm font-medium hover:underline">View All</button>
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            {activityLog.length === 0 ? (
+                                                <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-2xl border border-border/50">
+                                                    <Activity size={40} className="mx-auto mb-3 opacity-20" />
+                                                    <p>No recent activity recorded.</p>
+                                                </div>
+                                            ) : (
+                                                activityLog.map((log, i) => (
+                                                    <div key={i} className="group flex items-center justify-between p-4 rounded-xl hover:bg-muted/40 transition-colors border border-transparent hover:border-border/50">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                                                                <Activity size={18} />
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-semibold text-sm">{log.action}</p>
+                                                                <p className="text-xs text-muted-foreground">{log.details}</p>
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-xs font-mono text-muted-foreground bg-muted/30 px-2 py-1 rounded-md">
+                                                            {new Date(log.date).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Danger Zone */}
+                                    <div className="glass-card p-8 border-l-4 border-l-destructive/50 overflow-hidden relative">
+                                        <div className="absolute top-0 right-0 p-8 opacity-5">
+                                            <AlertTriangle size={120} />
+                                        </div>
+
+                                        <h2 className="text-2xl font-bold text-destructive flex items-center gap-2 mb-6">
+                                            Danger Zone
+                                        </h2>
+
+                                        <div className="grid gap-6">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-destructive/5 border border-destructive/10">
+                                                <div>
+                                                    <h3 className="font-bold">Deactivate Account</h3>
+                                                    <p className="text-sm text-muted-foreground">Hide your profile and content temporarily.</p>
+                                                </div>
+                                                <button onClick={() => profileApi.deactivateAccount().then(() => toast.success("Deactivated (Simulated)"))} className="px-5 py-2.5 bg-background border border-destructive/20 text-destructive rounded-xl hover:bg-destructive hover:text-white transition-all text-sm font-medium whitespace-nowrap">
+                                                    Deactivate User
+                                                </button>
+                                            </div>
+
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
+                                                <div>
+                                                    <h3 className="font-bold">Delete Account</h3>
+                                                    <p className="text-sm text-muted-foreground">Permanently remove all data. This cannot be undone.</p>
+                                                </div>
+                                                <button onClick={handleDeleteAccount} className="px-5 py-2.5 bg-destructive text-white rounded-xl hover:bg-destructive/90 shadow-lg shadow-destructive/20 transition-all text-sm font-medium flex items-center gap-2 whitespace-nowrap">
+                                                    <Trash2 size={16} /> Delete Account
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* --- PRIVACY TAB --- */}
+                            {activeTab === "privacy" && (
+                                <div className="glass-card p-8 md:p-10 space-y-10">
+                                    {/* Change Password */}
+                                    <section>
+                                        <div className="flex items-center gap-4 mb-6">
+                                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white shadow-lg">
+                                                <Key size={24} />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-2xl font-bold">Password</h2>
+                                                <p className="text-muted-foreground text-sm">Update your password security.</p>
+                                            </div>
+                                        </div>
+
+                                        <form onSubmit={handleChangePassword} className="max-w-xl space-y-5 bg-muted/10 p-6 rounded-2xl border border-border/50">
+                                            <div className="space-y-2">
+                                                <label className="text-sm font-bold ml-1">Current Password</label>
+                                                <div className="relative">
+                                                    <input
+                                                        type={showPassword ? "text" : "password"}
+                                                        value={oldPassword}
+                                                        onChange={(e) => setOldPassword(e.target.value)}
+                                                        className="input-field pr-10"
+                                                        placeholder="••••••••"
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-bold ml-1">New Password</label>
+                                                    <input
+                                                        type={showPassword ? "text" : "password"}
+                                                        value={newPassword}
+                                                        onChange={(e) => setNewPassword(e.target.value)}
+                                                        className="input-field"
+                                                        placeholder="••••••••"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-bold ml-1">Confirm Password</label>
+                                                    <input
+                                                        type={showPassword ? "text" : "password"}
+                                                        value={confirmPassword}
+                                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                                        className="input-field"
+                                                        placeholder="••••••••"
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center justify-between pt-2">
+                                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-sm text-muted-foreground hover:text-primary flex items-center gap-2">
+                                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />} {showPassword ? "Hide" : "Show"} Passwords
+                                                </button>
+                                                <button
+                                                    type="submit"
+                                                    disabled={isLoading}
+                                                    className="btn-primary"
+                                                >
+                                                    Update Password
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </section>
+
+                                    <div className="h-px bg-border/50" />
+
+                                    {/* 2FA */}
+                                    <section>
+                                        <div className="flex items-center gap-4 mb-6">
+                                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white shadow-lg">
+                                                <Shield size={24} />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-2xl font-bold">Two-Factor Authentication</h2>
+                                                <p className="text-muted-foreground text-sm">Add an extra layer of security.</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between p-6 bg-gradient-to-r from-purple-500/10 to-transparent border border-purple-500/20 rounded-2xl">
+                                            <div className="max-w-md">
+                                                <h3 className="font-bold text-lg mb-1">Secure your account</h3>
+                                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                                    When enabled, you'll need to verify your identity via email or an authenticator app when logging on a new device.
+                                                </p>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer ml-4">
+                                                <input type="checkbox" className="sr-only peer" onChange={(e) => handleToggle2FA(e.target.checked)} />
+                                                <div className="w-14 h-7 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-500/30 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-500 shadow-inner"></div>
+                                            </label>
+                                        </div>
+                                    </section>
+                                </div>
+                            )}
+
+                            {/* --- REPORTS TAB --- */}
+                            {activeTab === "reports" && (
+                                <div className="glass-card relative overflow-hidden text-center py-24 px-6 md:px-12">
+                                    <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
+
+                                    <div className="relative z-10 flex flex-col items-center max-w-2xl mx-auto space-y-8">
+                                        <div className="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center text-primary rotate-12 shadow-xl shadow-primary/10 mb-4">
+                                            <Activity size={48} />
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <h3 className="text-4xl font-extrabold tracking-tight">Activity Reports</h3>
+                                            <p className="text-xl text-muted-foreground leading-relaxed">
+                                                Dive deep into your analytics. Track your time, engagement, and content performance with detailed insights.
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            onClick={() => router.push("/reports")}
+                                            className="btn-primary text-lg px-10 py-4 flex items-center gap-3"
+                                        >
+                                            View Full Dashboard <ChevronRight size={20} />
+                                        </button>
+
+                                        <p className="text-sm text-muted-foreground/60">
+                                            Updated automatically every 60 seconds while active.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                        </motion.div>
+                    </AnimatePresence>
                 </div>
             </main>
         </div>
     );
 }
+
+// Icon for chevron (missing in imports)
+import { ChevronRight } from "lucide-react";

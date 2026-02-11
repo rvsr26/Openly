@@ -2,12 +2,12 @@
 
 import { User } from "firebase/auth";
 import Link from "next/link";
-import { UserCircle, LayoutGrid, Flame, Trophy, Compass, Bookmark, FileText, Settings, HelpCircle, Layers, PenTool, Home, MessageCircle } from "lucide-react";
+import { UserCircle, LayoutGrid, Flame, Trophy, Compass, Bookmark, FileText, Settings, HelpCircle, Layers, PenTool, Home, MessageCircle, UserPlus, Users } from "lucide-react";
 import { getAbsUrl } from "../lib/api";
 import { memo } from "react";
 
 interface LeftSidebarProps {
-    user: User | null;
+    user: any | null;
     username: string;
     userPhoto?: string;
 }
@@ -64,6 +64,7 @@ function LeftSidebar({ user, username, userPhoto }: LeftSidebarProps) {
                 <p className="px-3 text-[9px] font-black text-muted-foreground/60 uppercase tracking-widest mb-2 mt-1">Personal</p>
                 <NavItem href="/profile" icon={LayoutGrid} label="My Reviews" />
                 <NavItem href="/messages" icon={MessageCircle} label="Messages" />
+                <NavItem href="/network" icon={Users} label="My Network" />
                 <NavItem href="/drafts" icon={PenTool} label="Drafts" />
                 <NavItem href="/bookmarks" icon={Bookmark} label="Bookmarks" />
             </div>

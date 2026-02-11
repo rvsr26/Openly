@@ -86,7 +86,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex w-full bg-background">
+    <div className="min-h-screen flex w-full relative overflow-hidden">
+
+      {/* Background Ambience for Mobile (Global one handles it, but we ensure transparency) */}
 
       {/* --- LEFT SIDE: ARTWORK --- */}
       <div className="hidden lg:flex w-1/2 bg-zinc-900 text-white relative items-center justify-center p-12 overflow-hidden">
@@ -98,68 +100,57 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-10 max-w-lg">
-          <div className="mb-8">
-            <img src="/assets/logo.png" alt="Openly" className="h-16 w-auto mb-6 object-contain" />
+          <div className="mb-10">
+            <img src="/assets/logo.png" alt="Openly" className="h-16 w-auto mb-8 object-contain" />
+            <h1 className="text-5xl font-black mb-6 tracking-tight leading-none">
+              Share Failures. <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500">Build Success.</span>
+            </h1>
             <p className="text-xl text-zinc-300 font-light leading-relaxed">
-              &quot;Productive feedback is the breakfast of champions.&quot;
+              &quot;Success is stumbling from failure to failure with no loss of enthusiasm.&quot;
             </p>
-            <p className="mt-4 text-zinc-500 font-mono text-sm">— Community Wisdom</p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-              <div className="p-2 bg-green-500/20 rounded-lg text-green-400"><CheckCircle size={20} /></div>
-              <div>
-                <h4 className="font-bold">Safe Environment</h4>
-                <p className="text-xs text-zinc-400">Anonymous posting supported</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-              <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400"><ArrowRight size={20} /></div>
-              <div>
-                <h4 className="font-bold">Better Decisions</h4>
-                <p className="text-xs text-zinc-400">Insights from real reviews</p>
-              </div>
-            </div>
+            <p className="mt-4 text-zinc-500 font-mono text-sm">— Winston Churchill</p>
           </div>
         </div>
       </div>
 
       {/* --- RIGHT SIDE: FORM --- */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative">
-        {/* Mobile BG Elements */}
-        <div className="lg:hidden absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background -z-10" />
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-12 relative z-10">
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md space-y-8"
+          className="w-full max-w-md glass-card p-8 sm:p-10 shadow-2xl"
         >
-          <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-foreground">Welcome back</h2>
+          <div className="text-center mb-8">
+            <div className="lg:hidden mb-6 flex justify-center">
+              <img src="/assets/logo.png" alt="Openly" className="h-12 w-auto" />
+            </div>
+            <h2 className="text-3xl font-black tracking-tight text-foreground">Welcome Back</h2>
             <p className="mt-2 text-sm text-muted-foreground">
-              Enter your details to access your account
+              Sign in to continue your journey
             </p>
           </div>
 
-          <form onSubmit={handleEmailLogin} className="space-y-6">
-
-            {/* Error/Success Messages */}
-            {error && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-destructive/15 text-destructive text-sm p-3 rounded-lg flex items-center gap-2">
-                <AlertCircle size={16} /> {error}
-              </motion.div>
-            )}
-            {resetMsg && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-green-500/15 text-green-600 text-sm p-3 rounded-lg flex items-center gap-2">
-                <CheckCircle size={16} /> {resetMsg}
-              </motion.div>
-            )}
+          <form onSubmit={handleEmailLogin} className="space-y-5">
+            {/* Error & Reset Messages */}
+            <div className="space-y-2">
+              {error && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-destructive/15 text-destructive text-sm p-3 rounded-lg flex items-center gap-2">
+                  <AlertCircle size={16} /> {error}
+                </motion.div>
+              )}
+              {resetMsg && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-emerald-500/15 text-emerald-500 text-sm p-3 rounded-lg flex items-center gap-2">
+                  <CheckCircle size={16} /> {resetMsg}
+                </motion.div>
+              )}
+            </div>
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Email</label>
+                <label className="text-sm font-bold ml-1">Email</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
                   <input
@@ -167,16 +158,17 @@ export default function LoginPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="flex h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+                    className="input-field pl-10"
                     placeholder="name@example.com"
                   />
                 </div>
               </div>
+
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Password</label>
-                  <button type="button" onClick={handleForgotPassword} className="text-sm font-medium text-primary hover:underline">
-                    Forgot password?
+                <div className="flex justify-between items-center">
+                  <label className="text-sm font-bold ml-1">Password</label>
+                  <button type="button" onClick={handleForgotPassword} className="text-xs font-medium text-primary hover:underline">
+                    Forgot Password?
                   </button>
                 </div>
                 <div className="relative">
@@ -186,7 +178,7 @@ export default function LoginPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="flex h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all"
+                    className="input-field pl-10"
                     placeholder="••••••••"
                   />
                 </div>
@@ -196,14 +188,14 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-11 px-8 w-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 duration-300"
+              className="btn-primary w-full flex items-center justify-center gap-2"
             >
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? "Signing in..." : <><ArrowRight size={18} /> Sign In</>}
             </button>
 
-            <div className="relative">
+            <div className="relative py-2">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
+                <span className="w-full border-t border-border" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-background px-2 text-muted-foreground">
@@ -216,19 +208,19 @@ export default function LoginPage() {
               type="button"
               disabled={loading}
               onClick={handleGoogleLogin}
-              className="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-11 px-8 w-full"
+              className="btn-secondary w-full flex items-center justify-center gap-2 border border-border"
             >
-              <svg className="mr-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512">
-                <path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"></path>
+              <svg className="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M12.0003 20.45c4.656 0 8.556-3.218 9.973-7.65h-9.973v-4.524h15.222c.159.833.242 1.693.242 2.578 0 8.019-5.748 13.913-13.828 13.913-7.729 0-14-6.271-14-14s6.271-14 14-14c3.784 0 7.211 1.396 9.872 3.882l-4.133 3.493c-1.554-1.121-3.601-1.785-5.739-1.785-5.188 0-9.471 3.978-11.042 9.006h-.033l-4.665-3.587-.146.108c1.677 5.95 7.152 10.354 13.671 10.354z" fill="currentColor" />
               </svg>
               Google
             </button>
           </form>
 
-          <p className="px-8 text-center text-sm text-muted-foreground">
+          <p className="mt-8 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
-            <button onClick={() => router.push("/signup")} className="underline underline-offset-4 hover:text-primary font-medium text-foreground">
-              Sign up
+            <button onClick={() => router.push("/signup")} className="font-bold text-primary hover:underline">
+              Sign Up
             </button>
           </p>
         </motion.div>

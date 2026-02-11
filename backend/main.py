@@ -18,6 +18,7 @@ from database import (
 from bson import ObjectId
 from cache_utils import get_cached_feed, set_cached_feed, generate_cache_key, invalidate_category_cache
 from messaging_endpoints import router as messaging_router
+from activity_endpoints import router as activity_router
 
 # Import authentication and middleware (optional - won't break app if missing)
 AUTH_ENABLED = False
@@ -26,7 +27,8 @@ try:
         send_verification_email, verify_email_token, send_password_reset_email, 
         reset_password, handle_oauth_login, create_access_token, get_current_user,
         EmailVerificationRequest, VerifyEmailRequest, PasswordResetRequest, 
-        PasswordResetConfirm, OAuthLoginRequest
+        PasswordResetConfirm, OAuthLoginRequest,
+        generate_2fa_secret, get_2fa_qr_code, verify_2fa_code, authenticate_user
     )
     from middleware import (
         RateLimitMiddleware, SecurityHeadersMiddleware, RequestLoggingMiddleware,
@@ -49,16 +51,64 @@ except Exception as e:
         pass
     class OAuthLoginRequest(BaseModel):
         pass
+    class LoginRequest(BaseModel):
+        pass
+    class TwoFactorEnableRequest(BaseModel):
+        pass
+    class TwoFactorVerifyLoginRequest(BaseModel):
+        pass
+    
+    async def authenticate_user(*args, **kwargs):
+        return None
+    
+    async def authenticate_user(*args, **kwargs):
+        return None
+        
+    def generate_2fa_secret(): return "dummy_secret"
+    def get_2fa_qr_code(email, secret): return "dummy_qr"
+    def verify_2fa_code(secret, code): return False
     
     async def get_current_user(): 
         return None
 
 
+# Models
+class ProfessionalExperience(BaseModel):
+    company: str
+    position: str
+    location: Optional[str] = None
+    start_date: str
+    end_date: Optional[str] = None
+    current: bool = False
+    description: Optional[str] = None
+
+class Education(BaseModel):
+    school: str
+    degree: Optional[str] = None
+    field: Optional[str] = None
+    start_date: str
+    end_date: Optional[str] = None
+
+class Skill(BaseModel):
+    name: str
+    level: Optional[str] = None 
+    endorsements: int = 0
+
+class ProfessionalInfoUpdate(BaseModel):
+    headline: Optional[str] = None
+    bio: Optional[str] = None
+    website: Optional[str] = None
+    location: Optional[str] = None
+    experiences: Optional[List[ProfessionalExperience]] = None
+    education: Optional[List[Education]] = None
+    skills: Optional[List[Skill]] = None
+
 # --- 1. SETUP ---
 app = FastAPI(title="Openly API", version="1.0.0")
 
-# Include Messaging Router
+# Include Routers
 app.include_router(messaging_router)
+app.include_router(activity_router)
 
 # Add security middleware (if available)
 if AUTH_ENABLED:
@@ -193,6 +243,17 @@ class DraftRequest(BaseModel):
     is_anonymous: bool = False
     tags: List[str] = []
 
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class TwoFactorEnableRequest(BaseModel):
+    code: str
+
+class TwoFactorVerifyLoginRequest(BaseModel):
+    user_id: str
+    code: str
+
 # --- 3. HELPER FUNCTIONS ---
 
 def serialize_doc(doc):
@@ -217,6 +278,22 @@ def classify_category(content: str):
     if any(w in text for w in ["health", "sick", "doctor", "hospital", "pain"]):
         return "Health"
     return "Life"
+
+async def get_user_by_any_id(user_id: str):
+    """Find a user by id string, handling both direct match and ObjectId."""
+    if not user_id: return None
+    # 1. Try direct match on _id (string id)
+    user = await users_collection.find_one({"_id": user_id})
+    if not user:
+        # 2. Try match on uid field
+        user = await users_collection.find_one({"uid": user_id})
+    if not user:
+        # 3. Try match on _id as ObjectId
+        try:
+            user = await users_collection.find_one({"_id": ObjectId(user_id)})
+        except:
+            pass
+    return user
 
 # --- 4. CORE ROUTES ---
 
@@ -263,6 +340,168 @@ async def api_oauth_login(req: OAuthLoginRequest):
     result = await handle_oauth_login(req.provider, req.access_token, req.user_info)
     return result
 
+@app.post("/api/v1/auth/login")
+async def api_login(req: LoginRequest):
+    """Standard Email/Password Login"""
+    result = await authenticate_user(req.email, req.password)
+    if not result:
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+    
+    if "2fa_required" in result:
+        return {
+            "2fa_required": True,
+            "user_id": result["user_id"],
+            "message": "Two-factor authentication required"
+        }
+        
+    # Generate JWT
+    access_token = create_access_token({"sub": result["_id"], "email": result.get("email")})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user_id": result["_id"],
+        "user": {
+            "id": result["_id"],
+            "email": result.get("email"),
+            "username": result.get("username"),
+            "display_name": result.get("display_name"),
+            "photoURL": result.get("photoURL")
+        }
+    }
+
+@app.post("/api/v1/auth/2fa/setup")
+async def api_2fa_setup(user = Depends(get_current_user)):
+    """Initialize 2FA setup - Returns Secret and QR Code"""
+    secret = generate_2fa_secret()
+    
+    # Save secret temporarily or permanently? 
+    # Usually we save it to the user record but mark it as not yet verified/enabled.
+    # Or just return it and save it when they verify.
+    # Let's save it to the user record with `two_factor_secret` and `two_factor_enabled=False`
+    
+    await users_collection.update_one(
+        {"_id": user["_id"]},
+        {"$set": {"two_factor_temp_secret": secret}}
+    )
+    
+    qr_code = get_2fa_qr_code(user["email"], secret)
+    
+    return {
+        "secret": secret,
+        "qr_code": qr_code
+    }
+
+@app.post("/api/v1/auth/2fa/enable")
+async def api_2fa_enable(req: TwoFactorEnableRequest, user = Depends(get_current_user)):
+    """Verify code and enable 2FA"""
+    # Get temp secret
+    user_doc = await users_collection.find_one({"_id": user["_id"]})
+    secret = user_doc.get("two_factor_temp_secret")
+    
+    if not secret:
+        raise HTTPException(status_code=400, detail="2FA setup not initialized")
+        
+    if verify_2fa_code(secret, req.code):
+        await users_collection.update_one(
+            {"_id": user["_id"]},
+            {
+                "$set": {
+                    "two_factor_enabled": True,
+                    "two_factor_secret": secret
+                },
+                "$unset": {"two_factor_temp_secret": ""}
+            }
+        )
+        return {"status": "success", "message": "2FA enabled successfully"}
+    else:
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+
+@app.post("/api/v1/auth/2fa/verify-login")
+async def api_2fa_verify_login(req: TwoFactorVerifyLoginRequest):
+    """Complete login with 2FA code"""
+    user = await users_collection.find_one({"_id": req.user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if not user.get("two_factor_enabled"):
+        raise HTTPException(status_code=400, detail="2FA not enabled for this user")
+        
+    secret = user.get("two_factor_secret")
+    if verify_2fa_code(secret, req.code):
+        # Generate JWT
+        access_token = create_access_token({"sub": user["_id"], "email": user.get("email")})
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user_id": user["_id"],
+             "user": {
+                "id": user["_id"],
+                "email": user.get("email"),
+                "username": user.get("username"),
+                "display_name": user.get("display_name"),
+                "photoURL": user.get("photoURL")
+            }
+        }
+    else:
+         raise HTTPException(status_code=401, detail="Invalid 2FA code")
+
+@app.post("/api/v1/auth/2fa/disable")
+async def api_2fa_disable(user = Depends(get_current_user)):
+    """Disable 2FA"""
+    await users_collection.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {"two_factor_enabled": False},
+            "$unset": {"two_factor_secret": "", "two_factor_temp_secret": ""}
+        }
+    )
+    return {"status": "success", "message": "2FA disabled"}
+
+class UserSyncRequest(BaseModel):
+    uid: str
+    email: EmailStr
+    display_name: Optional[str] = None
+    photoURL: Optional[str] = None
+
+@app.post("/api/v1/auth/sync")
+async def api_sync_user(req: UserSyncRequest):
+    """Sync Firebase user to MongoDB and return backend JWT"""
+    # Check if user exists
+    user = await get_user_by_any_id(req.uid)
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    if user:
+        # Update metadata
+        update_data = {"last_synced_at": now}
+        if req.email: update_data["email"] = req.email
+        if req.display_name: update_data["display_name"] = req.display_name
+        if req.photoURL: update_data["photoURL"] = req.photoURL
+        
+        await users_collection.update_one({"_id": req.uid}, {"$set": update_data})
+    else:
+        # Create user
+        new_user = {
+            "_id": req.uid,
+            "email": req.email,
+            "display_name": req.display_name or "",
+            "photoURL": req.photoURL or "",
+            "created_at": now,
+            "email_verified": True, # Assumed if coming from valid Firebase session in this simple sync
+            "last_synced_at": now
+        }
+        await users_collection.insert_one(new_user)
+    
+    # Generate Backend JWT
+    from auth import create_access_token
+    token = create_access_token({"sub": req.uid, "email": req.email})
+    
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user_id": req.uid
+    }
+
 @app.get("/api/v1/auth/me")
 async def api_get_current_user(user = Depends(get_current_user)):
     """Get current authenticated user"""
@@ -303,6 +542,68 @@ async def api_validate_email(email: EmailStr):
         "available": existing is None,
         "error": None if existing is None else "Email already registered"
     }
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+@app.post("/api/v1/auth/change-password")
+async def api_change_password(req: ChangePasswordRequest, user = Depends(get_current_user)):
+    """Change current user's password"""
+    if "password_hash" not in user:
+        raise HTTPException(400, "User does not have a password set (OAuth user?)")
+        
+    from auth import verify_password, change_password, hash_password
+    
+    # Verify old password
+    # Since we can't import verify_password here if it causes circular import, 
+    # we might need to handle it carefully. 
+    # Actually main.py imports auth.py, so it's fine.
+    
+    # Manual verification to avoid circular import issues if logical separation isn't perfect
+    hashed_old = hash_password(req.old_password)
+    if hashed_old != user["password_hash"]:
+        raise HTTPException(400, "Incorrect old password")
+        
+    validation = validate_password_strength(req.new_password)
+    if not validation["valid"]:
+        raise HTTPException(400, str(validation["errors"]))
+        
+    await change_password(user["_id"], req.new_password)
+    return {"status": "success"}
+
+class Toggle2FARequest(BaseModel):
+    enabled: bool
+
+@app.post("/api/v1/auth/2fa/toggle")
+async def api_toggle_2fa(req: Toggle2FARequest, user = Depends(get_current_user)):
+    """Toggle 2FA"""
+    from auth import toggle_two_factor
+    await toggle_two_factor(user["_id"], req.enabled)
+    return {"status": "success", "enabled": req.enabled}
+
+@app.post("/api/v1/user/deactivate")
+async def api_deactivate_account(user = Depends(get_current_user)):
+    """Deactivate account"""
+    from auth import deactivate_user
+    await deactivate_user(user["_id"])
+    return {"status": "deactivated"}
+
+@app.delete("/api/v1/user")
+async def api_delete_account(user = Depends(get_current_user)):
+    """Permanently delete account"""
+    from auth import delete_user
+    await delete_user(user["_id"])
+    return {"status": "deleted"}
+
+@app.get("/api/v1/user/activity")
+async def api_get_activity_log(user = Depends(get_current_user)):
+    """Get recent account activity (mock for now or real if available)"""
+    # In a real app, we'd query an audit log collection
+    return [
+        {"action": "Login", "date": datetime.now(timezone.utc).isoformat(), "details": "Successful login"},
+        {"action": "Profile Update", "date": (datetime.now(timezone.utc) - timedelta(days=2)).isoformat(), "details": "Updated bio"}
+    ]
 
 
 # --- POSTS ---
@@ -689,10 +990,11 @@ async def search_mixed(q: str = Query(..., min_length=3), user_id: Optional[str]
 # --- PROFILE ---
 
 @app.get("/users/{user_id}/profile")
-async def get_user_profile(user_id: str):
-    # Fetch user data (user_id is _id)
-    user_doc = await users_collection.find_one({"_id": user_id})
-    user_data = user_doc if user_doc else {}
+async def get_user_profile_v2(user_id: str):
+    # Fetch user data (user_id is _id or uid)
+    user_data = await get_user_by_any_id(user_id)
+    if not user_data:
+        raise HTTPException(404, "User not found")
 
     # Fetch posts
     cursor = posts_collection.find({"user_id": user_id}).sort("created_at", -1)
@@ -723,7 +1025,10 @@ async def get_user_profile(user_id: str):
             "headline": user_data.get("headline", None),
             "bio": user_data.get("bio", None),
             "website": user_data.get("website", None),
-            "location": user_data.get("location", None)
+            "location": user_data.get("location", None),
+            "experiences": user_data.get("experiences", []),
+            "education": user_data.get("education", []),
+            "skills": user_data.get("skills", [])
         },
         "stats": {
             "total_views": total_views,
@@ -737,9 +1042,9 @@ async def upload_profile_photo(user_id: str, request: Request, file: UploadFile 
     # Validate file type
     if not file.content_type.startswith("image/"):
         raise HTTPException(400, "Only images allowed")
-
+    
     # Ensure user exists
-    user = await users_collection.find_one({"_id": user_id})
+    user = await get_user_by_any_id(user_id)
     if not user:
         raise HTTPException(404, "User not found")
 
@@ -1072,11 +1377,12 @@ async def get_notifications(user_id: str):
     
     notifications = []
     async for doc in cursor:
-        actor = await users_collection.find_one({"_id": doc["actor_id"]})
+        actor = await get_user_by_any_id(doc["actor_id"])
         notifications.append({
             "id": str(doc["_id"]),
             "type": doc["type"],
             "actor_name": actor.get("display_name", "Someone") if actor else "Someone",
+            "actor_username": actor.get("username", "") if actor else "",
             "actor_pic": actor.get("photoURL") if actor else None,
             "resource_id": doc.get("resource_id"),
             "message": doc.get("message"),
@@ -1105,7 +1411,7 @@ async def follow_user(target_id: str, req: ViewRequest):
         raise HTTPException(400, "Cannot follow self")
         
     # Check if target exists
-    target = await users_collection.find_one({"_id": target_id})
+    target = await get_user_by_any_id(target_id)
     if not target:
         raise HTTPException(404, "User not found")
         
@@ -1139,7 +1445,7 @@ async def unfollow_user(target_id: str, user_id: str):
 
 @app.get("/users/{user_id}")
 async def get_user_profile(user_id: str):
-    user = await users_collection.find_one({"uid": user_id})
+    user = await get_user_by_any_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
@@ -1183,8 +1489,13 @@ async def update_user_profile(user_id: str, profile: UpdateProfileRequest):
         
     update_data["updatedAt"] = datetime.now(timezone.utc).isoformat()
     
+    # Check if user exists first to get the correct _id for update
+    user = await get_user_by_any_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
     result = await users_collection.update_one(
-        {"uid": user_id},
+        {"_id": user["_id"]},
         {"$set": update_data}
     )
     
@@ -1198,7 +1509,7 @@ async def get_followers(user_id: str):
     cursor = follows_collection.find({"following_id": user_id})
     followers = []
     async for doc in cursor:
-        user = await users_collection.find_one({"_id": doc["follower_id"]})
+        user = await get_user_by_any_id(doc["follower_id"])
         if user:
             followers.append({
                 "user_id": doc["follower_id"],
@@ -1213,7 +1524,7 @@ async def get_following(user_id: str):
     cursor = follows_collection.find({"follower_id": user_id})
     following = []
     async for doc in cursor:
-        user = await users_collection.find_one({"_id": doc["following_id"]})
+        user = await get_user_by_any_id(doc["following_id"])
         if user:
             following.append({
                 "user_id": doc["following_id"],
@@ -1265,8 +1576,9 @@ async def send_connection_request(target_id: str, req: ConnectRequest):
 @app.post("/connect/{target_id}/accept")
 async def accept_connection(target_id: str, req: ConnectRequest):
     # 'req.requester_id' is the ACCEPTOR (Current User)
-    # 'target_id' is the REQUESTER (The other person)
+    # 'target_id' is the REQUESTER (The person who sent the request)
     
+    # We look for a pending request where target_id sent it to req.requester_id
     doc = await connections_collection.find_one({
         "requester_id": target_id,
         "target_id": req.requester_id,
@@ -1274,15 +1586,24 @@ async def accept_connection(target_id: str, req: ConnectRequest):
     })
 
     if not doc:
-        raise HTTPException(404, "No pending request found from this user")
+        # Fallback: maybe the parameters were swapped by frontend
+        doc = await connections_collection.find_one({
+            "requester_id": req.requester_id,
+            "target_id": target_id,
+            "status": "pending"
+        })
+
+    if not doc:
+        raise HTTPException(404, "No pending request found between these users")
 
     await connections_collection.update_one(
         {"_id": doc["_id"]},
         {"$set": {"status": "accepted", "updated_at": datetime.now(timezone.utc).isoformat()}}
     )
     
-    # Notify Original Requester (target_id)
-    await create_notification(target_id, "connection_accepted", req.requester_id)
+    # Notify the other person (the one who didn't just click accept)
+    other_person_id = doc["requester_id"] if doc["target_id"] == req.requester_id else doc["target_id"]
+    await create_notification(other_person_id, "connection_accepted", req.requester_id)
     
     return {"status": "connected"}
 
@@ -1315,7 +1636,7 @@ async def get_pending_requests(user_id: str):
     requests = []
     async for doc in cursor:
         # Fetch requester info
-        user = await users_collection.find_one({"_id": doc["requester_id"]})
+        user = await get_user_by_any_id(doc["requester_id"])
         if user:
             requests.append({
                 "id": str(doc["_id"]),
@@ -1339,7 +1660,7 @@ async def get_my_network(user_id: str):
     async for doc in cursor:
         other_id = doc["target_id"] if doc["requester_id"] == user_id else doc["requester_id"]
         
-        user = await users_collection.find_one({"_id": other_id})
+        user = await get_user_by_any_id(other_id)
         if user:
             connections.append({
                 "user_id": other_id,
@@ -1349,6 +1670,47 @@ async def get_my_network(user_id: str):
                 "headline": user.get("headline", "Member") # Prep for Phase 3
             })
     return connections
+
+@app.get("/users/suggested")
+async def get_suggested_users(user_id: Optional[str] = None):
+    # Fetch random users, excluding the current user
+    query = {}
+    if user_id:
+        # Also exclude people already connected or with pending requests
+        existing_conns = await connections_collection.find({
+            "$or": [{"requester_id": user_id}, {"target_id": user_id}]
+        }).to_list(100)
+        
+        excluded_ids = {user_id}
+        # Handle cases where user_id might be numeric or ObjectId in string form
+        try:
+            excluded_ids.add(ObjectId(user_id))
+        except:
+            pass
+
+        for conn in existing_conns:
+            excluded_ids.add(conn["requester_id"])
+            excluded_ids.add(conn["target_id"])
+            try:
+                excluded_ids.add(ObjectId(conn["requester_id"]))
+                excluded_ids.add(ObjectId(conn["target_id"]))
+            except:
+                pass
+        
+        query["_id"] = {"$nin": list(excluded_ids)}
+
+    cursor = users_collection.find(query).limit(5)
+    
+    suggested = []
+    async for doc in cursor:
+        suggested.append({
+            "uid": str(doc["_id"]),
+            "username": doc.get("username"),
+            "display_name": doc.get("display_name"),
+            "photoURL": doc.get("photoURL"),
+            "headline": doc.get("headline", "Member")
+        })
+    return suggested
 
 @app.get("/stats/trending")
 async def get_trending_topics():
@@ -1464,7 +1826,7 @@ async def create_or_get_conversation(req: ConversationRequest):
         # Fetch participant info
         participant_info = []
         for p_id in participants:
-            user = await users_collection.find_one({"_id": p_id})
+            user = await get_user_by_any_id(p_id)
             if user:
                 participant_info.append({
                     "id": p_id,
@@ -1493,7 +1855,7 @@ async def create_or_get_conversation(req: ConversationRequest):
     # Fetch participant info
     participant_info = []
     for p_id in participants:
-        user = await users_collection.find_one({"_id": p_id})
+        user = await get_user_by_any_id(p_id)
         if user:
             participant_info.append({
                 "id": p_id,
@@ -1526,7 +1888,7 @@ async def get_conversations(user_id: str):
         
         # Get the other participant's info
         other_user_id = [p for p in conv["participants"] if p != user_id][0]
-        other_user = await users_collection.find_one({"_id": other_user_id})
+        other_user = await get_user_by_any_id(other_user_id)
         
         if other_user:
             participant_info = [{
@@ -1570,7 +1932,7 @@ async def get_messages(conversation_id: str, limit: int = 50, before: Optional[s
         msg_data = serialize_doc(msg)
         
         # Fetch sender info
-        sender = await users_collection.find_one({"_id": msg["sender_id"]})
+        sender = await get_user_by_any_id(msg["sender_id"])
         if sender:
             msg_data["sender_name"] = sender.get("display_name") or sender.get("username")
             msg_data["sender_pic"] = sender.get("photoURL")
