@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-
 import { User } from "firebase/auth";
 import { motion } from "framer-motion";
 import { getAbsUrl, uploadImage } from "../lib/api";
@@ -78,16 +77,15 @@ function CreatePost({
     const mdeOptions = useMemo(() => ({
         autofocus: false,
         spellChecker: false,
-        placeholder: "What's your suggestion? Share a failure, a review, or an insight...",
+        placeholder: "Share your thoughts, insights, or experiences...",
         status: false,
         autosave: {
             enabled: false,
             uniqueId: "create-post-editor"
         },
         toolbar: ["bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|", "link", "guide"],
-        minHeight: "150px"
+        minHeight: "120px"
     }), []);
-
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -103,28 +101,27 @@ function CreatePost({
             }
         }
     };
+
     if (!user) {
         return (
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="glass-card mb-8 p-10 text-center"
+                className="card-simple p-8 text-center mb-6"
             >
-                <h3 className="text-2xl font-black text-foreground mb-3">Join the Community</h3>
-                <p className="text-muted-foreground text-sm mb-8 max-w-md mx-auto">Share your reviews, failures, and insights to help others build better products.</p>
-                <div className="flex gap-4 justify-center">
-                    <a href="/login" className="btn-primary px-8">
+                <h3 className="heading-tertiary mb-2">Join the Community</h3>
+                <p className="text-body-sm mb-6 max-w-md mx-auto">Share your insights and experiences to help others.</p>
+                <div className="flex gap-3 justify-center">
+                    <a href="/login" className="btn-primary">
                         Log In
                     </a>
-                    <a href="/signup" className="btn-secondary px-8 border border-border">
+                    <a href="/signup" className="btn-secondary">
                         Sign Up
                     </a>
                 </div>
             </motion.div>
         );
     }
-
-
 
     const selectedTimeline = timelines.find(t => t.id === selectedTimelineId);
 
@@ -133,166 +130,202 @@ function CreatePost({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
-            className="glass-card mb-8 p-6 !rounded-[2rem] border border-primary/20 bg-primary/[0.02] group/create overflow-visible z-30 relative"
+            className="card-simple p-6 mb-6 hover:shadow-md transition-shadow"
         >
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary opacity-70">Share a Review</h3>
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-5 pb-4 border-b border-border">
+                <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-border flex-shrink-0">
+                    <Image
+                        src={isAnonymous ? getAbsUrl("/assets/anonymous.png") : (userPhoto || "/assets/default-user.png")}
+                        fill
+                        className="object-cover"
+                        alt="User"
+                        sizes="40px"
+                    />
+                </div>
+                <div className="flex-1">
+                    <h3 className="text-base font-semibold text-foreground">Create Post</h3>
+                    <p className="text-xs text-muted-foreground">Share your insights with the community</p>
+                </div>
 
-                <div className="flex gap-2">
-                    {/* Timeline Selector */}
-                    {timelines.length > 0 && (
-                        <div className="relative">
-                            <button
-                                onClick={() => setShowTimelineMenu(!showTimelineMenu)}
-                                className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full transition-all ${selectedTimelineId ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-white/5 text-muted-foreground hover:bg-white/10"
-                                    }`}
+                {/* Timeline Selector */}
+                {timelines.length > 0 && (
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowTimelineMenu(!showTimelineMenu)}
+                            className={`flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-lg transition-all ${selectedTimelineId
+                                ? "bg-primary/10 text-primary border border-primary/20"
+                                : "bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent"
+                                }`}
+                        >
+                            <Map size={14} />
+                            <span className="hidden sm:inline">{selectedTimeline ? selectedTimeline.title : "Add to Journey"}</span>
+                            <ChevronDown size={14} className={`transition-transform ${showTimelineMenu ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {showTimelineMenu && (
+                            <motion.div
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="absolute right-0 top-full mt-2 w-64 bg-card border border-border rounded-xl shadow-lg overflow-hidden z-50"
                             >
-                                <Map size={12} />
-                                {selectedTimeline ? selectedTimeline.title : "Add to Journey"}
-                                <ChevronDown size={12} className={`transition-transform ${showTimelineMenu ? "rotate-180" : ""}`} />
-                            </button>
-
-                            {showTimelineMenu && (
-                                <div className="absolute right-0 top-full mt-2 w-48 glass-card p-1 shadow-xl z-50 animate-in fade-in zoom-in-95 origin-top-right">
+                                <div className="p-2 border-b border-border bg-muted/30">
+                                    <p className="text-xs font-semibold text-muted-foreground px-2">Select Journey</p>
+                                </div>
+                                <div className="max-h-64 overflow-y-auto">
                                     <button
-                                        onClick={() => {
-                                            setSelectedTimelineId(null);
-                                            setShowTimelineMenu(false);
-                                        }}
-                                        className="w-full text-left px-3 py-2 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors text-muted-foreground"
+                                        onClick={() => { setSelectedTimelineId(null); setShowTimelineMenu(false); }}
+                                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors ${!selectedTimelineId ? "bg-primary/10 text-primary font-medium" : "text-foreground"}`}
                                     >
-                                        None
+                                        None (General Post)
                                     </button>
-                                    {timelines.map(t => (
+                                    {timelines.map(tl => (
                                         <button
-                                            key={t.id}
-                                            onClick={() => {
-                                                setSelectedTimelineId(t.id);
-                                                setShowTimelineMenu(false);
-                                            }}
-                                            className={`w-full text-left px-3 py-2 text-xs font-bold rounded-lg transition-colors flex items-center justify-between ${selectedTimelineId === t.id ? "bg-primary/10 text-primary" : "text-foreground hover:bg-white/5"
-                                                }`}
+                                            key={tl.id}
+                                            onClick={() => { setSelectedTimelineId(tl.id); setShowTimelineMenu(false); }}
+                                            className={`w-full text-left px-4 py-2.5 text-sm hover:bg-muted/50 transition-colors ${selectedTimelineId === tl.id ? "bg-primary/10 text-primary font-medium" : "text-foreground"}`}
                                         >
-                                            <span className="truncate">{t.title}</span>
-                                            {selectedTimelineId === t.id && <span className="text-primary text-[10px]">✓</span>}
+                                            <div className="flex items-center gap-2">
+                                                <Map size={14} />
+                                                <span className="truncate">{tl.title}</span>
+                                            </div>
                                         </button>
                                     ))}
                                 </div>
-                            )}
-                        </div>
-                    )}
+                            </motion.div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Editor */}
+            <div className="mb-4">
+                <SimpleMDE
+                    value={content}
+                    onChange={setContent}
+                    options={mdeOptions}
+                />
+            </div>
+
+            {/* Image Preview */}
+            {imageUrl && (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="relative mb-4 rounded-xl overflow-hidden border border-border group"
+                >
+                    <Image
+                        src={getAbsUrl(imageUrl)}
+                        alt="Upload preview"
+                        width={0}
+                        height={0}
+                        sizes="100vw"
+                        style={{ width: '100%', height: 'auto', maxHeight: '300px', objectFit: 'cover' }}
+                    />
+                    <button
+                        onClick={() => setImageUrl("")}
+                        className="absolute top-2 right-2 p-1.5 bg-destructive/90 hover:bg-destructive text-white rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                    >
+                        <X size={16} />
+                    </button>
+                </motion.div>
+            )}
+
+            {/* Collaborators */}
+            {collaborators.length > 0 && (
+                <div className="mb-4 p-3 bg-muted/30 rounded-lg border border-border">
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">Collaborators</p>
+                    <div className="flex flex-wrap gap-2">
+                        {collaborators.map((c, i) => (
+                            <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary/10 text-primary text-xs font-medium rounded-lg border border-primary/20">
+                                @{c}
+                                <button onClick={() => removeCollaborator(c)} className="hover:text-destructive transition-colors">
+                                    <X size={12} />
+                                </button>
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Collaborator Input */}
+            <div className="mb-4">
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        value={collaboratorInput}
+                        onChange={(e) => setCollaboratorInput(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && addCollaborator()}
+                        placeholder="Add collaborator (username)"
+                        className="flex-1 input-field text-sm"
+                    />
+                    <button
+                        onClick={addCollaborator}
+                        disabled={!collaboratorInput.trim()}
+                        className="btn-secondary text-sm px-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Add
+                    </button>
                 </div>
             </div>
 
-            <div className="space-y-4">
-                <div className="flex gap-4">
-                    <div className="relative w-12 h-12 rounded-2xl overflow-hidden ring-2 ring-primary/10 group-hover/create:rotate-3 transition-all duration-200 shadow-lg shrink-0">
-                        <Image
-                            src={getAbsUrl(userPhoto || user.photoURL) || '/assets/default-user.png'}
-                            fill
-                            className="object-cover"
-                            alt="User Profile"
-                        />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <SimpleMDE
-                            value={content}
-                            onChange={(val) => setContent(val)}
-                            options={mdeOptions as any}
-                        />
+            {/* Footer Actions */}
+            <div className="flex items-center justify-between pt-4 border-t border-border">
+                <div className="flex items-center gap-3">
+                    {/* Image Upload */}
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                        className="btn-icon"
+                        title="Upload image"
+                    >
+                        {uploading ? <Loader2 size={18} className="animate-spin" /> : <ImageIcon size={18} />}
+                    </button>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                    />
 
-                        {/* Collaborators Input */}
-                        <div className="mt-2 flex flex-wrap gap-2 items-center">
-                            {collaborators.map(c => (
-                                <span key={c} className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full flex items-center gap-1">
-                                    @{c}
-                                    <button onClick={() => removeCollaborator(c)} className="hover:text-red-500"><X size={10} /></button>
-                                </span>
-                            ))}
-                            <div className="flex items-center gap-2 bg-white/5 rounded-full px-3 py-1">
-                                <span className="text-muted-foreground text-xs">@</span>
-                                <input
-                                    className="bg-transparent border-none outline-none text-xs text-foreground w-24 placeholder:text-muted-foreground/50"
-                                    placeholder="Collaborator ID"
-                                    value={collaboratorInput}
-                                    onChange={e => setCollaboratorInput(e.target.value)}
-                                    onKeyDown={e => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            addCollaborator();
-                                        }
-                                    }}
-                                />
-                                <button onClick={addCollaborator} disabled={!collaboratorInput} className="text-primary disabled:opacity-50 text-xs font-bold">+</button>
-                            </div>
-                        </div>
-                    </div>
+                    {/* Anonymous Toggle */}
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                        <input
+                            type="checkbox"
+                            checked={isAnonymous}
+                            onChange={(e) => setIsAnonymous(e.target.checked)}
+                            className="w-4 h-4 rounded border-border text-primary focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                        />
+                        <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                            Post Anonymously
+                        </span>
+                    </label>
                 </div>
 
-                {/* Image Preview */}
-                {imageUrl && (
-                    <div className="relative w-full h-48 bg-black/5 dark:bg-white/5 rounded-2xl overflow-hidden group/image">
-                        <Image src={getAbsUrl(imageUrl)} fill alt="Preview" className="object-cover" />
-                        <button
-                            onClick={() => setImageUrl("")}
-                            className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full hover:bg-red-500 transition-colors"
-                        >
-                            <X size={14} />
-                        </button>
-                    </div>
-                )}
-
-                {/* Upload Progress */}
-                {uploading && (
-                    <div className="w-full h-12 flex items-center justify-center bg-primary/5 rounded-xl">
-                        <Loader2 className="animate-spin text-primary mr-2" size={16} />
-                        <span className="text-xs font-bold text-primary">Uploading...</span>
-                    </div>
-                )}
-
-                <div className="flex flex-col sm:flex-row gap-4 justify-between items-center pt-2">
-                    <label className="flex items-center space-x-3 text-muted-foreground text-xs cursor-pointer select-none group/anon hover:text-primary transition-colors">
-                        <div className={`w-5 h-5 rounded-lg border-2 transition-all flex items-center justify-center ${isAnonymous ? "bg-primary border-primary rotate-12 shadow-sm" : "border-border/50 group-hover/anon:border-primary/50"}`}>
-                            {isAnonymous && <span className="text-white text-[10px] font-black">✓</span>}
-                        </div>
-                        <input type="checkbox" checked={isAnonymous} onChange={(e) => setIsAnonymous(e.target.checked)} className="hidden" />
-                        <span className="font-bold uppercase tracking-widest opacity-80 group-hover/anon:opacity-100 transition-all">Post Anonymously</span>
-                    </label>
-
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            accept="image/*"
-                            onChange={handleFileSelect}
-                        />
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploading || loading}
-                            className="p-2 rounded-xl hover:bg-primary/10 text-primary/70 hover:text-primary transition-all"
-                            title="Add Image"
-                        >
-                            <ImageIcon size={20} />
-                        </button>
-                    </div>
-
-                    <div className="flex gap-2 w-full sm:w-auto">
-                        <button
-                            onClick={handleSaveDraft}
-                            disabled={loading || !content.trim()}
-                            className="flex-1 sm:flex-none btn-secondary border border-border/50 px-6 py-2.5 text-[10px] uppercase tracking-widest"
-                        >
-                            Save Draft
-                        </button>
-                        <button
-                            onClick={handleSubmit}
-                            disabled={loading || !content.trim()}
-                            className="flex-1 sm:flex-none btn-primary px-8 py-3 text-[10px] uppercase tracking-[0.2em]"
-                        >
-                            {loading ? "POSTING..." : "SHARE REVIEW"}
-                        </button>
-                    </div>
+                {/* Action Buttons */}
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleSaveDraft}
+                        disabled={loading || !content.trim()}
+                        className="btn-ghost text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Save Draft
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={loading || !content.trim()}
+                        className="btn-primary text-sm disabled:opacity-50 disabled:cursor-not-allowed min-w-[80px]"
+                    >
+                        {loading ? (
+                            <span className="flex items-center gap-2">
+                                <Loader2 size={14} className="animate-spin" />
+                                Posting...
+                            </span>
+                        ) : (
+                            "Post"
+                        )}
+                    </button>
                 </div>
             </div>
         </motion.div>

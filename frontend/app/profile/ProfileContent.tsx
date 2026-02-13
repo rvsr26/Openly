@@ -44,7 +44,7 @@ export default function ProfileContent({ activeTab, posts, user, isOwner, onRefr
     // Fetch Timelines when tab is active
     useEffect(() => {
         if (activeTab === "Journeys" && user) {
-            setLoadingTimelines(true);
+            setTimeout(() => setLoadingTimelines(true), 0);
             timelineApi.getUserTimelines(user.id || user.uid)
                 .then(setTimelines)
                 .catch(console.error)

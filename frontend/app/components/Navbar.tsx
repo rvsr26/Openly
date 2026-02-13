@@ -22,26 +22,57 @@ import {
   Menu,
   X
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
+import ThemeToggle from "./ThemeToggle";
+import SearchAutocomplete from './SearchAutocomplete';
 
 function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user: authUser, refreshSession } = useAuth();
   const { theme } = useTheme();
 
+  // All hooks must be called before any conditional returns
   const [isScrolled, setIsScrolled] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
   const [storedAccounts, setStoredAccounts] = useState<any[]>([]);
 
+  // All useEffect hooks must also be before conditional returns
   useEffect(() => {
-    setStoredAccounts(getStoredAccounts());
-  }, [showDropdown]); // Refresh when dropdown opens
+    if (showDropdown) {
+      const accounts = getStoredAccounts();
+      setTimeout(() => setStoredAccounts(accounts), 0);
+    }
+  }, [showDropdown]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Hide navbar on landing, login, and signup pages
+  const hiddenPaths = ['/', '/landing', '/login', '/signup'];
+  if (hiddenPaths.includes(pathname)) {
+    return null;
+  }
 
   const handleAddAccount = async () => {
     if (authUser) {
@@ -57,46 +88,18 @@ function Navbar() {
       saveAccount(authUser, localStorage.getItem('token'));
     }
 
-    // Switch token in localStorage
     if (account.token) {
       localStorage.setItem('token', account.token);
-    } else {
-      // If no token stored, we might need a re-login for this specific account,
-      // but let's try to refresh anyway.
-      // Usually, saveAccount will have stored the token.
     }
 
-    // Refresh context session
     await refreshSession();
-
     setShowDropdown(false);
-    // No need to redirect to login if we have a token!
   };
 
   const handleRemoveAccount = (uid: string) => {
     removeAccount(uid);
     setStoredAccounts(getStoredAccounts());
   };
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
 
   const { data: profile } = useQuery({
     queryKey: ["userProfile", authUser?.uid],
@@ -126,10 +129,9 @@ function Navbar() {
 
   const handleLogout = async () => {
     try {
-      if (authUser) saveAccount(authUser, localStorage.getItem('token')); // Remember account on logout too
+      if (authUser) saveAccount(authUser, localStorage.getItem('token'));
       await logout();
       localStorage.removeItem('token');
-      // Force refresh of the context
       await refreshSession();
       setShowDropdown(false);
       router.push('/login');
@@ -139,120 +141,90 @@ function Navbar() {
   };
 
   return (
-    <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${isScrolled
-      ? "glass-premium shadow-xl shadow-black/10"
-      : "bg-background/20 backdrop-blur-sm border-b border-white/5"
+    <nav className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${isScrolled
+      ? "bg-background/95 backdrop-blur-md shadow-sm border-b border-border"
+      : "bg-background/80 backdrop-blur-sm border-b border-border/50"
       }`}>
-      <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-20 gap-3 sm:gap-4">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
 
           {/* LOGO */}
-          <Link href="/" className="flex items-center gap-2 sm:gap-3 group flex-shrink-0">
-            <motion.div
-              whileHover={{ rotate: 12, scale: 1.1 }}
-              className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-primary to-primary/60 p-1.5 sm:p-2 flex items-center justify-center shadow-lg shadow-primary/25"
-            >
-              <div className="w-full h-full bg-white rounded-xl"></div>
-            </motion.div>
-            <span className="text-lg sm:text-xl lg:text-2xl font-black text-foreground tracking-tighter">
+          <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
+              <div className="w-5 h-5 bg-white rounded-md"></div>
+            </div>
+            <span className="text-xl font-bold text-foreground">
               Openly
             </span>
           </Link>
 
           {/* SEARCH BAR (Desktop) */}
-          <div className="hidden md:flex flex-1 max-w-md lg:max-w-xl mx-4 lg:mx-8">
-            <div className="relative w-full group">
-              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none z-10">
-                <Search className="w-4 h-4 text-muted-foreground/70 group-focus-within:text-primary transition-colors duration-300" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search people, insights..."
-                className="w-full bg-white/5 hover:bg-white/10 focus:bg-white/10 border border-white/5 group-hover:border-white/10 focus:border-primary/30 rounded-full pl-11 pr-12 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 transition-all duration-300 outline-none ring-0 focus:ring-4 focus:ring-primary/10 shadow-sm"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const target = e.target as HTMLInputElement;
-                    if (target.value.trim()) {
-                      router.push(`/search?q=${encodeURIComponent(target.value.trim())}`);
-                    }
-                  }
-                }}
-              />
-              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                <kbd className="hidden lg:inline-flex h-5 select-none items-center gap-1 rounded border border-white/10 bg-white/5 px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-50">
-                  <span className="text-xs">⌘</span>K
-                </kbd>
-              </div>
-            </div>
+          <div className="hidden md:flex flex-1 max-w-md lg:max-w-xl mx-8">
+            <SearchAutocomplete />
           </div>
 
           {/* ACTIONS */}
-          <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
 
             {/* Create Post Button */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+            <button
               onClick={handleCreatePost}
-              className="hidden sm:flex items-center gap-2 px-3 sm:px-5 lg:px-6 py-2 sm:py-2.5 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-white rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-bold uppercase tracking-wider shadow-lg shadow-primary/25 transition-all"
+              className="hidden sm:flex items-center gap-2 btn-primary text-sm"
             >
               <Plus className="w-4 h-4" />
               <span className="hidden lg:inline">Create</span>
-            </motion.button>
+            </button>
 
             {/* Mobile Create Button */}
             <button
               onClick={handleCreatePost}
-              className="sm:hidden p-2 text-primary hover:bg-primary/10 rounded-xl transition-colors"
+              className="sm:hidden btn-icon"
             >
               <Plus className="w-5 h-5" />
             </button>
 
             {/* Divider */}
-            <div className="hidden sm:block h-8 w-px bg-border/50"></div>
+            <div className="hidden sm:block h-6 divider-vertical"></div>
 
             {/* Icons (Desktop) */}
-            <div className="hidden sm:flex items-center gap-1 lg:gap-2">
-              <Link
-                href="/messages"
-                className="relative p-2 lg:p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all"
-              >
+            <div className="hidden sm:flex items-center gap-1">
+              <Link href="/messages" className="btn-icon relative">
                 <MessageCircle className="w-5 h-5" />
                 {unreadCount && unreadCount.unread_count > 0 && (
-                  <span className="absolute top-1 right-1 bg-primary text-white text-[8px] rounded-full w-4 h-4 flex items-center justify-center font-bold ring-2 ring-background">
+                  <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
                     {unreadCount.unread_count > 9 ? '9+' : unreadCount.unread_count}
                   </span>
                 )}
               </Link>
 
-              <Link
-                href="/notifications"
-                className="p-2 lg:p-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all"
-              >
+              <Link href="/notifications" className="btn-icon">
                 <Bell className="w-5 h-5" />
               </Link>
+
+              {/* Theme Toggle */}
+              <ThemeToggle />
             </div>
 
             {/* Divider */}
-            <div className="h-8 w-px bg-border/50"></div>
+            <div className="h-6 divider-vertical"></div>
 
             {/* User Menu */}
             {authUser ? (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
-                  className="flex items-center gap-2 sm:gap-3 p-1 pl-2 sm:pl-3 rounded-2xl hover:bg-muted/50 transition-all border border-transparent hover:border-border/50"
+                  className="flex items-center gap-2 p-1 pl-2 rounded-xl hover:bg-muted/50 transition-all"
                 >
-                  <span className="hidden lg:inline text-xs font-bold text-foreground max-w-[100px] truncate">
+                  <span className="hidden lg:inline text-sm font-medium text-foreground max-w-[100px] truncate">
                     {profile?.user_info?.display_name || authUser.displayName || 'User'}
                   </span>
-                  <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl overflow-hidden ring-2 ring-primary/20">
+                  <div className="relative w-8 h-8 rounded-lg overflow-hidden ring-2 ring-border">
                     <Image
                       src={getAbsUrl(profile?.user_info?.photoURL || authUser.photoURL) || '/assets/default-user.png'}
                       fill
                       className="object-cover"
                       alt="Profile"
-                      sizes="(max-width: 640px) 32px, 36px"
+                      sizes="32px"
                     />
                   </div>
                   <ChevronDown className={`hidden sm:block w-4 h-4 text-muted-foreground transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
@@ -265,11 +237,11 @@ function Navbar() {
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute right-0 mt-2 w-56 sm:w-64 glass-premium rounded-2xl shadow-2xl overflow-hidden"
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-64 card-elevated rounded-xl overflow-hidden"
                     >
-                      <div className="p-4 border-b border-border/50 bg-gradient-to-br from-primary/5 to-transparent">
-                        <p className="text-sm font-bold text-foreground truncate">
+                      <div className="p-4 border-b border-border bg-muted/30">
+                        <p className="text-sm font-semibold text-foreground truncate">
                           {profile?.user_info?.display_name || authUser.displayName || 'User'}
                         </p>
                         <p className="text-xs text-muted-foreground truncate mt-0.5">
@@ -281,7 +253,7 @@ function Navbar() {
                         <Link
                           href="/profile"
                           onClick={() => setShowDropdown(false)}
-                          className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
                         >
                           <UserIcon className="w-4 h-4 text-muted-foreground" />
                           <span>View Profile</span>
@@ -290,7 +262,7 @@ function Navbar() {
                         <Link
                           href="/settings"
                           onClick={() => setShowDropdown(false)}
-                          className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
                         >
                           <Settings className="w-4 h-4 text-muted-foreground" />
                           <span>Settings</span>
@@ -298,44 +270,48 @@ function Navbar() {
                       </div>
 
                       {/* SWITCH ACCOUNTS SECTION */}
-                      <div className="border-t border-border/50 py-2">
-                        <p className="px-4 text-xs font-bold text-muted-foreground uppercase mb-1">Switch Accounts</p>
-                        {storedAccounts.filter((acc: any) => acc.uid !== authUser.uid).map((acc: any) => (
-                          <div key={acc.uid} className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 group transition-colors cursor-pointer" onClick={() => handleSwitchAccount(acc)}>
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full overflow-hidden relative border border-border">
-                                <Image src={getAbsUrl(acc.photoURL) || '/assets/default-user.png'} fill alt={acc.displayName || 'User'} className="object-cover" />
+                      {storedAccounts.filter((acc: any) => acc.uid !== authUser.uid).length > 0 && (
+                        <div className="border-t border-border py-2">
+                          <p className="px-4 text-xs font-semibold text-muted-foreground uppercase mb-1">Switch Accounts</p>
+                          {storedAccounts.filter((acc: any) => acc.uid !== authUser.uid).map((acc: any) => (
+                            <div key={acc.uid} className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 group transition-colors cursor-pointer" onClick={() => handleSwitchAccount(acc)}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full overflow-hidden relative border border-border">
+                                  <Image src={getAbsUrl(acc.photoURL) || '/assets/default-user.png'} fill alt={acc.displayName || 'User'} className="object-cover" />
+                                </div>
+                                <div className="max-w-[120px]">
+                                  <p className="text-sm font-medium text-foreground truncate">{acc.displayName || 'User'}</p>
+                                </div>
                               </div>
-                              <div className="max-w-[100px]">
-                                <p className="text-sm font-medium text-foreground truncate">{acc.displayName || 'User'}</p>
-                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveAccount(acc.uid);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-all"
+                                title="Remove account"
+                              >
+                                <X size={12} />
+                              </button>
                             </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveAccount(acc.uid);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-red-500 transition-all"
-                              title="Remove account"
-                            >
-                              <X size={12} />
-                            </button>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
+                      )}
 
+                      <div className="border-t border-border py-1">
                         <button
                           onClick={handleAddAccount}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
                         >
                           <Plus className="w-4 h-4" />
                           <span>Add Account</span>
                         </button>
                       </div>
 
-                      <div className="border-t border-border/50">
+                      <div className="border-t border-border">
                         <button
                           onClick={handleLogout}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-destructive hover:bg-destructive/5 transition-colors"
                         >
                           <LogOut className="w-4 h-4" />
                           <span>Logout</span>
@@ -348,7 +324,7 @@ function Navbar() {
             ) : (
               <Link
                 href="/login"
-                className="px-4 sm:px-5 py-2 text-xs font-bold text-foreground hover:text-primary transition-colors uppercase border border-border rounded-xl hover:border-primary/50"
+                className="px-4 py-2 text-sm font-semibold text-foreground hover:text-primary transition-colors border border-border rounded-xl hover:border-primary/50"
               >
                 Login
               </Link>
@@ -357,7 +333,7 @@ function Navbar() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="sm:hidden p-2 text-foreground hover:bg-muted/50 rounded-xl transition-colors"
+              className="sm:hidden btn-icon"
             >
               {showMobileMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -371,7 +347,7 @@ function Navbar() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="sm:hidden border-t border-border/50 py-4 space-y-2"
+              className="sm:hidden border-t border-border py-4 space-y-2"
             >
               <Link
                 href="/messages"
@@ -396,15 +372,15 @@ function Navbar() {
                 <span>Notifications</span>
               </Link>
 
-              <div className="relative px-4 py-2">
-                <div className="absolute inset-y-0 left-8 flex items-center pointer-events-none">
-                  <Search className="w-4 h-4 text-muted-foreground" />
+              <div className="px-4 py-2">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    className="w-full input-field pl-10 pr-4 py-2.5 text-sm"
+                  />
                 </div>
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="w-full input-field pl-10 pr-4 py-2.5 text-sm"
-                />
               </div>
             </motion.div>
           )}

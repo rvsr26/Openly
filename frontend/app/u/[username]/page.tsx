@@ -137,6 +137,7 @@ export default function PublicProfilePage() {
             <div className="flex justify-between items-end -mt-12 mb-4">
               <img
                 src={getAbsUrl(profile.user_info.photo)}
+                alt={profile.user_info.display_name}
                 className="w-32 h-32 rounded-full border-4 border-background shadow-md bg-secondary object-cover"
               />
 

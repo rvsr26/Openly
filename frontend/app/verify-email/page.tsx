@@ -1,27 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
 
-export default function VerifyEmailPage() {
+function VerifyEmailContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
     const [message, setMessage] = useState("");
-
-    useEffect(() => {
-        const token = searchParams.get("token");
-
-        if (!token) {
-            setStatus("error");
-            setMessage("Invalid verification link");
-            return;
-        }
-
-        verifyEmail(token);
-    }, [searchParams]);
 
     const verifyEmail = async (token: string) => {
         try {
@@ -50,6 +38,20 @@ export default function VerifyEmailPage() {
             setMessage("An error occurred. Please try again.");
         }
     };
+
+    useEffect(() => {
+        const token = searchParams.get("token");
+
+        if (!token) {
+            setTimeout(() => {
+                setStatus("error");
+                setMessage("Invalid verification link");
+            }, 0);
+            return;
+        }
+
+        setTimeout(() => verifyEmail(token), 0);
+    }, [searchParams, router]);
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
@@ -89,5 +91,13 @@ export default function VerifyEmailPage() {
                 )}
             </motion.div>
         </div>
+    );
+}
+
+export default function VerifyEmailPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="w-16 h-16 mx-auto text-blue-600 animate-spin" /> Verifying...</div>}>
+            <VerifyEmailContent />
+        </Suspense>
     );
 }

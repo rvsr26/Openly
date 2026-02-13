@@ -12,7 +12,7 @@ import {
   onAuthStateChanged,
 } from "firebase/auth";
 import { motion } from "framer-motion";
-import { Mail, Lock, ArrowRight, CheckCircle, AlertCircle } from "lucide-react";
+import { Mail, Lock, ArrowRight, CheckCircle, AlertCircle, Heart, Sparkles } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,7 +26,7 @@ export default function LoginPage() {
   /* 🔐 Redirect if already logged in */
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) router.push("/");
+      if (user) router.push("/feed");
     });
     return () => unsubscribe();
   }, [router]);
@@ -40,7 +40,7 @@ export default function LoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/");
+      router.push("/feed");
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && (err as any).code === "auth/invalid-credential") {
         setError("Invalid email or password.");
@@ -61,7 +61,7 @@ export default function LoginPage() {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      router.push("/");
+      router.push("/feed");
     } catch (err: unknown) {
       setError("Google login failed.");
     } finally {
@@ -86,41 +86,44 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex w-full relative overflow-hidden bg-background">
+    <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-muted/30">
 
-      {/* Background Ambience (Mobile/Global) */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-purple-500/5 pointer-events-none" />
+      {/* --- LEFT SIDE: BRANDING --- */}
+      <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-primary via-primary to-primary/80 text-white relative items-center justify-center p-12 overflow-hidden">
 
-      {/* --- LEFT SIDE: ARTWORK --- */}
-      <div className="hidden lg:flex w-1/2 bg-black text-white relative items-center justify-center p-12 overflow-hidden">
-        {/* Abstract Background Shapes - Premium & Dark */}
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center opacity-40 mix-blend-overlay" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
-          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/30 rounded-full blur-[120px] animate-pulse-slow" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/30 rounded-full blur-[120px] animate-pulse-slow delay-1000" />
+        {/* Animated Background */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-[20%] right-[10%] w-[500px] h-[500px] bg-white/20 rounded-full blur-[120px] animate-pulse"></div>
+          <div className="absolute bottom-[20%] left-[10%] w-[400px] h-[400px] bg-white/10 rounded-full blur-[100px] animate-pulse delay-1000"></div>
         </div>
 
         <div className="relative z-10 max-w-lg">
           <div className="mb-10">
-            <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-white/10 shadow-2xl">
-              <img src="/assets/logo.png" alt="Openly" className="h-10 w-auto object-contain brightness-0 invert" />
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center mb-8 shadow-2xl">
+              <Heart className="w-12 h-12 text-white" fill="white" />
             </div>
-            <h1 className="text-5xl font-black mb-6 tracking-tight leading-[1.1] text-white">
-              Share Failures. <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">Build Success.</span>
+            <h1 className="text-6xl font-bold mb-6 tracking-tight leading-tight">
+              Welcome Back to
+              <br />
+              <span className="text-white/90">Openly</span>
             </h1>
-            <p className="text-xl text-gray-300 font-light leading-relaxed">
-              &quot;Success is stumbling from failure to failure with no loss of enthusiasm.&quot;
+            <p className="text-xl text-white/80 font-light leading-relaxed mb-8">
+              Continue your journey of growth through shared failures and collective wisdom.
             </p>
-            <div className="mt-8 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-                <span className="font-serif italic font-bold">W</span>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-6 mt-12">
+              <div className="text-center">
+                <div className="text-3xl font-bold mb-1">10K+</div>
+                <div className="text-sm text-white/70">Stories</div>
               </div>
-              <div>
-                <p className="font-semibold text-white">Winston Churchill</p>
-                <p className="text-xs text-gray-400">Former Prime Minister of the UK</p>
+              <div className="text-center">
+                <div className="text-3xl font-bold mb-1">50K+</div>
+                <div className="text-sm text-white/70">Members</div>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold mb-1">4.9★</div>
+                <div className="text-sm text-white/70">Rating</div>
               </div>
             </div>
           </div>
@@ -128,69 +131,83 @@ export default function LoginPage() {
       </div>
 
       {/* --- RIGHT SIDE: FORM --- */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-12 relative z-10">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4 }}
           className="w-full max-w-md"
         >
-          <div className="mb-8">
-            <div className="lg:hidden mb-6 flex justify-center">
-              <img src="/assets/logo.png" alt="Openly" className="h-10 w-auto" />
+          {/* Mobile Logo */}
+          <div className="lg:hidden mb-8 flex justify-center">
+            <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-lg">
+              <Heart className="w-9 h-9 text-primary-foreground" fill="currentColor" />
             </div>
-            <h2 className="text-3xl font-black tracking-tight text-foreground mb-2">Welcome Back</h2>
-            <p className="text-muted-foreground">
-              Enter your details to access your account.
+          </div>
+
+          <div className="mb-10">
+            <h2 className="text-4xl font-bold mb-3 text-foreground">Welcome Back</h2>
+            <p className="text-muted-foreground text-lg">
+              Sign in to continue your journey
             </p>
           </div>
 
-          <form onSubmit={handleEmailLogin} className="space-y-5">
+          <form onSubmit={handleEmailLogin} className="space-y-6">
             {/* Error & Reset Messages */}
-            <div className="space-y-2">
-              {error && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-xl flex items-center gap-3">
-                  <AlertCircle size={18} /> {error}
-                </motion.div>
-              )}
-              {resetMsg && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-sm p-3 rounded-xl flex items-center gap-3">
-                  <CheckCircle size={18} /> {resetMsg}
-                </motion.div>
-              )}
-            </div>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-4 rounded-xl flex items-center gap-3"
+              >
+                <AlertCircle size={20} /> {error}
+              </motion.div>
+            )}
+            {resetMsg && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-sm p-4 rounded-xl flex items-center gap-3"
+              >
+                <CheckCircle size={20} /> {resetMsg}
+              </motion.div>
+            )}
 
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Email Address</label>
-                <div className="relative group">
-                  <Mail className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-foreground">Email Address</label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-muted/30 border border-border rounded-xl px-10 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                    className="w-full bg-muted/50 border border-border rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
                     placeholder="name@example.com"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Password</label>
-                  <button type="button" onClick={handleForgotPassword} className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors">
+                  <label className="text-sm font-semibold text-foreground">Password</label>
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                  >
                     Forgot Password?
                   </button>
                 </div>
-                <div className="relative group">
-                  <Lock className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <input
                     type="password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-muted/30 border border-border rounded-xl px-10 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                    className="w-full bg-muted/50 border border-border rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-foreground"
                     placeholder="••••••••"
                   />
                 </div>
@@ -200,17 +217,26 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3.5 rounded-xl shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+              className="w-full btn-primary py-4 text-lg flex items-center justify-center gap-2 shadow-lg shadow-primary/25"
             >
-              {loading ? "Signing in..." : <><span className="text-base">Sign In</span> <ArrowRight size={18} /></>}
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 animate-spin" />
+                  Signing in...
+                </span>
+              ) : (
+                <>
+                  Sign In <ArrowRight size={20} />
+                </>
+              )}
             </button>
 
-            <div className="relative py-4">
+            <div className="relative py-6">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border/60" />
+                <span className="w-full border-t border-border" />
               </div>
-              <div className="relative flex justify-center text-xs uppercase tracking-widest">
-                <span className="bg-background px-4 text-muted-foreground">
+              <div className="relative flex justify-center text-sm">
+                <span className="bg-background px-4 text-muted-foreground font-medium">
                   Or continue with
                 </span>
               </div>
@@ -220,18 +246,21 @@ export default function LoginPage() {
               type="button"
               disabled={loading}
               onClick={handleGoogleLogin}
-              className="w-full bg-card hover:bg-muted/50 border border-border font-semibold py-3.5 rounded-xl transition-all flex items-center justify-center gap-3 text-foreground active:scale-[0.98]"
+              className="w-full btn-secondary py-4 text-lg flex items-center justify-center gap-3"
             >
-              <svg className="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
+              <svg className="h-6 w-6" aria-hidden="true" viewBox="0 0 24 24">
                 <path d="M12.0003 20.45c4.656 0 8.556-3.218 9.973-7.65h-9.973v-4.524h15.222c.159.833.242 1.693.242 2.578 0 8.019-5.748 13.913-13.828 13.913-7.729 0-14-6.271-14-14s6.271-14 14-14c3.784 0 7.211 1.396 9.872 3.882l-4.133 3.493c-1.554-1.121-3.601-1.785-5.739-1.785-5.188 0-9.471 3.978-11.042 9.006h-.033l-4.665-3.587-.146.108c1.677 5.95 7.152 10.354 13.671 10.354z" fill="currentColor" />
               </svg>
               Google
             </button>
           </form>
 
-          <p className="mt-8 text-center text-sm text-muted-foreground">
+          <p className="mt-10 text-center text-muted-foreground">
             Don&apos;t have an account?{" "}
-            <button onClick={() => router.push("/signup")} className="font-bold text-primary hover:underline transition-colors">
+            <button
+              onClick={() => router.push("/signup")}
+              className="font-bold text-primary hover:underline transition-colors"
+            >
               Create an account
             </button>
           </p>

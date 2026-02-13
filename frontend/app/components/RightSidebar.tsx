@@ -6,6 +6,7 @@ import { TrendingUp, X, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { User } from "firebase/auth";
 import { memo } from "react";
+import TrendingTopics from "./TrendingTopics";
 
 interface TrendingTopic {
     topic: string;
@@ -63,51 +64,7 @@ function RightSidebar({
             {/* ... (Trending Section remains unchanged) ... */}
 
             {/* 2. TRENDING TOPICS */}
-            <div className="glass-card p-6">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-sm font-black text-foreground uppercase tracking-widest">Trending Topics</h3>
-                    <TrendingUp size={16} className="text-primary" />
-                </div>
-
-                <div className="space-y-3">
-                    {isLoading ? (
-                        <div className="text-[10px] text-muted-foreground/50 font-bold uppercase tracking-widest">Loading trends...</div>
-                    ) : (trending || []).length > 0 ? (
-                        trending.map((t) => (
-                            <Link
-                                key={t.topic}
-                                href={`/search?q=${encodeURIComponent(t.topic)}`}
-                                className="flex justify-between items-center group p-2 rounded-xl hover:bg-primary/5 transition-colors"
-                            >
-                                <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">#{t.topic}</span>
-                                <span className="text-[10px] font-bold text-muted-foreground bg-primary/5 px-2 py-0.5 rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                                    {t.posts_count || '1.2k'} posts
-                                </span>
-                            </Link>
-                        ))
-                    ) : (
-                        [
-                            { tag: '#Startup', count: '12.5k' },
-                            { tag: '#Failure', count: '8.2k' },
-                            { tag: '#Growth', count: '5.1k' },
-                            { tag: '#Career', count: '3.4k' },
-                            { tag: '#LifeLesson', count: '2.9k' }
-                        ].map(item => (
-                            <Link
-                                key={item.tag}
-                                href={`/search?q=${encodeURIComponent(item.tag.replace('#', ''))}`}
-                                className="flex justify-between items-center group p-2 rounded-xl hover:bg-white/5 transition-colors"
-                            >
-                                <div className="flex flex-col">
-                                    <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">{item.tag}</span>
-                                    <span className="text-[10px] text-muted-foreground font-medium">Trending in India</span>
-                                </div>
-                                <span className="text-[10px] font-bold text-muted-foreground bg-primary/5 px-2 py-1 rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors">{item.count}</span>
-                            </Link>
-                        ))
-                    )}
-                </div>
-            </div>
+            <TrendingTopics />
 
             {/* 3. RECOMMENDED USERS */}
             <div className="glass-card p-6">

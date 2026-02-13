@@ -3,6 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import Navbar from "./components/Navbar";
+import BackToTop from "./components/BackToTop";
+import ShortcutsHelpModal from "./components/ShortcutsHelpModal";
+import GlobalShortcuts from "./components/GlobalShortcuts";
 import { Toaster } from "sonner";
 import ActivityTracker from "./components/ActivityTracker";
 
@@ -39,9 +42,12 @@ export default function RootLayout({
         <Providers>
           <ActivityTracker />
           <Navbar />
+          <GlobalShortcuts />
           <div className="relative z-10 flex flex-col min-h-screen">
             {children}
           </div>
+          <BackToTop />
+          <ShortcutsHelpModal />
           <Toaster position="bottom-right" richColors theme="system" />
         </Providers>
       </body>
