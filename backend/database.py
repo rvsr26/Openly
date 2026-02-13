@@ -30,3 +30,9 @@ password_reset_tokens_collection = db.get_collection("password_reset_tokens")
 
 # Activity tracking
 user_activity_collection = db.get_collection("user_activity")
+
+# Advanced features collections
+user_aliases_collection = db.get_collection("user_aliases")
+group_chats_collection = db.get_collection("group_chats")
+message_reactions_collection = db.get_collection("message_reactions")
+timelines_collection = db.get_collection("timelines")

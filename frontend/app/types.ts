@@ -20,6 +20,7 @@ export interface Post {
     created_at?: string;
     comments?: Comment[];
     is_archived?: boolean;
+    collaborators?: string[];
 }
 
 export interface User {
@@ -31,6 +32,8 @@ export interface User {
     bio?: string;
     website?: string;
     location?: string;
+    phoenix_score?: number;
+    badges?: string[];
 }
 
 export interface Comment {

@@ -12,9 +12,19 @@ interface ProfileHeaderProps {
     isOwner: boolean;
 }
 
+import PhoenixBadge from "../components/PhoenixBadge";
+
+interface ProfileHeaderProps {
+    user: User;
+    profileData: any;
+    isOwner: boolean;
+}
+
 export default function ProfileHeader({ user, profileData, isOwner }: ProfileHeaderProps) {
     const username = profileData?.user_info?.username;
     const photoURL = profileData?.user_info?.photoURL || user.photoURL;
+    const score = profileData?.user_info?.phoenix_score || 0;
+    const badges = profileData?.user_info?.badges || [];
 
     return (
         <div className="relative mb-8">
@@ -51,9 +61,12 @@ export default function ProfileHeader({ user, profileData, isOwner }: ProfileHea
                         <div className="flex-1 w-full">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                                 <div>
-                                    <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-foreground mb-2">
-                                        {user.displayName}
-                                    </h1>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-foreground">
+                                            {user.displayName}
+                                        </h1>
+                                        <PhoenixBadge badges={badges} score={score} size="md" />
+                                    </div>
                                     <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-muted-foreground">
                                         <span className="text-primary font-bold bg-primary/10 px-3 py-1 rounded-full">@{username}</span>
                                         <span className="flex items-center gap-1.5"><MapPin size={14} /> Earth</span>

@@ -93,6 +93,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
                     if (response.ok) {
                         const data = await response.json();
+
+                        if (data['2fa_required']) {
+                            console.log("🔐 MFA Required");
+                            // We need to redirect to MFA page
+                            // Since we can't use router here easily without extensive changes (it's a provider),
+                            // we can use window.location or expect the component using useAuth to handle it?
+                            // Actually, we can assume we are in a client component tree.
+                            // Let's use window.location for simplicity and reliability here
+                            window.location.href = `/auth/mfa?uid=${data.user_id}`;
+                            return;
+                        }
+
                         localStorage.setItem('token', data.access_token);
                         console.log("✅ Synced with backend");
                         setUser(fbUser);

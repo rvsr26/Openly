@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Message, Conversation } from '../types';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
+import { getAbsUrl } from '../lib/api';
 
 interface ChatWindowProps {
     conversation: Conversation | null;
@@ -87,7 +88,7 @@ export default function ChatWindow({
             <div className="border-b border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-900">
                 <div className="flex items-center gap-3">
                     <img
-                        src={otherUser.photoURL || '/default-avatar.png'}
+                        src={getAbsUrl(otherUser.photoURL) || '/default-avatar.png'}
                         alt={otherUser.display_name}
                         className="w-10 h-10 rounded-full object-cover"
                     />

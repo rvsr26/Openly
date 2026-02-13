@@ -2,6 +2,7 @@
 
 import { Conversation } from '../types';
 import { formatDistanceToNow } from 'date-fns';
+import { getAbsUrl } from '../lib/api';
 
 interface ConversationListProps {
     conversations: Conversation[];
@@ -57,7 +58,7 @@ export default function ConversationList({
                     >
                         <div className="relative flex-shrink-0">
                             <img
-                                src={otherUser.photoURL || '/default-avatar.png'}
+                                src={getAbsUrl(otherUser.photoURL) || '/default-avatar.png'}
                                 alt={otherUser.display_name}
                                 className="w-12 h-12 rounded-full object-cover"
                             />
@@ -71,8 +72,8 @@ export default function ConversationList({
                         <div className="flex-1 min-w-0 text-left">
                             <div className="flex items-center justify-between mb-1">
                                 <h3 className={`font-semibold truncate ${conversation.unread_count > 0
-                                        ? 'text-gray-900 dark:text-white'
-                                        : 'text-gray-700 dark:text-gray-300'
+                                    ? 'text-gray-900 dark:text-white'
+                                    : 'text-gray-700 dark:text-gray-300'
                                     }`}>
                                     {otherUser.display_name}
                                 </h3>
@@ -82,8 +83,8 @@ export default function ConversationList({
                             </div>
 
                             <p className={`text-sm truncate ${conversation.unread_count > 0
-                                    ? 'text-gray-900 dark:text-gray-100 font-medium'
-                                    : 'text-gray-500 dark:text-gray-400'
+                                ? 'text-gray-900 dark:text-gray-100 font-medium'
+                                : 'text-gray-500 dark:text-gray-400'
                                 }`}>
                                 {conversation.last_message || 'No messages yet'}
                             </p>

@@ -13,8 +13,8 @@ interface LeftSidebarProps {
 }
 
 const NavItem = ({ href, icon: Icon, label, active = false }: { href: string; icon: any; label: string; active?: boolean }) => (
-    <Link href={href} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${active ? "bg-primary text-white premium-shadow" : "text-muted-foreground hover:bg-white/5 hover:text-white"}`}>
-        <Icon size={18} className={active ? "text-white" : "text-muted-foreground group-hover:text-white transition-colors"} />
+    <Link href={href} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${active ? "bg-primary text-white premium-shadow" : "text-muted-foreground hover:bg-primary/10 hover:text-primary"}`}>
+        <Icon size={18} className={active ? "text-white" : "text-muted-foreground group-hover:text-primary transition-colors"} />
         <span className="text-sm font-bold tracking-wide">{label}</span>
     </Link>
 );

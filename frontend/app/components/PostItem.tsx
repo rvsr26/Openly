@@ -507,6 +507,14 @@ function PostItem({ post }: { post: Post }) {
               <h4 className="text-sm font-black text-foreground flex items-center gap-2 group-hover/author:text-primary transition-colors">
                 {post.user_name || "User"}
                 <span className="text-[10px] text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full font-black ring-1 ring-emerald-500/20">850</span>
+                {post.collaborators && post.collaborators.length > 0 && (
+                  <span className="flex items-center gap-1 ml-2 text-xs font-normal text-muted-foreground">
+                    with
+                    {post.collaborators.map((c, i) => (
+                      <span key={i} className="text-primary font-bold hover:underline cursor-pointer">@{c}</span>
+                    ))}
+                  </span>
+                )}
               </h4>
               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{formattedDate}</p>
             </div>

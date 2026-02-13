@@ -2,6 +2,7 @@
 
 import { Message } from '../types';
 import { formatDistanceToNow } from 'date-fns';
+import { getAbsUrl } from '../lib/api';
 
 interface MessageBubbleProps {
     message: Message;
@@ -24,7 +25,7 @@ export default function MessageBubble({ message, isOwnMessage, onDelete }: Messa
         <div className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} mb-4 group`}>
             {!isOwnMessage && message.sender_pic && (
                 <img
-                    src={message.sender_pic}
+                    src={getAbsUrl(message.sender_pic)}
                     alt={message.sender_name}
                     className="w-8 h-8 rounded-full mr-2 mt-auto"
                 />
@@ -39,8 +40,8 @@ export default function MessageBubble({ message, isOwnMessage, onDelete }: Messa
 
                 <div
                     className={`px-4 py-2 rounded-2xl break-words ${isOwnMessage
-                            ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-br-sm'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-sm'
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-br-sm'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-sm'
                         }`}
                 >
                     {message.content}
