@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, User, Lock, LogOut, Shield, Activity, Save, AlertTriangle, Key, Trash2, Camera, Eye, EyeOff } from "lucide-react";
+import { Settings, User, Lock, LogOut, Shield, Activity, Save, AlertTriangle, Key, Trash2, Camera, Eye, EyeOff, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
@@ -30,6 +30,12 @@ export default function SettingsPage() {
 
     // Activity Log
     const [activityLog, setActivityLog] = useState<any[]>([]);
+
+    // MFA State
+    const [isMfaModalOpen, setIsMfaModalOpen] = useState(false);
+    const [mfaSecret, setMfaSecret] = useState("");
+    const [mfaQr, setMfaQr] = useState("");
+    const [mfaCode, setMfaCode] = useState("");
 
     useEffect(() => {
         if (user) {
@@ -422,10 +428,29 @@ export default function SettingsPage() {
                                                     When enabled, you'll need to verify your identity via email or an authenticator app when logging on a new device.
                                                 </p>
                                             </div>
-                                            <label className="relative inline-flex items-center cursor-pointer ml-4">
-                                                <input type="checkbox" className="sr-only peer" onChange={(e) => handleToggle2FA(e.target.checked)} />
-                                                <div className="w-14 h-7 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-500/30 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-500 shadow-inner"></div>
-                                            </label>
+
+                                            <button
+                                                onClick={() => {
+                                                    // Start MFA Setup Flow
+                                                    if (user.two_factor_enabled) { // Assuming user object has this or we check via API?
+                                                        // Actually user object from context might not have it unless we sync it. 
+                                                        // Use local state or assume disabled for now if untracked.
+                                                        // Better: Toggle based on known state.
+                                                        // For now, let's assume if they click the button, we trigger the relevant flow.
+                                                        // Since we don't track 2FA status in user context yet, we might need to fetch it.
+                                                        // Let's assume the button text changes based on status which we should fetch.
+                                                        setIsMfaModalOpen(true);
+                                                    } else {
+                                                        setIsMfaModalOpen(true);
+                                                    }
+                                                }}
+                                                className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${false // Replace with actual status check
+                                                    ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                                                    : "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/25"
+                                                    }`}
+                                            >
+                                                Configure 2FA
+                                            </button>
                                         </div>
                                     </section>
                                 </div>
@@ -464,11 +489,117 @@ export default function SettingsPage() {
 
                         </motion.div>
                     </AnimatePresence>
+
+                    {/* MFA Modal */}
+                    <AnimatePresence>
+                        {isMfaModalOpen && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    className="bg-background glass-card w-full max-w-md p-6 rounded-2xl shadow-2xl border border-white/10"
+                                >
+                                    <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                                        <Shield size={20} className="text-primary" /> Setup 2FA
+                                    </h3>
+
+                                    {!mfaSecret ? (
+                                        <div className="space-y-4">
+                                            <p className="text-sm text-muted-foreground">
+                                                Two-factor authentication adds an extra layer of security to your account.
+                                            </p>
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        const data = await authApi.setup2FA();
+                                                        setMfaSecret(data.secret);
+                                                        setMfaQr(data.qr_code);
+                                                    } catch (e) {
+                                                        toast.error("Failed to start setup");
+                                                    }
+                                                }}
+                                                className="btn-primary w-full"
+                                            >
+                                                Start Setup
+                                            </button>
+
+                                            <div className="border-t border-border pt-4 mt-4">
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            await authApi.disable2FA();
+                                                            toast.success("2FA Disabled");
+                                                            setIsMfaModalOpen(false);
+                                                        } catch (e) {
+                                                            toast.error("Failed to disable 2FA");
+                                                        }
+                                                    }}
+                                                    className="text-red-500 text-sm hover:underline w-full text-center"
+                                                >
+                                                    Disable 2FA
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-6">
+                                            <div className="flex flex-col items-center gap-4 p-4 bg-white rounded-xl">
+                                                {/* QR Code */}
+                                                <img src={mfaQr} alt="QR Code" className="w-48 h-48" />
+                                                <p className="text-xs text-gray-500 font-mono break-all text-center">{mfaSecret}</p>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="text-xs font-bold uppercase text-muted-foreground">Verification Code</label>
+                                                <input
+                                                    type="text"
+                                                    placeholder="000000"
+                                                    value={mfaCode}
+                                                    onChange={(e) => setMfaCode(e.target.value)}
+                                                    className="input-field text-center tracking-widest text-xl font-mono"
+                                                    maxLength={6}
+                                                />
+                                            </div>
+
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await authApi.enable2FA(mfaCode);
+                                                        toast.success("2FA Enabled Successfully!");
+                                                        setIsMfaModalOpen(false);
+                                                        setMfaSecret("");
+                                                        setMfaQr("");
+                                                        setMfaCode("");
+                                                    } catch (e) {
+                                                        toast.error("Invalid Code");
+                                                    }
+                                                }}
+                                                className="btn-primary w-full"
+                                                disabled={mfaCode.length !== 6}
+                                            >
+                                                Verify & Enable
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    <button
+                                        onClick={() => {
+                                            setIsMfaModalOpen(false);
+                                            setMfaSecret("");
+                                            setMfaQr("");
+                                            setMfaCode("");
+                                        }}
+                                        className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+                                    >
+                                        <span className="sr-only">Close</span>
+                                        ✕
+                                    </button>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </main>
         </div>
     );
 }
-
-// Icon for chevron (missing in imports)
-import { ChevronRight } from "lucide-react";

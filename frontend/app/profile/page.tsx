@@ -108,7 +108,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen pb-20">
 
-      <main className="mt-28 max-w-6xl mx-auto px-4">
+      <main className="mt-20 max-w-6xl mx-auto px-4">
 
         <ProfileHeader
           user={user}

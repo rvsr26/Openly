@@ -5,8 +5,9 @@ import Image from "next/image";
 import { User } from "firebase/auth";
 import { motion } from "framer-motion";
 import { getAbsUrl, uploadImage } from "../lib/api";
-import { memo, useRef, useState, useMemo } from "react";
-import { Image as ImageIcon, X, Loader2 } from "lucide-react";
+import { timelineApi, Timeline } from "../lib/timelineApi";
+import { memo, useRef, useState, useMemo, useEffect } from "react";
+import { Image as ImageIcon, X, Loader2, Map, ChevronDown } from "lucide-react";
 import dynamic from "next/dynamic";
 import "easymde/dist/easymde.min.css";
 
@@ -24,6 +25,10 @@ interface CreatePostProps {
     loading: boolean;
     imageUrl: string;
     setImageUrl: (val: string) => void;
+    selectedTimelineId: string | null;
+    setSelectedTimelineId: (val: string | null) => void;
+    collaborators: string[];
+    setCollaborators: (val: string[]) => void;
 }
 
 function CreatePost({
@@ -37,10 +42,38 @@ function CreatePost({
     handleSaveDraft,
     loading,
     imageUrl,
-    setImageUrl
+    setImageUrl,
+    selectedTimelineId,
+    setSelectedTimelineId,
+    collaborators,
+    setCollaborators
 }: CreatePostProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
+    const [collaboratorInput, setCollaboratorInput] = useState("");
+
+    const addCollaborator = () => {
+        if (collaboratorInput.trim() && !collaborators.includes(collaboratorInput.trim())) {
+            setCollaborators([...collaborators, collaboratorInput.trim()]);
+            setCollaboratorInput("");
+        }
+    };
+
+    const removeCollaborator = (collab: string) => {
+        setCollaborators(collaborators.filter(c => c !== collab));
+    };
+
+    // Timeline State
+    const [timelines, setTimelines] = useState<Timeline[]>([]);
+    const [showTimelineMenu, setShowTimelineMenu] = useState(false);
+
+    useEffect(() => {
+        if (user) {
+            timelineApi.getUserTimelines(user.uid || user.id)
+                .then(t => setTimelines(t.filter(tl => tl.status === 'active')))
+                .catch(console.error);
+        }
+    }, [user]);
 
     const mdeOptions = useMemo(() => ({
         autofocus: false,
@@ -91,14 +124,66 @@ function CreatePost({
         );
     }
 
+
+
+    const selectedTimeline = timelines.find(t => t.id === selectedTimelineId);
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
-            className="glass-card mb-8 p-6 !rounded-[2rem] border border-primary/20 bg-primary/[0.02] group/create overflow-hidden"
+            className="glass-card mb-8 p-6 !rounded-[2rem] border border-primary/20 bg-primary/[0.02] group/create overflow-visible z-30 relative"
         >
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] mb-4 text-primary opacity-70">Share a Review</h3>
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary opacity-70">Share a Review</h3>
+
+                <div className="flex gap-2">
+                    {/* Timeline Selector */}
+                    {timelines.length > 0 && (
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowTimelineMenu(!showTimelineMenu)}
+                                className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full transition-all ${selectedTimelineId ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-white/5 text-muted-foreground hover:bg-white/10"
+                                    }`}
+                            >
+                                <Map size={12} />
+                                {selectedTimeline ? selectedTimeline.title : "Add to Journey"}
+                                <ChevronDown size={12} className={`transition-transform ${showTimelineMenu ? "rotate-180" : ""}`} />
+                            </button>
+
+                            {showTimelineMenu && (
+                                <div className="absolute right-0 top-full mt-2 w-48 glass-card p-1 shadow-xl z-50 animate-in fade-in zoom-in-95 origin-top-right">
+                                    <button
+                                        onClick={() => {
+                                            setSelectedTimelineId(null);
+                                            setShowTimelineMenu(false);
+                                        }}
+                                        className="w-full text-left px-3 py-2 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors text-muted-foreground"
+                                    >
+                                        None
+                                    </button>
+                                    {timelines.map(t => (
+                                        <button
+                                            key={t.id}
+                                            onClick={() => {
+                                                setSelectedTimelineId(t.id);
+                                                setShowTimelineMenu(false);
+                                            }}
+                                            className={`w-full text-left px-3 py-2 text-xs font-bold rounded-lg transition-colors flex items-center justify-between ${selectedTimelineId === t.id ? "bg-primary/10 text-primary" : "text-foreground hover:bg-white/5"
+                                                }`}
+                                        >
+                                            <span className="truncate">{t.title}</span>
+                                            {selectedTimelineId === t.id && <span className="text-primary text-[10px]">✓</span>}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
             <div className="space-y-4">
                 <div className="flex gap-4">
                     <div className="relative w-12 h-12 rounded-2xl overflow-hidden ring-2 ring-primary/10 group-hover/create:rotate-3 transition-all duration-200 shadow-lg shrink-0">
@@ -115,6 +200,32 @@ function CreatePost({
                             onChange={(val) => setContent(val)}
                             options={mdeOptions as any}
                         />
+
+                        {/* Collaborators Input */}
+                        <div className="mt-2 flex flex-wrap gap-2 items-center">
+                            {collaborators.map(c => (
+                                <span key={c} className="bg-primary/10 text-primary text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                    @{c}
+                                    <button onClick={() => removeCollaborator(c)} className="hover:text-red-500"><X size={10} /></button>
+                                </span>
+                            ))}
+                            <div className="flex items-center gap-2 bg-white/5 rounded-full px-3 py-1">
+                                <span className="text-muted-foreground text-xs">@</span>
+                                <input
+                                    className="bg-transparent border-none outline-none text-xs text-foreground w-24 placeholder:text-muted-foreground/50"
+                                    placeholder="Collaborator ID"
+                                    value={collaboratorInput}
+                                    onChange={e => setCollaboratorInput(e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            addCollaborator();
+                                        }
+                                    }}
+                                />
+                                <button onClick={addCollaborator} disabled={!collaboratorInput} className="text-primary disabled:opacity-50 text-xs font-bold">+</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

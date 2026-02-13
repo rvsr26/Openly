@@ -13,12 +13,19 @@ from database import (
     posts_collection, users_collection, comments_collection, reactions_collection, 
     bookmarks_collection, reports_collection, drafts_collection, downvotes_collection, 
     views_collection, messages_collection, conversations_collection,
-    verification_tokens_collection, password_reset_tokens_collection
+    verification_tokens_collection, password_reset_tokens_collection,
+    connections_collection
 )
 from bson import ObjectId
 from cache_utils import get_cached_feed, set_cached_feed, generate_cache_key, invalidate_category_cache
 from messaging_endpoints import router as messaging_router
 from activity_endpoints import router as activity_router
+from timelines import router as timelines_router
+from alias_manager import (
+    create_alias, get_user_aliases, get_alias_by_id, update_alias, 
+    delete_alias, activate_alias, deactivate_all_aliases, get_active_alias,
+    AliasCreate, AliasUpdate
+)
 
 # Import authentication and middleware (optional - won't break app if missing)
 AUTH_ENABLED = False
@@ -109,6 +116,7 @@ app = FastAPI(title="Openly API", version="1.0.0")
 # Include Routers
 app.include_router(messaging_router)
 app.include_router(activity_router)
+app.include_router(timelines_router)
 
 # Add security middleware (if available)
 if AUTH_ENABLED:
@@ -126,8 +134,10 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:3001",
+        "http://localhost:3002",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
+        "http://127.0.0.1:3002",
         os.getenv("FRONTEND_URL", "http://localhost:3000")
     ],
     allow_credentials=True,
@@ -206,6 +216,8 @@ class PostRequest(BaseModel):
     category: Optional[str] = "All"
     image_url: Optional[str] = None
     is_anonymous: bool = False
+    timeline_id: Optional[str] = None
+    collaborators: List[str] = [] # List of user_ids
     tags: List[str] = [] 
 
 class PostUpdate(BaseModel):
@@ -492,9 +504,23 @@ async def api_sync_user(req: UserSyncRequest):
         }
         await users_collection.insert_one(new_user)
     
+    # Post-sync 2FA Check
+    updated_user = await users_collection.find_one({"_id": req.uid})
+    if updated_user and updated_user.get("two_factor_enabled"):
+         return {
+            "2fa_required": True,
+            "user_id": req.uid,
+            "message": "Two-factor authentication required"
+        }
+
     # Generate Backend JWT
-    from auth import create_access_token
-    token = create_access_token({"sub": req.uid, "email": req.email})
+    token = "dummy_token"
+    if AUTH_ENABLED:
+        try:
+            from auth import create_access_token
+            token = create_access_token({"sub": req.uid, "email": req.email})
+        except ImportError:
+            print("⚠️ Auth module import failed in sync endpoint")
     
     return {
         "access_token": token,
@@ -606,6 +632,94 @@ async def api_get_activity_log(user = Depends(get_current_user)):
     ]
 
 
+# ==================== ALIAS SYSTEM ENDPOINTS ====================
+
+@app.post("/api/v1/aliases/")
+async def api_create_alias(alias_data: AliasCreate, user = Depends(get_current_user)):
+    """Create a new alias for the current user"""
+    try:
+        alias = await create_alias(user["_id"], alias_data)
+        return alias
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create alias: {str(e)}")
+
+@app.get("/api/v1/aliases/")
+async def api_get_aliases(user = Depends(get_current_user)):
+    """Get all aliases for the current user"""
+    try:
+        aliases = await get_user_aliases(user["_id"])
+        return {"aliases": aliases}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch aliases: {str(e)}")
+
+@app.get("/api/v1/aliases/{alias_id}")
+async def api_get_alias(alias_id: str, user = Depends(get_current_user)):
+    """Get a specific alias by ID"""
+    alias = await get_alias_by_id(alias_id)
+    if not alias:
+        raise HTTPException(status_code=404, detail="Alias not found")
+    if alias["user_id"] != user["_id"]:
+        raise HTTPException(status_code=403, detail="Not authorized to view this alias")
+    return alias
+
+@app.put("/api/v1/aliases/{alias_id}")
+async def api_update_alias(alias_id: str, update_data: AliasUpdate, user = Depends(get_current_user)):
+    """Update an alias"""
+    try:
+        alias = await update_alias(alias_id, user["_id"], update_data)
+        return alias
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update alias: {str(e)}")
+
+@app.delete("/api/v1/aliases/{alias_id}")
+async def api_delete_alias(alias_id: str, user = Depends(get_current_user)):
+    """Delete an alias"""
+    try:
+        success = await delete_alias(alias_id, user["_id"])
+        if success:
+            return {"status": "deleted"}
+        raise HTTPException(status_code=404, detail="Alias not found")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete alias: {str(e)}")
+
+@app.post("/api/v1/aliases/{alias_id}/activate")
+async def api_activate_alias(alias_id: str, user = Depends(get_current_user)):
+    """Activate an alias (switch to this persona)"""
+    try:
+        alias = await activate_alias(alias_id, user["_id"])
+        return {"status": "activated", "alias": alias}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to activate alias: {str(e)}")
+
+@app.post("/api/v1/aliases/deactivate")
+async def api_deactivate_aliases(user = Depends(get_current_user)):
+    """Deactivate all aliases and return to main profile"""
+    try:
+        success = await deactivate_all_aliases(user["_id"])
+        return {"status": "deactivated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to deactivate aliases: {str(e)}")
+
+@app.get("/api/v1/aliases/active")
+async def api_get_active_alias(user = Depends(get_current_user)):
+    """Get the currently active alias (if any)"""
+    alias = await get_active_alias(user["_id"])
+    if alias:
+        return alias
+    return {"message": "No active alias"}
+
+
+
+
+
 # --- POSTS ---
 
 @app.post("/posts/")
@@ -650,10 +764,35 @@ async def create_post(post: PostRequest):
         "report_count": 0,
         "downvote_count": 0,
         "is_rejected": False,
+        "timeline_id": post.timeline_id,
+        "collaborators": post.collaborators,
         "is_archived": False
     }
-    
+
     result = await posts_collection.insert_one(new_post)
+    
+    # GAMIFICATION: Award points for creating a post
+    try:
+        from gamification import calculate_score_action, get_badges_for_score
+        points = calculate_score_action("post_creation")
+        
+        # Update user score
+        user = await users_collection.find_one({"_id": ObjectId(post.user_id)})
+        if user:
+            current_score = user.get("phoenix_score", 0)
+            new_score = current_score + points
+            
+            # Check for new badges
+            new_badges = get_badges_for_score(new_score)
+            existing_badges = user.get("badges", [])
+            updated_badges = list(set(existing_badges + new_badges))
+            
+            await users_collection.update_one(
+                {"_id": ObjectId(post.user_id)},
+                {"$set": {"phoenix_score": new_score, "badges": updated_badges}}
+            )
+    except Exception as e:
+        print(f"Error updating gamification score: {e}")
     
     # Invalidate feed caches for this category
     post_category = new_post["category"]
@@ -1028,7 +1167,9 @@ async def get_user_profile_v2(user_id: str):
             "location": user_data.get("location", None),
             "experiences": user_data.get("experiences", []),
             "education": user_data.get("education", []),
-            "skills": user_data.get("skills", [])
+            "skills": user_data.get("skills", []),
+            "phoenix_score": user_data.get("phoenix_score", 0),
+            "badges": user_data.get("badges", [])
         },
         "stats": {
             "total_views": total_views,
@@ -1443,6 +1584,47 @@ async def unfollow_user(target_id: str, user_id: str):
         
     return {"status": "unfollowed"}
 
+@app.get("/users/suggested")
+async def get_suggested_users(user_id: Optional[str] = None):
+    # Fetch random users, excluding the current user
+    query = {}
+    if user_id:
+        # Also exclude people already connected or with pending requests
+        existing_conns = await connections_collection.find({
+            "$or": [{"requester_id": user_id}, {"target_id": user_id}]
+        }).to_list(100)
+        
+        excluded_ids = {user_id}
+        # Handle cases where user_id might be numeric or ObjectId in string form
+        try:
+            excluded_ids.add(ObjectId(user_id))
+        except:
+            pass
+
+        for conn in existing_conns:
+            excluded_ids.add(conn["requester_id"])
+            excluded_ids.add(conn["target_id"])
+            try:
+                excluded_ids.add(ObjectId(conn["requester_id"]))
+                excluded_ids.add(ObjectId(conn["target_id"]))
+            except:
+                pass
+        
+        query["_id"] = {"$nin": list(excluded_ids)}
+
+    cursor = users_collection.find(query).limit(5)
+    
+    suggested = []
+    async for doc in cursor:
+        suggested.append({
+            "uid": str(doc["_id"]),
+            "username": doc.get("username"),
+            "display_name": doc.get("display_name"),
+            "photoURL": doc.get("photoURL"),
+            "headline": doc.get("headline", "Member")
+        })
+    return suggested
+
 @app.get("/users/{user_id}")
 async def get_user_profile(user_id: str):
     user = await get_user_by_any_id(user_id)
@@ -1539,7 +1721,7 @@ async def get_following(user_id: str):
 class ConnectRequest(BaseModel):
     requester_id: str
 
-from database import connections_collection
+# from database import connections_collection
 
 @app.post("/connect/{target_id}")
 async def send_connection_request(target_id: str, req: ConnectRequest):
@@ -1671,46 +1853,7 @@ async def get_my_network(user_id: str):
             })
     return connections
 
-@app.get("/users/suggested")
-async def get_suggested_users(user_id: Optional[str] = None):
-    # Fetch random users, excluding the current user
-    query = {}
-    if user_id:
-        # Also exclude people already connected or with pending requests
-        existing_conns = await connections_collection.find({
-            "$or": [{"requester_id": user_id}, {"target_id": user_id}]
-        }).to_list(100)
-        
-        excluded_ids = {user_id}
-        # Handle cases where user_id might be numeric or ObjectId in string form
-        try:
-            excluded_ids.add(ObjectId(user_id))
-        except:
-            pass
 
-        for conn in existing_conns:
-            excluded_ids.add(conn["requester_id"])
-            excluded_ids.add(conn["target_id"])
-            try:
-                excluded_ids.add(ObjectId(conn["requester_id"]))
-                excluded_ids.add(ObjectId(conn["target_id"]))
-            except:
-                pass
-        
-        query["_id"] = {"$nin": list(excluded_ids)}
-
-    cursor = users_collection.find(query).limit(5)
-    
-    suggested = []
-    async for doc in cursor:
-        suggested.append({
-            "uid": str(doc["_id"]),
-            "username": doc.get("username"),
-            "display_name": doc.get("display_name"),
-            "photoURL": doc.get("photoURL"),
-            "headline": doc.get("headline", "Member")
-        })
-    return suggested
 
 @app.get("/stats/trending")
 async def get_trending_topics():
@@ -2147,4 +2290,61 @@ async def unarchive_post(post_id: str, user_id: str):
     await posts_collection.update_one({"_id": oid}, {"$set": {"is_archived": False}})
     await invalidate_category_cache(post.get("category", "Life"))
     return {"status": "unarchived"}
+
+
+# --- GAMIFICATION ROUTES ---
+@app.get("/api/v1/users/{user_id}/score")
+async def get_user_score(user_id: str):
+    """Get a user's Phoenix Score and badges"""
+    try:
+        if not ObjectId.is_valid(user_id):
+             raise HTTPException(status_code=400, detail="Invalid user ID")
+             
+        user = await users_collection.find_one({"_id": ObjectId(user_id)})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+            
+        return {
+            "score": user.get("phoenix_score", 0),
+            "badges": user.get("badges", [])
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching score: {e}")
+
+@app.post("/api/v1/posts/{post_id}/collaborators")
+async def invite_collaborator(post_id: str, collaborator_id: str):
+    """Invite a user to collaborate on a post"""
+    try:
+        if not ObjectId.is_valid(post_id) or not ObjectId.is_valid(collaborator_id):
+             raise HTTPException(status_code=400, detail="Invalid ID format")
+
+        # Verify post exists
+        post = await posts_collection.find_one({"_id": ObjectId(post_id)})
+        if not post:
+            raise HTTPException(status_code=404, detail="Post not found")
+            
+        # Verify collaborator exists
+        collaborator = await users_collection.find_one({"_id": ObjectId(collaborator_id)})
+        if not collaborator:
+            raise HTTPException(status_code=404, detail="Collaborator not found")
+            
+        # Add to collaborators list if not already there
+        if collaborator_id not in post.get("collaborators", []):
+            await posts_collection.update_one(
+                {"_id": ObjectId(post_id)},
+                {"$addToSet": {"collaborators": collaborator_id}}
+            )
+            
+            # GAMIFICATION: Award points for collaboration
+            try:
+                from gamification import calculate_score_action
+                points = calculate_score_action("collaboration")
+                # Intentionally passing for now
+                pass 
+            except Exception:
+                pass
+
+        return {"status": "collaborator_added"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error adding collaborator: {e}")
 

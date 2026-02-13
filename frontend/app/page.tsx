@@ -7,7 +7,7 @@ import PostItem from './components/PostItem';
 import CreatePost from './components/CreatePost';
 import LeftSidebar from './components/LeftSidebar';
 import RightSidebar from './components/RightSidebar';
-import TopInsightsBanner from './components/TopInsightsBanner';
+
 
 import { auth } from './firebase';
 import { Post } from './types';
@@ -24,6 +24,8 @@ export default function Home() {
   const [content, setContent] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [selectedTimelineId, setSelectedTimelineId] = useState<string | null>(null);
+  const [collaborators, setCollaborators] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
   const [sortBy, setSortBy] = useState<"new" | "hot" | "top" | "for-you">("hot");
@@ -81,7 +83,9 @@ export default function Home() {
         user_name: user.displayName || "Anonymous User", // Fallback for missing display name
         user_pic: userPhoto || user.photoURL,
         is_anonymous: isAnonymous,
-        image_url: imageUrl
+        image_url: imageUrl,
+        timeline_id: selectedTimelineId || null,
+        collaborators: collaborators
       });
 
       if (res.data.status === "rejected_for_toxicity") {
@@ -90,6 +94,7 @@ export default function Home() {
 
       setContent('');
       setImageUrl('');
+      setCollaborators([]);
       fetchFeed(activeFilter, sortBy);
 
     } catch (error: any) {
@@ -162,10 +167,8 @@ export default function Home() {
   return (
     <div className="min-h-screen relative">
 
-      {/* Hero Section with Gradient */}
-
-
-      <main className="relative z-10 mt-24 sm:mt-28 mb-12 max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-8">
+      {/* Hero Section with clean spacing */}
+      <main className="relative z-10 mt-20 mb-12 max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-8">
 
         {/* RESPONSIVE GRID LAYOUT */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8 items-start">
@@ -178,8 +181,7 @@ export default function Home() {
           {/* CENTER FEED */}
           <div className="col-span-1 lg:col-span-6 space-y-4 sm:space-y-6 min-h-screen">
 
-            {/* Top Insights Banner */}
-            <TopInsightsBanner />
+
 
             {/* CREATE POST - CENTERED */}
             <CreatePost
@@ -194,6 +196,10 @@ export default function Home() {
               loading={loading}
               imageUrl={imageUrl}
               setImageUrl={setImageUrl}
+              selectedTimelineId={selectedTimelineId}
+              setSelectedTimelineId={setSelectedTimelineId}
+              collaborators={collaborators}
+              setCollaborators={setCollaborators}
             />
 
             {/* FILTER & SORT SECTION */}

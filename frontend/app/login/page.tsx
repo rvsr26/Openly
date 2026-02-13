@@ -86,50 +86,62 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex w-full relative overflow-hidden">
+    <div className="min-h-screen flex w-full relative overflow-hidden bg-background">
 
-      {/* Background Ambience for Mobile (Global one handles it, but we ensure transparency) */}
+      {/* Background Ambience (Mobile/Global) */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-purple-500/5 pointer-events-none" />
 
       {/* --- LEFT SIDE: ARTWORK --- */}
-      <div className="hidden lg:flex w-1/2 bg-zinc-900 text-white relative items-center justify-center p-12 overflow-hidden">
-        {/* Abstract Background Shapes */}
-        <div className="absolute top-0 left-0 w-full h-full opacity-20 z-0">
-          <div className="absolute top-10 left-10 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
-          <div className="absolute bottom-10 right-10 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
-          <div className="absolute top-1/2 left-1/2 w-72 h-72 bg-red-500 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
+      <div className="hidden lg:flex w-1/2 bg-black text-white relative items-center justify-center p-12 overflow-hidden">
+        {/* Abstract Background Shapes - Premium & Dark */}
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop')] bg-cover bg-center opacity-40 mix-blend-overlay" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
+          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/30 rounded-full blur-[120px] animate-pulse-slow" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/30 rounded-full blur-[120px] animate-pulse-slow delay-1000" />
         </div>
 
         <div className="relative z-10 max-w-lg">
           <div className="mb-10">
-            <img src="/assets/logo.png" alt="Openly" className="h-16 w-auto mb-8 object-contain" />
-            <h1 className="text-5xl font-black mb-6 tracking-tight leading-none">
+            <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-8 border border-white/10 shadow-2xl">
+              <img src="/assets/logo.png" alt="Openly" className="h-10 w-auto object-contain brightness-0 invert" />
+            </div>
+            <h1 className="text-5xl font-black mb-6 tracking-tight leading-[1.1] text-white">
               Share Failures. <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500">Build Success.</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">Build Success.</span>
             </h1>
-            <p className="text-xl text-zinc-300 font-light leading-relaxed">
+            <p className="text-xl text-gray-300 font-light leading-relaxed">
               &quot;Success is stumbling from failure to failure with no loss of enthusiasm.&quot;
             </p>
-            <p className="mt-4 text-zinc-500 font-mono text-sm">— Winston Churchill</p>
+            <div className="mt-8 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                <span className="font-serif italic font-bold">W</span>
+              </div>
+              <div>
+                <p className="font-semibold text-white">Winston Churchill</p>
+                <p className="text-xs text-gray-400">Former Prime Minister of the UK</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* --- RIGHT SIDE: FORM --- */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-12 relative z-10">
-
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md glass-card p-8 sm:p-10 shadow-2xl"
+          className="w-full max-w-md"
         >
-          <div className="text-center mb-8">
+          <div className="mb-8">
             <div className="lg:hidden mb-6 flex justify-center">
-              <img src="/assets/logo.png" alt="Openly" className="h-12 w-auto" />
+              <img src="/assets/logo.png" alt="Openly" className="h-10 w-auto" />
             </div>
-            <h2 className="text-3xl font-black tracking-tight text-foreground">Welcome Back</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Sign in to continue your journey
+            <h2 className="text-3xl font-black tracking-tight text-foreground mb-2">Welcome Back</h2>
+            <p className="text-muted-foreground">
+              Enter your details to access your account.
             </p>
           </div>
 
@@ -137,48 +149,48 @@ export default function LoginPage() {
             {/* Error & Reset Messages */}
             <div className="space-y-2">
               {error && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-destructive/15 text-destructive text-sm p-3 rounded-lg flex items-center gap-2">
-                  <AlertCircle size={16} /> {error}
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-xl flex items-center gap-3">
+                  <AlertCircle size={18} /> {error}
                 </motion.div>
               )}
               {resetMsg && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-emerald-500/15 text-emerald-500 text-sm p-3 rounded-lg flex items-center gap-2">
-                  <CheckCircle size={16} /> {resetMsg}
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-sm p-3 rounded-xl flex items-center gap-3">
+                  <CheckCircle size={18} /> {resetMsg}
                 </motion.div>
               )}
             </div>
 
             <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-bold ml-1">Email</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Email Address</label>
+                <div className="relative group">
+                  <Mail className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="input-field pl-10"
+                    className="w-full bg-muted/30 border border-border rounded-xl px-10 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                     placeholder="name@example.com"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex justify-between items-center">
-                  <label className="text-sm font-bold ml-1">Password</label>
-                  <button type="button" onClick={handleForgotPassword} className="text-xs font-medium text-primary hover:underline">
+                  <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Password</label>
+                  <button type="button" onClick={handleForgotPassword} className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors">
                     Forgot Password?
                   </button>
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+                <div className="relative group">
+                  <Lock className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
                   <input
                     type="password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="input-field pl-10"
+                    className="w-full bg-muted/30 border border-border rounded-xl px-10 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
                     placeholder="••••••••"
                   />
                 </div>
@@ -188,17 +200,17 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary w-full flex items-center justify-center gap-2"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3.5 rounded-xl shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
             >
-              {loading ? "Signing in..." : <><ArrowRight size={18} /> Sign In</>}
+              {loading ? "Signing in..." : <><span className="text-base">Sign In</span> <ArrowRight size={18} /></>}
             </button>
 
-            <div className="relative py-2">
+            <div className="relative py-4">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
+                <span className="w-full border-t border-border/60" />
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
+              <div className="relative flex justify-center text-xs uppercase tracking-widest">
+                <span className="bg-background px-4 text-muted-foreground">
                   Or continue with
                 </span>
               </div>
@@ -208,7 +220,7 @@ export default function LoginPage() {
               type="button"
               disabled={loading}
               onClick={handleGoogleLogin}
-              className="btn-secondary w-full flex items-center justify-center gap-2 border border-border"
+              className="w-full bg-card hover:bg-muted/50 border border-border font-semibold py-3.5 rounded-xl transition-all flex items-center justify-center gap-3 text-foreground active:scale-[0.98]"
             >
               <svg className="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
                 <path d="M12.0003 20.45c4.656 0 8.556-3.218 9.973-7.65h-9.973v-4.524h15.222c.159.833.242 1.693.242 2.578 0 8.019-5.748 13.913-13.828 13.913-7.729 0-14-6.271-14-14s6.271-14 14-14c3.784 0 7.211 1.396 9.872 3.882l-4.133 3.493c-1.554-1.121-3.601-1.785-5.739-1.785-5.188 0-9.471 3.978-11.042 9.006h-.033l-4.665-3.587-.146.108c1.677 5.95 7.152 10.354 13.671 10.354z" fill="currentColor" />
@@ -219,8 +231,8 @@ export default function LoginPage() {
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
-            <button onClick={() => router.push("/signup")} className="font-bold text-primary hover:underline">
-              Sign Up
+            <button onClick={() => router.push("/signup")} className="font-bold text-primary hover:underline transition-colors">
+              Create an account
             </button>
           </p>
         </motion.div>

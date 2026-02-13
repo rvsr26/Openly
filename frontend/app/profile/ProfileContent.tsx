@@ -3,7 +3,9 @@
 import { motion, AnimatePresence } from "framer-motion";
 import PostItem from "../components/PostItem";
 import { Post } from "../types";
-import { Grid, Image as ImageIcon, Bookmark, Briefcase, GraduationCap, Award, Plus } from "lucide-react";
+import { Grid, Image as ImageIcon, Bookmark, Briefcase, GraduationCap, Award, Plus, Map, ArrowRight, ArrowLeft } from "lucide-react";
+import TimelineView from "../components/TimelineView";
+import { timelineApi, Timeline } from "../lib/timelineApi";
 
 interface ProfileContentProps {
     activeTab: string;
@@ -13,13 +15,20 @@ interface ProfileContentProps {
     onRefresh?: () => void;
 }
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "../lib/api";
 import { toast } from "sonner";
 
 export default function ProfileContent({ activeTab, posts, user, isOwner, onRefresh }: ProfileContentProps) {
     const [isAddingExp, setIsAddingExp] = useState(false);
     const [isAddingSkill, setIsAddingSkill] = useState(false);
+
+    // Journey States
+    const [timelines, setTimelines] = useState<Timeline[]>([]);
+    const [selectedTimelineId, setSelectedTimelineId] = useState<string | null>(null);
+    const [loadingTimelines, setLoadingTimelines] = useState(false);
+    const [isCreatingJourney, setIsCreatingJourney] = useState(false);
+    const [newJourney, setNewJourney] = useState({ title: "", description: "" });
 
     // Form States
     const [newExp, setNewExp] = useState({
@@ -31,6 +40,31 @@ export default function ProfileContent({ activeTab, posts, user, isOwner, onRefr
         description: ""
     });
     const [newSkill, setNewSkill] = useState("");
+
+    // Fetch Timelines when tab is active
+    useEffect(() => {
+        if (activeTab === "Journeys" && user) {
+            setLoadingTimelines(true);
+            timelineApi.getUserTimelines(user.id || user.uid)
+                .then(setTimelines)
+                .catch(console.error)
+                .finally(() => setLoadingTimelines(false));
+        }
+    }, [activeTab, user]);
+
+    const handleCreateJourney = async () => {
+        if (!newJourney.title.trim()) return;
+        try {
+            const created = await timelineApi.create(newJourney);
+            setTimelines([created, ...timelines]);
+            setIsCreatingJourney(false);
+            setNewJourney({ title: "", description: "" });
+            toast.success("Journey started!");
+        } catch (e) {
+            console.error(e);
+            toast.error("Failed to create journey");
+        }
+    };
 
     const handleAddExperience = async () => {
         if (!newExp.company || !newExp.position || !newExp.start_date) {
@@ -93,6 +127,104 @@ export default function ProfileContent({ activeTab, posts, user, isOwner, onRefr
                         )}
                     </div>
                 );
+            case "Journeys":
+                if (selectedTimelineId) {
+                    return (
+                        <div className="animate-in fade-in slide-in-from-right-8">
+                            <button
+                                onClick={() => setSelectedTimelineId(null)}
+                                className="mb-4 flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-primary transition-colors"
+                            >
+                                <ArrowLeft size={16} /> Back to Journeys
+                            </button>
+                            <TimelineView timelineId={selectedTimelineId} />
+                        </div>
+                    );
+                }
+
+                return (
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="font-bold text-lg">My Journeys</h3>
+                            {isOwner && !isCreatingJourney && (
+                                <button
+                                    onClick={() => setIsCreatingJourney(true)}
+                                    className="px-4 py-2 bg-primary/10 text-primary rounded-xl text-xs font-bold hover:bg-primary hover:text-white transition-all"
+                                >
+                                    + New Journey
+                                </button>
+                            )}
+                        </div>
+
+                        {isCreatingJourney && (
+                            <div className="glass-card p-6 space-y-4 animate-in fade-in slide-in-from-top-4 mb-6 border border-primary/20">
+                                <h4 className="font-bold text-lg">Start a New Journey</h4>
+                                <input
+                                    placeholder="Journey Title (e.g. My Startup Pivot)"
+                                    className="glass-input"
+                                    value={newJourney.title}
+                                    onChange={e => setNewJourney({ ...newJourney, title: e.target.value })}
+                                />
+                                <textarea
+                                    placeholder="Description (Optional)"
+                                    className="glass-input min-h-[80px]"
+                                    value={newJourney.description}
+                                    onChange={e => setNewJourney({ ...newJourney, description: e.target.value })}
+                                />
+                                <div className="flex justify-end gap-3">
+                                    <button
+                                        onClick={() => setIsCreatingJourney(false)}
+                                        className="px-6 py-2 rounded-xl border border-border text-sm font-bold hover:bg-white/5"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleCreateJourney}
+                                        disabled={!newJourney.title.trim()}
+                                        className="px-6 py-2 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 disabled:opacity-50"
+                                    >
+                                        Create Journey
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {loadingTimelines ? (
+                            <div className="text-center py-12 text-muted-foreground">Loading journeys...</div>
+                        ) : timelines.length === 0 && !isCreatingJourney ? (
+                            <EmptyState
+                                icon={Map}
+                                title="No Journeys Started"
+                                description="Group your posts into a timeline to show your growth."
+                            />
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {timelines.map((timeline) => (
+                                    <div
+                                        key={timeline.id}
+                                        onClick={() => setSelectedTimelineId(timeline.id)}
+                                        className="glass-card p-6 cursor-pointer hover:border-primary/50 transition-all group relative overflow-hidden"
+                                    >
+                                        <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <ArrowRight className="text-primary" size={20} />
+                                        </div>
+                                        <h4 className="font-bold text-lg mb-2">{timeline.title}</h4>
+                                        <p className="text-sm text-muted-foreground line-clamp-2">{timeline.description || "No description"}</p>
+                                        <div className="mt-4 flex items-center justify-between">
+                                            <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md ${timeline.status === 'completed' ? 'bg-green-500/10 text-green-500' : 'bg-primary/10 text-primary'
+                                                }`}>
+                                                {timeline.status}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground font-mono">
+                                                {new Date(timeline.created_at).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                );
             case "Media":
                 return (
                     <EmptyState
@@ -115,7 +247,7 @@ export default function ProfileContent({ activeTab, posts, user, isOwner, onRefr
                         {(user.education && user.education.length > 0) ? (
                             user.education.map((edu: any, idx: number) => (
                                 <div key={idx} className="glass-card p-6 flex gap-4">
-                                    <div className="w-12 h-12 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-400 shrink-0">
+                                    <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary shrink-0">
                                         <GraduationCap size={24} />
                                     </div>
                                     <div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import api from "../lib/api";
+import api, { getAbsUrl } from "../lib/api";
 import { TrendingUp, X, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { User } from "firebase/auth";
@@ -39,7 +39,7 @@ function RightSidebar({
             return res.data;
         },
         staleTime: 1000 * 60 * 5,
-        enabled: true
+        enabled: !!user?.uid
     });
 
     const handleConnect = async (targetId: string) => {
@@ -77,7 +77,7 @@ function RightSidebar({
                             <Link
                                 key={t.topic}
                                 href={`/search?q=${encodeURIComponent(t.topic)}`}
-                                className="flex justify-between items-center group p-2 rounded-xl hover:bg-white/5 transition-colors"
+                                className="flex justify-between items-center group p-2 rounded-xl hover:bg-primary/5 transition-colors"
                             >
                                 <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">#{t.topic}</span>
                                 <span className="text-[10px] font-bold text-muted-foreground bg-primary/5 px-2 py-0.5 rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors">
@@ -119,7 +119,7 @@ function RightSidebar({
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-primary/20 overflow-hidden ring-1 ring-primary/20">
                                         {u.photoURL ? (
-                                            <img src={u.photoURL} alt={u.username} className="w-full h-full object-cover" />
+                                            <img src={getAbsUrl(u.photoURL)} alt={u.username} className="w-full h-full object-cover" />
                                         ) : (
                                             <div className="w-full h-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-[10px] font-black text-white">
                                                 {u.display_name?.[0] || u.username?.[0] || '?'}
