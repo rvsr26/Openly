@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ThemeProvider } from 'next-themes';
 import { AuthProvider } from '../context/AuthContext';
+import { KeyboardShortcutsProvider } from '../context/KeyboardShortcutsContext';
 import Navbar from './components/Navbar';
 import { usePathname } from 'next/navigation';
 
@@ -23,9 +24,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          {showNavbar && <Navbar />}
-          {children}
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <KeyboardShortcutsProvider>
+            {showNavbar && <Navbar />}
+            {children}
+          </KeyboardShortcutsProvider>
         </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>

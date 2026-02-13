@@ -1,0 +1,1675 @@
+﻿
+> failure-frontend@0.1.0 build
+> next build
+
+   Γû▓ Next.js 15.1.0
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Linting and checking validity of types ...
+npm : 
+At line:1 char:1
++ npm run build > 
+build_output_2.log 
+2>&1
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (:String   
+ ) [], RemoteExce    
+ption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+Failed to compile.
+
+./app/admin/AdminGuar
+d.tsx
+6:8  Warning: 
+'axios' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+
+./app/admin/page.tsx
+4:8  Warning: 
+'axios' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+
+./app/bookmarks/page.
+tsx
+4:8  Warning: 
+'axios' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+7:10  Warning: 
+'auth' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+8:10  Warning: 
+'onAuthStateChanged' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+8:30  Warning: 
+'User' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+
+./app/components/Chat
+Window.tsx
+90:21  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/components/Conv
+ersationList.tsx
+18:5  Warning: 
+'currentUserId' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+40:60  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  
+react/no-unescaped-en
+tities
+60:29  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/components/Crea
+tePost.tsx
+5:10  Warning: 
+'User' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+
+./app/components/Left
+Sidebar.tsx
+3:10  Warning: 
+'User' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+5:10  Warning: 
+'UserCircle' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+5:49  Warning: 
+'Compass' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+5:68  Warning: 
+'FileText' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+5:138  Warning: 
+'UserPlus' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+59:33  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/components/Mess
+ageBubble.tsx
+27:17  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/components/Navb
+ar.tsx
+2:10  Warning: 
+'loginWithGoogle' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+4:10  Warning: 
+'onAuthStateChanged' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+4:30  Warning: 
+'User' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+5:10  Warning: 
+'auth' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+14:3  Warning: 
+'Users' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+33:11  Warning: 
+'theme' is assigned 
+a value but never 
+used.  @typescript-es
+lint/no-unused-vars
+43:5  Error: Error: 
+Calling setState 
+synchronously within 
+an effect can 
+trigger cascading 
+renders
+
+Effects are intended 
+to synchronize state 
+between React and 
+external systems 
+such as manually 
+updating the DOM, 
+state management 
+libraries, or other 
+platform APIs. In 
+general, the body of 
+an effect should do 
+one or both of the 
+following:
+* Update external 
+systems with the 
+latest state from 
+React.
+* Subscribe for 
+updates from some 
+external system, 
+calling setState in 
+a callback function 
+when external state 
+changes.
+
+Calling setState 
+synchronously within 
+an effect body 
+causes cascading 
+renders that can 
+hurt performance, 
+and is not 
+recommended. (https:/
+/react.dev/learn/you-
+might-not-need-an-eff
+ect).
+
+D:\PROJECTS\Upcomming
+\Failure-Sharing-Site
+\frontend\app\compone
+nts\Navbar.tsx:43:5
+  41 |
+  42 |   
+useEffect(() => {
+> 43 |     setStoredA
+ccounts(getStoredAcco
+unts());
+     |     
+^^^^^^^^^^^^^^^^^ 
+Avoid calling 
+setState() directly 
+within an effect
+  44 |   }, 
+[showDropdown]); // 
+Refresh when 
+dropdown opens
+  45 |
+  46 |   const 
+handleAddAccount = 
+async () => {  react-
+hooks/set-state-in-ef
+fect
+
+./app/components/Phoe
+nixBadge.tsx
+4:10  Warning: 
+'Award' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+
+./app/components/Post
+Item.tsx
+5:10  Warning: 
+'auth' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+18:3  Warning: 
+'ImageIcon' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+31:8  Warning: 
+'ShareImageTemplate' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+32:10  Warning: 
+'toPng' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+208:6  Warning: 
+React Hook useEffect 
+has a missing 
+dependency: 
+'currentUser'. 
+Either include it or 
+remove the 
+dependency array.  re
+act-hooks/exhaustive-
+deps
+336:14  Warning: 
+'err' is defined but 
+never used.  @typescr
+ipt-eslint/no-unused-
+vars
+374:14  Warning: 
+'error' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+389:14  Warning: 
+'error' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+402:14  Warning: 
+'error' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+
+./app/components/Repo
+rtModal.tsx
+5:8  Warning: 
+'axios' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+
+./app/components/Righ
+tSidebar.tsx
+5:22  Warning: 'X' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+7:10  Warning: 
+'User' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+22:5  Warning: 
+'userPhoto' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+122:45  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/components/Sear
+chBar.tsx
+115:15  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/components/Shar
+eImageTemplate.tsx
+53:29  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+106:29  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/components/Time
+lineView.tsx
+84:37  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/components/TopI
+nsightsBanner.tsx
+4:10  Warning: 
+'BarChart3' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+4:33  Warning: 
+'ArrowRight' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+
+./app/components/User
+SearchModal.tsx
+84:45  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/create-post/pag
+e.tsx
+117:13  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/drafts/page.tsx
+5:27  Warning: 
+'ArrowRight' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+6:10  Warning: 
+'onAuthStateChanged' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+6:30  Warning: 
+'User' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+7:10  Warning: 
+'auth' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+24:11  Warning: 
+'router' is assigned 
+a value but never 
+used.  @typescript-es
+lint/no-unused-vars
+50:18  Warning: 'e' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+
+./app/forgot-password
+/page.tsx
+11:11  Warning: 
+'router' is assigned 
+a value but never 
+used.  @typescript-es
+lint/no-unused-vars
+34:18  Warning: 
+'error' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+54:27  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  
+react/no-unescaped-en
+tities
+57:29  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  
+react/no-unescaped-en
+tities
+84:52  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  
+react/no-unescaped-en
+tities
+
+./app/lib/accountUtil
+s.ts
+3:10  Warning: 
+'User' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+
+./app/lib/useWebSocke
+t.ts
+60:25  Error: Error: 
+Cannot access 
+variable before it 
+is declared
+
+`connect` is 
+accessed before it 
+is declared, which 
+prevents the earlier 
+access from updating 
+when this value 
+changes over time.
+
+D:\PROJECTS\Upcomming
+\Failure-Sharing-Site
+\frontend\app\lib\use
+WebSocket.ts:60:25
+  58 |               
+      reconnectTimeou
+tRef.current = 
+setTimeout(() => {
+  59 |               
+          reconnectAt
+tempts.current++;
+> 60 |               
+          connect();
+     |               
+          ^^^^^^^ 
+`connect` accessed 
+before it is declared
+  61 |               
+      }, delay);
+  62 |               
+  }
+  63 |             };
+
+D:\PROJECTS\Upcomming
+\Failure-Sharing-Site
+\frontend\app\lib\use
+WebSocket.ts:20:5
+  18 |     const 
+reconnectAttempts = 
+useRef(0);
+  19 |
+> 20 |     const 
+connect = 
+useCallback(() => {
+     |     ^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^^
+> 21 |         if 
+(!userId || wsRef.cur
+rent?.readyState === 
+WebSocket.OPEN) {
+     | ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
+> 22 |             
+return;
+     ΓÇª
+     | ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
+> 68 |         }
+     | ^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^
+> 69 |     }, 
+[userId]);
+     | 
+^^^^^^^^^^^^^^^^^^ 
+`connect` is 
+declared here
+  70 |
+  71 |     const 
+disconnect = 
+useCallback(() => {
+  72 |         if (re
+connectTimeoutRef.cur
+rent) {  react-hooks/
+immutability
+
+./app/login/page.tsx
+65:14  Warning: 
+'err' is defined but 
+never used.  @typescr
+ipt-eslint/no-unused-
+vars
+108:15  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+140:15  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/messages/page.t
+sx
+5:10  Warning: 
+'onAuthStateChanged' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+6:10  Warning: 
+'auth' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+13:5  Warning: 
+'Info' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+16:18  Warning: 
+'AnimatePresence' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+18:8  Warning: 'api' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+41:13  Warning: 
+'isConnected' is 
+assigned a value but 
+never used.  @typescr
+ipt-eslint/no-unused-
+vars
+77:38  Warning: 'e' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+101:8  Warning: 
+React Hook useEffect 
+has missing 
+dependencies: 
+'activeConversation' 
+and 
+'handleSelectUser'. 
+Either include them 
+or remove the 
+dependency array.  re
+act-hooks/exhaustive-
+deps
+183:8  Warning: 
+React Hook useEffect 
+has a missing 
+dependency: 'activeCo
+nversation'. Either 
+include it or remove 
+the dependency 
+array.  react-hooks/e
+xhaustive-deps
+347:53  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+399:45  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/network/page.ts
+x
+4:10  Warning: 
+'onAuthStateChanged' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+4:30  Warning: 
+'User' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+5:10  Warning: 
+'auth' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+6:10  Warning: 
+'useState' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+6:20  Warning: 
+'useEffect' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+7:8  Warning: 
+'axios' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+81:37  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+125:41  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/notifications/p
+age.tsx
+4:10  Warning: 
+'onAuthStateChanged' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+4:30  Warning: 
+'User' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+5:10  Warning: 
+'auth' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+6:10  Warning: 
+'useState' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+6:20  Warning: 
+'useEffect' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+7:8  Warning: 
+'axios' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+10:10  Warning: 
+'Bell' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+11:8  Warning: 
+'Link' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+90:17  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/page.tsx
+12:10  Warning: 
+'auth' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+16:8  Warning: 
+'Link' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+19:7  Warning: 
+'CATEGORIES' is 
+assigned a value but 
+never used.  @typescr
+ipt-eslint/no-unused-
+vars
+
+./app/profile/edit/pa
+ge.tsx
+4:8  Warning: 
+'axios' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+99:14  Warning: 'e' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+128:17  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/profile/page.ts
+x
+6:10  Warning: 
+'auth' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+7:10  Warning: 
+'onAuthStateChanged' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+7:30  Warning: 
+'User' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+
+./app/profile/Profile
+Content.tsx
+3:18  Warning: 
+'AnimatePresence' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+47:13  Error: Error: 
+Calling setState 
+synchronously within 
+an effect can 
+trigger cascading 
+renders
+
+Effects are intended 
+to synchronize state 
+between React and 
+external systems 
+such as manually 
+updating the DOM, 
+state management 
+libraries, or other 
+platform APIs. In 
+general, the body of 
+an effect should do 
+one or both of the 
+following:
+* Update external 
+systems with the 
+latest state from 
+React.
+* Subscribe for 
+updates from some 
+external system, 
+calling setState in 
+a callback function 
+when external state 
+changes.
+
+Calling setState 
+synchronously within 
+an effect body 
+causes cascading 
+renders that can 
+hurt performance, 
+and is not 
+recommended. (https:/
+/react.dev/learn/you-
+might-not-need-an-eff
+ect).
+
+D:\PROJECTS\Upcomming
+\Failure-Sharing-Site
+\frontend\app\profile
+\ProfileContent.tsx:4
+7:13
+  45 |     
+useEffect(() => {
+  46 |         if 
+(activeTab === 
+"Journeys" && user) {
+> 47 |             se
+tLoadingTimelines(tru
+e);
+     |             
+^^^^^^^^^^^^^^^^^^^ 
+Avoid calling 
+setState() directly 
+within an effect
+  48 |             ti
+melineApi.getUserTime
+lines(user.id || 
+user.uid)
+  49 |               
+  .then(setTimelines)
+  50 |               
+  .catch(console.erro
+r)  react-hooks/set-s
+tate-in-effect
+83:18  Warning: 'e' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+99:18  Warning: 'e' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+
+./app/profile/Profile
+Header.tsx
+7:50  Warning: 
+'LinkIcon' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+55:33  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/profile/[id]/pa
+ge.tsx
+4:8  Warning: 
+'axios' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+78:11  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/reports/page.ts
+x
+7:10  Warning: 
+'motion' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+18:8  Warning: React 
+Hook useEffect has a 
+missing dependency: 
+'fetchStats'. Either 
+include it or remove 
+the dependency 
+array.  react-hooks/e
+xhaustive-deps
+
+./app/reset-password/
+page.tsx
+83:18  Warning: 
+'error' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+
+./app/search/page.tsx
+25:32  Error: Error: 
+Calling setState 
+synchronously within 
+an effect can 
+trigger cascading 
+renders
+
+Effects are intended 
+to synchronize state 
+between React and 
+external systems 
+such as manually 
+updating the DOM, 
+state management 
+libraries, or other 
+platform APIs. In 
+general, the body of 
+an effect should do 
+one or both of the 
+following:
+* Update external 
+systems with the 
+latest state from 
+React.
+* Subscribe for 
+updates from some 
+external system, 
+calling setState in 
+a callback function 
+when external state 
+changes.
+
+Calling setState 
+synchronously within 
+an effect body 
+causes cascading 
+renders that can 
+hurt performance, 
+and is not 
+recommended. (https:/
+/react.dev/learn/you-
+might-not-need-an-eff
+ect).
+
+D:\PROJECTS\Upcomming
+\Failure-Sharing-Site
+\frontend\app\search\
+page.tsx:25:32
+  23 |   // Sync tab 
+with URL or default 
+to posts
+  24 |   
+useEffect(() => {
+> 25 |     if 
+(typeParam === 
+'users') setActiveTab
+('users');
+     |               
+                 
+^^^^^^^^^^^^ Avoid 
+calling setState() 
+directly within an 
+effect
+  26 |     else setAc
+tiveTab('posts');
+  27 |   }, 
+[typeParam]);
+  28 |  react-hooks/s
+et-state-in-effect
+62:59  Error: `"` 
+can be escaped with 
+`&quot;`, `&ldquo;`, 
+`&#34;`, `&rdquo;`.  
+react/no-unescaped-en
+tities
+62:67  Error: `"` 
+can be escaped with 
+`&quot;`, `&ldquo;`, 
+`&#34;`, `&rdquo;`.  
+react/no-unescaped-en
+tities
+118:43  Error: `"` 
+can be escaped with 
+`&quot;`, `&ldquo;`, 
+`&#34;`, `&rdquo;`.  
+react/no-unescaped-en
+tities
+118:51  Error: `"` 
+can be escaped with 
+`&quot;`, `&ldquo;`, 
+`&#34;`, `&rdquo;`.  
+react/no-unescaped-en
+tities
+136:27  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+159:38  Warning: 
+'err' is defined but 
+never used.  @typescr
+ipt-eslint/no-unused-
+vars
+184:43  Error: `"` 
+can be escaped with 
+`&quot;`, `&ldquo;`, 
+`&#34;`, `&rdquo;`.  
+react/no-unescaped-en
+tities
+184:51  Error: `"` 
+can be escaped with 
+`&quot;`, `&ldquo;`, 
+`&#34;`, `&rdquo;`.  
+react/no-unescaped-en
+tities
+
+./app/settings/page.t
+sx
+3:26  Warning: 
+'Lock' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+3:32  Warning: 
+'LogOut' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+45:8  Warning: React 
+Hook useEffect has a 
+missing dependency: 
+'loadProfile'. 
+Either include it or 
+remove the 
+dependency array.  re
+act-hooks/exhaustive-
+deps
+84:18  Warning: 
+'error' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+100:18  Warning: 
+'error' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+125:11  Warning: 
+'handleToggle2FA' is 
+assigned a value but 
+never used.  @typescr
+ipt-eslint/no-unused-
+vars
+129:18  Warning: 
+'error' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+140:18  Warning: 
+'error' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+211:49  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+428:70  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  
+react/no-unescaped-en
+tities
+518:62  Warning: 'e' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+534:66  Warning: 'e' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+548:49  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+573:62  Warning: 'e' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+
+./app/setup-username/
+page.tsx
+131:11  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/signup/page.tsx
+13:22  Warning: 
+'CheckCircle' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+98:15  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+139:15  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+
+./app/u/[username]/pa
+ge.tsx
+4:8  Warning: 
+'axios' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+8:8  Warning: 
+'PostItem' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+10:10  Warning: 
+'auth' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+17:8  Warning: 
+'ProfileStats' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+56:18  Warning: 
+'usernameError' is 
+defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+98:14  Warning: 'e' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+110:14  Warning: 'e' 
+is defined but never 
+used.  @typescript-es
+lint/no-unused-vars
+138:15  Warning: 
+Using `<img>` could 
+result in slower LCP 
+and higher 
+bandwidth. Consider 
+using `<Image />` 
+from `next/image` or 
+a custom image 
+loader to 
+automatically 
+optimize images. 
+This may incur 
+additional usage or 
+cost from your 
+provider. See: https:
+//nextjs.org/docs/mes
+sages/no-img-element 
+ @next/next/no-img-el
+ement
+138:15  Warning: img 
+elements must have 
+an alt prop, either 
+with meaningful 
+text, or an empty 
+string for 
+decorative images.  
+jsx-a11y/alt-text
+
+./app/verify-email/pa
+ge.tsx
+23:9  Error: Error: 
+Cannot access 
+variable before it 
+is declared
+
+`verifyEmail` is 
+accessed before it 
+is declared, which 
+prevents the earlier 
+access from updating 
+when this value 
+changes over time.
+
+D:\PROJECTS\Upcomming
+\Failure-Sharing-Site
+\frontend\app\verify-
+email\page.tsx:23:9
+  21 |         }
+  22 |
+> 23 |         
+verifyEmail(token);
+     |         
+^^^^^^^^^^^ 
+`verifyEmail` 
+accessed before it 
+is declared
+  24 |     }, 
+[searchParams]);
+  25 |
+  26 |     const 
+verifyEmail = async 
+(token: string) => {
+
+D:\PROJECTS\Upcomming
+\Failure-Sharing-Site
+\frontend\app\verify-
+email\page.tsx:26:5
+  24 |     }, 
+[searchParams]);
+  25 |
+> 26 |     const 
+verifyEmail = async 
+(token: string) => {
+     |     ^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
+> 27 |         try {
+     | ^^^^^^^^^^^^^
+> 28 |             
+const response = 
+await fetch(`${proces
+s.env.NEXT_PUBLIC_API
+_URL}/api/v1/auth/ver
+ify-email`, {
+     ΓÇª
+     | ^^^^^^^^^^^^^
+> 51 |         }
+     | ^^^^^^^^^^^^^
+> 52 |     };
+     | ^^^^^^^ 
+`verifyEmail` is 
+declared here
+  53 |
+  54 |     return (
+  55 |         <div c
+lassName="min-h-scree
+n flex items-center 
+justify-center 
+bg-gradient-to-br 
+from-blue-50 
+to-indigo-100 
+dark:from-gray-900 
+dark:to-gray-800 
+p-4">  react-hooks/im
+mutability
+24:8  Warning: React 
+Hook useEffect has a 
+missing dependency: 
+'verifyEmail'. 
+Either include it or 
+remove the 
+dependency array.  re
+act-hooks/exhaustive-
+deps
+48:18  Warning: 
+'error' is defined 
+but never used.  @typ
+escript-eslint/no-unu
+sed-vars
+
+info  - Need to 
+disable some ESLint 
+rules? Learn more 
+here: https://nextjs.
+org/docs/app/api-refe
+rence/config/eslint#d
+isabling-rules

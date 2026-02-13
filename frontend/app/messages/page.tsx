@@ -21,7 +21,9 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 import { useAuth } from '@/context/AuthContext';
 
-export default function MessagesPage() {
+import { Suspense } from "react";
+
+function MessagesContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const targetUserId = searchParams.get('user');
@@ -532,5 +534,17 @@ export default function MessagesPage() {
                 currentUserId={currentUser?.uid}
             />
         </div>
+    );
+}
+
+export default function MessagesPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        }>
+            <MessagesContent />
+        </Suspense>
     );
 }

@@ -1,0 +1,328 @@
+﻿
+> failure-frontend@0.1.0 build
+> next build
+
+   Γû▓ Next.js 15.1.0
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+npm : [Error: Cannot 
+apply unknown 
+utility class 
+`glass-card`]
+At line:1 char:1
++ npm run build > 
+build_output.log 2>&1
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: ([Error:   
+  Cannot ...s `gl    
+ass-card`]:Strin    
+g) [], RemoteExc    
+eption
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+<w> [webpack.cache.Pa
+ckFileCacheStrategy] 
+Skipped not 
+serializable cache 
+item 'Compilation/mod
+ules|D:\PROJECTS\Upco
+mming\Failure-Sharing
+-Site\frontend\node_m
+odules\next\dist\buil
+d\webpack\loaders\css
+-loader\src\index.js?
+?ruleSet[1].rules[13]
+.oneOf[10].use[2]!D:\
+PROJECTS\Upcomming\Fa
+ilure-Sharing-Site\fr
+ontend\node_modules\n
+ext\dist\build\webpac
+k\loaders\postcss-loa
+der\src\index.js??rul
+eSet[1].rules[13].one
+Of[10].use[3]!D:\PROJ
+ECTS\Upcomming\Failur
+e-Sharing-Site\fronte
+nd\app\globals.css': 
+No serializer 
+registered for 
+PostCSSSyntaxError
+<w> while 
+serializing webpack/l
+ib/cache/PackFileCach
+eStrategy.PackContent
+Items -> webpack/lib/
+NormalModule -> webpa
+ck/lib/ModuleBuildErr
+or -> 
+PostCSSSyntaxError
+Failed to compile.
+
+./app/globals.css:1:1
+Syntax error: 
+tailwindcss: D:\PROJE
+CTS\Upcomming\Failure
+-Sharing-Site\fronten
+d\app\globals.css 
+Cannot apply unknown 
+utility class 
+`glass-card`
+
+[1m[31m>[39m[22m
+[90m 1 | [39m[36m@i
+mport[39m [32m"tail
+windcss"[39m[33m;[
+39m
+ [90m   | [39m[1m
+[31m^[39m[22m
+ [90m 2 | [39m
+ [90m 3 | [39m[36m
+@plugin[39m [32m"ta
+ilwindcss-animate"[3
+9m[33m;[39m
+
+./app/globals.css
+Syntax error: 
+tailwindcss: D:\PROJE
+CTS\Upcomming\Failure
+-Sharing-Site\fronten
+d\app\globals.css 
+Cannot apply unknown 
+utility class 
+`glass-card` (1:1)
+
+[1m[31m>[39m[22m
+[90m 1 | [39m[36m@i
+mport[39m [32m"tail
+windcss"[39m[33m;[
+39m
+ [90m   | [39m[1m
+[31m^[39m[22m
+ [90m 2 | [39m
+ [90m 3 | [39m[36m
+@plugin[39m [32m"ta
+ilwindcss-animate"[3
+9m[33m;[39m
+
+    at 
+tryRunOrWebpackError 
+(D:\PROJECTS\Upcommin
+g\Failure-Sharing-Sit
+e\frontend\node_modul
+es\next\dist\compiled
+\webpack\bundle5.js:2
+8:314962)
+    at __webpack_requ
+ire_module__ (D:\PROJ
+ECTS\Upcomming\Failur
+e-Sharing-Site\fronte
+nd\node_modules\next\
+dist\compiled\webpack
+\bundle5.js:28:131434
+)
+    at __nested_webpa
+ck_require_161179__ (
+D:\PROJECTS\Upcomming
+\Failure-Sharing-Site
+\frontend\node_module
+s\next\dist\compiled\
+webpack\bundle5.js:28
+:130872)
+    at D:\PROJECTS\Up
+comming\Failure-Shari
+ng-Site\frontend\node
+_modules\next\dist\co
+mpiled\webpack\bundle
+5.js:28:131723
+    at 
+symbolIterator (D:\PR
+OJECTS\Upcomming\Fail
+ure-Sharing-Site\fron
+tend\node_modules\nex
+t\dist\compiled\neo-a
+sync\async.js:1:14444
+)
+    at done (D:\PROJE
+CTS\Upcomming\Failure
+-Sharing-Site\fronten
+d\node_modules\next\d
+ist\compiled\neo-asyn
+c\async.js:1:14824)
+    at Hook.eval [as 
+callAsync] (eval at 
+create (D:\PROJECTS\U
+pcomming\Failure-Shar
+ing-Site\frontend\nod
+e_modules\next\dist\c
+ompiled\webpack\bundl
+e5.js:13:9218), 
+<anonymous>:15:1)
+    at Hook.CALL_ASYN
+C_DELEGATE [as 
+_callAsync] (D:\PROJE
+CTS\Upcomming\Failure
+-Sharing-Site\fronten
+d\node_modules\next\d
+ist\compiled\webpack\
+bundle5.js:13:6372)
+    at D:\PROJECTS\Up
+comming\Failure-Shari
+ng-Site\frontend\node
+_modules\next\dist\co
+mpiled\webpack\bundle
+5.js:28:130593
+    at 
+symbolIterator (D:\PR
+OJECTS\Upcomming\Fail
+ure-Sharing-Site\fron
+tend\node_modules\nex
+t\dist\compiled\neo-a
+sync\async.js:1:14402
+)
+-- inner error --
+Syntax error: 
+tailwindcss: D:\PROJE
+CTS\Upcomming\Failure
+-Sharing-Site\fronten
+d\app\globals.css 
+Cannot apply unknown 
+utility class 
+`glass-card` (1:1)
+
+[1m[31m>[39m[22m
+[90m 1 | [39m[36m@i
+mport[39m [32m"tail
+windcss"[39m[33m;[
+39m
+ [90m   | [39m[1m
+[31m^[39m[22m
+ [90m 2 | [39m
+ [90m 3 | [39m[36m
+@plugin[39m [32m"ta
+ilwindcss-animate"[3
+9m[33m;[39m
+
+    at 
+Object.<anonymous> (D
+:\PROJECTS\Upcomming\
+Failure-Sharing-Site\
+frontend\node_modules
+\next\dist\build\webp
+ack\loaders\css-loade
+r\src\index.js??ruleS
+et[1].rules[13].oneOf
+[10].use[2]!D:\PROJEC
+TS\Upcomming\Failure-
+Sharing-Site\frontend
+\node_modules\next\di
+st\build\webpack\load
+ers\postcss-loader\sr
+c\index.js??ruleSet[1
+].rules[13].oneOf[10]
+.use[3]!D:\PROJECTS\U
+pcomming\Failure-Shar
+ing-Site\frontend\app
+\globals.css:1:7)
+    at D:\PROJECTS\Up
+comming\Failure-Shari
+ng-Site\frontend\node
+_modules\next\dist\co
+mpiled\webpack\bundle
+5.js:28:955548
+    at Hook.eval [as 
+call] (eval at 
+create (D:\PROJECTS\U
+pcomming\Failure-Shar
+ing-Site\frontend\nod
+e_modules\next\dist\c
+ompiled\webpack\bundl
+e5.js:13:8996), 
+<anonymous>:7:1)
+    at 
+Hook.CALL_DELEGATE 
+[as _call] (D:\PROJEC
+TS\Upcomming\Failure-
+Sharing-Site\frontend
+\node_modules\next\di
+st\compiled\webpack\b
+undle5.js:13:6266)
+    at D:\PROJECTS\Up
+comming\Failure-Shari
+ng-Site\frontend\node
+_modules\next\dist\co
+mpiled\webpack\bundle
+5.js:28:131467
+    at 
+tryRunOrWebpackError 
+(D:\PROJECTS\Upcommin
+g\Failure-Sharing-Sit
+e\frontend\node_modul
+es\next\dist\compiled
+\webpack\bundle5.js:2
+8:314916)
+    at __webpack_requ
+ire_module__ (D:\PROJ
+ECTS\Upcomming\Failur
+e-Sharing-Site\fronte
+nd\node_modules\next\
+dist\compiled\webpack
+\bundle5.js:28:131434
+)
+    at __nested_webpa
+ck_require_161179__ (
+D:\PROJECTS\Upcomming
+\Failure-Sharing-Site
+\frontend\node_module
+s\next\dist\compiled\
+webpack\bundle5.js:28
+:130872)
+    at D:\PROJECTS\Up
+comming\Failure-Shari
+ng-Site\frontend\node
+_modules\next\dist\co
+mpiled\webpack\bundle
+5.js:28:131723
+    at 
+symbolIterator (D:\PR
+OJECTS\Upcomming\Fail
+ure-Sharing-Site\fron
+tend\node_modules\nex
+t\dist\compiled\neo-a
+sync\async.js:1:14444
+)
+
+Generated code for D:
+\PROJECTS\Upcomming\F
+ailure-Sharing-Site\f
+rontend\node_modules\
+next\dist\build\webpa
+ck\loaders\css-loader
+\src\index.js??ruleSe
+t[1].rules[13].oneOf[
+10].use[2]!D:\PROJECT
+S\Upcomming\Failure-S
+haring-Site\frontend\
+node_modules\next\dis
+t\build\webpack\loade
+rs\postcss-loader\src
+\index.js??ruleSet[1]
+.rules[13].oneOf[10].
+use[3]!D:\PROJECTS\Up
+comming\Failure-Shari
+ng-Site\frontend\app\
+globals.css
+
+Import trace for 
+requested module:
+./app/globals.css
+
+
+> Build failed 
+because of webpack 
+errors

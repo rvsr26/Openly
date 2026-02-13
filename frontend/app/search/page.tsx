@@ -17,14 +17,8 @@ function SearchResults() {
   const query = searchParams.get('q') || '';
   const typeParam = searchParams.get('type') || 'all'; // 'all', 'posts', 'users'
 
-  // Tab State
-  const [activeTab, setActiveTab] = useState<'posts' | 'users'>('posts');
-
-  // Sync tab with URL or default to posts
-  useEffect(() => {
-    if (typeParam === 'users') setActiveTab('users');
-    else setActiveTab('posts');
-  }, [typeParam]);
+  // Derive tab from URL parameter - Source of Truth
+  const activeTab: 'posts' | 'users' = typeParam === 'users' ? 'users' : 'posts';
 
   const { data: results, isLoading } = useQuery({
     queryKey: ['search', query],
@@ -40,7 +34,7 @@ function SearchResults() {
   const users = results?.filter((item: any) => item.type === 'user') || [];
 
   const handleTabChange = (tab: 'posts' | 'users') => {
-    setActiveTab(tab);
+    // setActiveTab(tab); // Removed
     const params = new URLSearchParams(window.location.search);
     params.set('type', tab);
     router.push(`/search?${params.toString()}`);

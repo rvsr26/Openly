@@ -7,7 +7,9 @@ import { Shield, ArrowRight, Lock, Loader2 } from "lucide-react";
 import api from "@/app/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
-export default function MFAPage() {
+import { Suspense } from "react";
+
+function MFAContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const uid = searchParams.get("uid");
@@ -129,7 +131,7 @@ export default function MFAPage() {
                     {code.map((digit, idx) => (
                         <input
                             key={idx}
-                            ref={el => inputRefs.current[idx] = el}
+                            ref={(el) => { inputRefs.current[idx] = el }}
                             type="text"
                             maxLength={1}
                             value={digit}
@@ -169,5 +171,13 @@ export default function MFAPage() {
 
             </motion.div>
         </div>
+    );
+}
+
+export default function MFAPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>}>
+            <MFAContent />
+        </Suspense>
     );
 }

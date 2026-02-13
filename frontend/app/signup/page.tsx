@@ -24,7 +24,7 @@ export default function SignupPage() {
   /* 🔐 Redirect if already logged in */
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) router.push("/");
+      if (user) router.push("/feed");
     });
     return () => unsubscribe();
   }, [router]);

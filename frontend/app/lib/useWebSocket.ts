@@ -17,6 +17,8 @@ export function useWebSocket(userId: string | null) {
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const reconnectAttempts = useRef(0);
 
+    const connectRef = useRef<() => void>(() => { });
+
     const connect = useCallback(() => {
         if (!userId || wsRef.current?.readyState === WebSocket.OPEN) {
             return;
@@ -57,7 +59,7 @@ export function useWebSocket(userId: string | null) {
                     const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
                     reconnectTimeoutRef.current = setTimeout(() => {
                         reconnectAttempts.current++;
-                        connect();
+                        connectRef.current();
                     }, delay);
                 }
             };
@@ -67,6 +69,10 @@ export function useWebSocket(userId: string | null) {
             console.error('Failed to create WebSocket connection:', error);
         }
     }, [userId]);
+
+    useEffect(() => {
+        connectRef.current = connect;
+    }, [connect]);
 
     const disconnect = useCallback(() => {
         if (reconnectTimeoutRef.current) {
