@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
-import { useSystem } from "../context/SystemContext";
+import { useSystem } from "@/context/SystemContext";
 import {
   ThumbsUp,
   ThumbsDown,

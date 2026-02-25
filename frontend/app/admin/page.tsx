@@ -6,7 +6,7 @@ import PostItem from "../components/PostItem";
 import { Post, User } from "../types";
 import { useAuth } from "@/context/AuthContext";
 import { ShieldAlert, Users, LayoutDashboard, Ban, ShieldCheck, CheckCircle2, Shield, Trash2, Settings, Power, MessageSquare, BookOpen, UserPlus, MailX, CheckSquare, Database } from "lucide-react";
-import { useSystem } from "../context/SystemContext";
+import { useSystem } from "@/context/SystemContext";
 import TagInsights from "../components/TagInsights";
 
 export default function AdminPage() {

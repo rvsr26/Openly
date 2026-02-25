@@ -14,7 +14,7 @@ import {
     Info, Image as ImageIcon, Smile, Paperclip,
     MessageCircle, ArrowLeft, Lock, ShieldAlert
 } from 'lucide-react';
-import { useSystem } from '../context/SystemContext';
+import { useSystem } from '@/context/SystemContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import api, { getAbsUrl } from '../lib/api';

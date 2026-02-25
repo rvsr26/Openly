@@ -1,7 +1,7 @@
 "use client";
 
 import { Wrench, ShieldAlert } from "lucide-react";
-import { useSystem } from "../context/SystemContext";
+import { useSystem } from "@/context/SystemContext";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 

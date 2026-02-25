@@ -12,7 +12,7 @@ import api from "../lib/api";
 import dynamic from "next/dynamic";
 import "easymde/dist/easymde.min.css";
 import PollBuilder, { PollCreateData } from "./PollBuilder";
-import { useSystem } from "../context/SystemContext";
+import { useSystem } from "@/context/SystemContext";
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), { ssr: false });
 

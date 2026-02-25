@@ -2,9 +2,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
 import { ThemeProvider } from 'next-themes';
-import { AuthProvider } from '../context/AuthContext';
-import { KeyboardShortcutsProvider } from '../context/KeyboardShortcutsContext';
-import { SystemProvider } from '../context/SystemContext';
+import { AuthProvider } from '@/context/AuthContext';
+import { KeyboardShortcutsProvider } from '@/context/KeyboardShortcutsContext';
+import { SystemProvider } from '@/context/SystemContext';
 import Navbar from './components/Navbar';
 import { usePathname } from 'next/navigation';
 
