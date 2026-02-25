@@ -8,7 +8,7 @@ interface ProfileTabsProps {
 }
 
 export default function ProfileTabs({ activeTab, setActiveTab }: ProfileTabsProps) {
-    const tabs = ["Overview", "Journeys", "Experience", "Skills", "Posts", "Media", "Saved"];
+    const tabs = ["Overview", "Journeys", "Experience", "Education", "Skills", "Posts", "Media", "Saved"];
 
     return (
         <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2 scrollbar-hide">

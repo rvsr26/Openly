@@ -12,8 +12,9 @@ import { decryptMessage, encryptMessage, generateConversationKey } from '../lib/
 import {
     Plus, Search, Send, MoreVertical, Phone, Video,
     Info, Image as ImageIcon, Smile, Paperclip,
-    MessageCircle, ArrowLeft
+    MessageCircle, ArrowLeft, Lock, ShieldAlert
 } from 'lucide-react';
+import { useSystem } from '../context/SystemContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import api, { getAbsUrl } from '../lib/api';
@@ -30,6 +31,7 @@ function MessagesContent() {
     const targetUserId = searchParams.get('user');
 
     const { user: currentUser, loading: authLoading } = useAuth();
+    const { disableDms } = useSystem();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -318,6 +320,35 @@ function MessagesContent() {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     <p className="text-muted-foreground text-sm uppercase tracking-widest animate-pulse">Loading Messages...</p>
                 </div>
+            </div>
+        );
+    }
+
+    if (disableDms) {
+        return (
+            <div className="min-h-screen pt-24 pb-10 px-4 flex items-center justify-center">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="glass-card max-w-lg w-full p-12 text-center relative overflow-hidden"
+                >
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-purple-600" />
+                    <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center text-primary mx-auto mb-8 shadow-inner">
+                        <Lock size={48} />
+                    </div>
+                    <h2 className="text-3xl font-black mb-4 tracking-tight">Messaging Paused</h2>
+                    <p className="text-muted-foreground mb-10 leading-relaxed text-lg">
+                        The administration has temporarily disabled direct messaging for all users. We apologize for the inconvenience and appreciate your patience.
+                    </p>
+                    <div className="flex flex-col gap-3">
+                        <button
+                            onClick={() => router.push('/feed')}
+                            className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-2xl shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2 group"
+                        >
+                            Return to Feed <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+                        </button>
+                    </div>
+                </motion.div>
             </div>
         );
     }

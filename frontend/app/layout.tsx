@@ -10,6 +10,8 @@ import { Toaster } from "sonner";
 import ActivityTracker from "./components/ActivityTracker";
 import MobileNav from "./components/MobileNav";
 import OnboardingGuide from "./components/OnboardingGuide";
+import BroadcastBanner from "./components/BroadcastBanner";
+import MaintenanceScreen from "./components/MaintenanceScreen";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,16 +44,19 @@ export default function RootLayout({
         <div className="fixed inset-0 z-0 pointer-events-none bg-background"></div>
 
         <Providers>
-          <ActivityTracker />
-          <GlobalShortcuts />
-          <div className="relative z-10 flex flex-col min-h-screen">
-            {children}
-          </div>
-          <BackToTop />
-          <ShortcutsHelpModal />
-          <MobileNav />
-          <OnboardingGuide />
-          <Toaster position="bottom-right" richColors theme="system" />
+          <MaintenanceScreen>
+            <ActivityTracker />
+            <GlobalShortcuts />
+            <BroadcastBanner />
+            <div className="relative z-10 flex flex-col min-h-screen">
+              {children}
+            </div>
+            <BackToTop />
+            <ShortcutsHelpModal />
+            <MobileNav />
+            <OnboardingGuide />
+            <Toaster position="bottom-right" richColors theme="system" />
+          </MaintenanceScreen>
         </Providers>
       </body>
     </html>

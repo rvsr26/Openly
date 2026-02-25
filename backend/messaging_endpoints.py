@@ -11,7 +11,8 @@ from database import (
     conversations_collection, 
     messages_collection, 
     users_collection,
-    notifications_collection
+    notifications_collection,
+    settings_collection
 )
 
 router = APIRouter()
@@ -64,6 +65,14 @@ class ReadRequest(BaseModel):
 # Create or get existing conversation
 @router.post("/conversations/")
 async def create_or_get_conversation(req: ConversationRequest):
+    # Check if DMs are disabled globally
+    settings = await settings_collection.find_one({"_id": "global_settings"})
+    if settings and settings.get("disable_dms"):
+        # Check if the sender is an admin (bypasses restriction)
+        sender = await users_collection.find_one({"_id": req.user_id})
+        if not sender or (sender.get("role") != "admin" and sender.get("username") != "admin"):
+            raise HTTPException(status_code=403, detail="Direct messaging is currently disabled globally")
+            
     # Sort participant IDs for consistency
     participants = sorted([req.user_id, req.target_user_id])
     
@@ -203,6 +212,13 @@ async def get_messages(conversation_id: str, limit: int = 50, before: Optional[s
 # Send a message
 @router.post("/conversations/{conversation_id}/messages")
 async def send_message(conversation_id: str, req: MessageRequest, background_tasks: BackgroundTasks):
+    # Check if DMs are disabled globally
+    settings = await settings_collection.find_one({"_id": "global_settings"})
+    if settings and settings.get("disable_dms"):
+        sender = await users_collection.find_one({"_id": req.sender_id})
+        if not sender or (sender.get("role") != "admin" and sender.get("username") != "admin"):
+            raise HTTPException(status_code=403, detail="Direct messaging is currently disabled globally")
+            
     try:
         conv_oid = ObjectId(conversation_id)
     except:

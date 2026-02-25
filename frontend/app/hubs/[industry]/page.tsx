@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import api from "@/app/lib/api";
 import PostItem from "@/app/components/PostItem";
+import HubSentiment from "@/app/components/HubSentiment";
 import { FeedSkeleton } from "@/app/components/PostSkeleton";
 import { Briefcase, Flame, Clock, Trophy, ChevronLeft, Search } from "lucide-react";
 import { useState } from "react";
@@ -86,13 +87,18 @@ export default function HubPage() {
                     <button
                         onClick={handleToggleHub}
                         className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${isJoined
-                                ? "bg-white/5 border border-white/10 text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
-                                : "bg-primary text-white hover:scale-105 active:scale-95 shadow-xl shadow-primary/20"
+                            ? "bg-white/5 border border-white/10 text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                            : "bg-primary text-white hover:scale-105 active:scale-95 shadow-xl shadow-primary/20"
                             }`}
                     >
                         {isJoined ? "Leave Hub" : "Join Hub"}
                     </button>
                 </div>
+            </div>
+
+            {/* AI Sentiment Analysis */}
+            <div className="mb-8">
+                <HubSentiment hubName={hubName} />
             </div>
 
             {/* Hub Controls */}

@@ -10,10 +10,12 @@ import {
   onAuthStateChanged,
 } from "firebase/auth";
 import { motion } from "framer-motion";
-import { Mail, Lock, CheckCircle, AlertCircle, ArrowRight, UserPlus, Shield } from "lucide-react";
+import { Mail, Lock, CheckCircle, AlertCircle, ArrowRight, UserPlus, Shield, Sparkles, Ban } from "lucide-react";
+import { useSystem } from "../context/SystemContext";
 
 export default function SignupPage() {
   const router = useRouter();
+  const { pauseRegistrations } = useSystem();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -144,95 +146,118 @@ export default function SignupPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSignup} className="space-y-5">
-
-            {/* Error Message */}
-            {error && (
-              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-xl flex items-center gap-3">
-                <AlertCircle size={18} /> {error}
-              </motion.div>
-            )}
-
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Email Address</label>
-                <div className="relative group">
-                  <Mail className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-muted/30 border border-border rounded-xl px-10 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
-                    placeholder="name@example.com"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Password</label>
-                <div className="relative group">
-                  <Lock className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <input
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-muted/30 border border-border rounded-xl px-10 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Confirm Password</label>
-                <div className="relative group">
-                  <Lock className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                  <input
-                    type="password"
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full bg-muted/30 border border-border rounded-xl px-10 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
-                    placeholder="••••••••"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3.5 rounded-xl shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+          {pauseRegistrations ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="p-8 rounded-3xl bg-secondary/30 border border-border shadow-2xl text-center relative overflow-hidden group"
             >
-              {loading ? "Creating account..." : (
-                <span className="flex items-center gap-2">Sign Up <ArrowRight size={18} /></span>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-red-500" />
+              <div className="w-20 h-20 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 mx-auto mb-6 group-hover:scale-110 transition-transform duration-500">
+                <Ban size={40} />
+              </div>
+              <h3 className="text-2xl font-black mb-3 text-foreground">Registrations Paused</h3>
+              <p className="text-muted-foreground mb-8 leading-relaxed">
+                We are currently not accepting new registrations to ensure the best experience for our current community. We&apos;ll be back soon!
+              </p>
+              <button
+                onClick={() => router.push("/feed")}
+                className="w-full btn-secondary !py-3.5 !rounded-xl font-bold flex items-center justify-center gap-2"
+              >
+                Explore the Feed <ArrowRight size={18} />
+              </button>
+            </motion.div>
+          ) : (
+            <form onSubmit={handleSignup} className="space-y-5">
+
+              {/* Error Message */}
+              {error && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-xl flex items-center gap-3">
+                  <AlertCircle size={18} /> {error}
+                </motion.div>
               )}
-            </button>
 
-            <div className="relative py-4">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border/60" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase tracking-widest">
-                <span className="bg-background px-4 text-muted-foreground">
-                  Or sign up with
-                </span>
-              </div>
-            </div>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Email Address</label>
+                  <div className="relative group">
+                    <Mail className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full bg-muted/30 border border-border rounded-xl px-10 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                      placeholder="name@example.com"
+                    />
+                  </div>
+                </div>
 
-            <button
-              type="button"
-              disabled={loading}
-              onClick={handleGoogleSignup}
-              className="w-full bg-card hover:bg-muted/50 border border-border font-semibold py-3.5 rounded-xl transition-all flex items-center justify-center gap-3 text-foreground active:scale-[0.98]"
-            >
-              <svg className="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
-                <path d="M12.0003 20.45c4.656 0 8.556-3.218 9.973-7.65h-9.973v-4.524h15.222c.159.833.242 1.693.242 2.578 0 8.019-5.748 13.913-13.828 13.913-7.729 0-14-6.271-14-14s6.271-14 14-14c3.784 0 7.211 1.396 9.872 3.882l-4.133 3.493c-1.554-1.121-3.601-1.785-5.739-1.785-5.188 0-9.471 3.978-11.042 9.006h-.033l-4.665-3.587-.146.108c1.677 5.95 7.152 10.354 13.671 10.354z" fill="currentColor" />
-              </svg>
-              Google
-            </button>
-          </form>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Password</label>
+                  <div className="relative group">
+                    <Lock className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full bg-muted/30 border border-border rounded-xl px-10 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase text-muted-foreground ml-1">Confirm Password</label>
+                  <div className="relative group">
+                    <Lock className="absolute left-3 top-3.5 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                    <input
+                      type="password"
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full bg-muted/30 border border-border rounded-xl px-10 py-3 outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-medium"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3.5 rounded-xl shadow-lg shadow-primary/25 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+              >
+                {loading ? "Creating account..." : (
+                  <span className="flex items-center gap-2">Sign Up <ArrowRight size={18} /></span>
+                )}
+              </button>
+
+              <div className="relative py-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border/60" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase tracking-widest">
+                  <span className="bg-background px-4 text-muted-foreground">
+                    Or sign up with
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={loading}
+                onClick={handleGoogleSignup}
+                className="w-full bg-card hover:bg-muted/50 border border-border font-semibold py-3.5 rounded-xl transition-all flex items-center justify-center gap-3 text-foreground active:scale-[0.98]"
+              >
+                <svg className="h-5 w-5" aria-hidden="true" viewBox="0 0 24 24">
+                  <path d="M12.0003 20.45c4.656 0 8.556-3.218 9.973-7.65h-9.973v-4.524h15.222c.159.833.242 1.693.242 2.578 0 8.019-5.748 13.913-13.828 13.913-7.729 0-14-6.271-14-14s6.271-14 14-14c3.784 0 7.211 1.396 9.872 3.882l-4.133 3.493c-1.554-1.121-3.601-1.785-5.739-1.785-5.188 0-9.471 3.978-11.042 9.006h-.033l-4.665-3.587-.146.108c1.677 5.95 7.152 10.354 13.671 10.354z" fill="currentColor" />
+                </svg>
+                Google
+              </button>
+            </form>
+          )}
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
             Already have an account?{" "}

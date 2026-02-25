@@ -1,3 +1,19 @@
+export interface PollOption {
+    id: string;       // e.g. "opt_0", "opt_1"...
+    text: string;
+    votes: number;
+}
+
+export interface Poll {
+    question: string;
+    type: "yesno" | "multiple";
+    options: PollOption[];
+    total_votes: number;
+    ends_at?: string;           // ISO string, optional expiry
+    allow_anonymous: boolean;
+    voted_option_id?: string;   // filled in on the client after fetching user's vote
+}
+
 export interface Post {
     id: string;
     content: string;
@@ -27,11 +43,44 @@ export interface Post {
     tags?: string[];
     is_professional_inquiry?: boolean;
     endorsements_count?: number;
+    poll?: Poll;
+    community_id?: string;
+    specific_reactions?: Record<string, number>;
+    user_reactions?: Record<string, string>;
+    user_reaction?: string;
+    has_downvoted?: boolean;
+}
+
+export interface ProfessionalExperience {
+    company: string;
+    position: string;
+    location?: string;
+    start_date: string;
+    end_date?: string;
+    current?: boolean;
+    description?: string;
+}
+
+export interface Education {
+    school: string;
+    degree?: string;
+    field?: string;
+    start_date: string;
+    end_date?: string;
+}
+
+export interface Skill {
+    name: string;
+    level?: string;
+    endorsements?: number;
+    endorsers?: string[];
 }
 
 export interface User {
-    id: string;
+    id?: string;
+    uid?: string;
     username: string;
+    email?: string;
     display_name: string;
     photoURL?: string;
     headline?: string;
@@ -43,6 +92,31 @@ export interface User {
     is_expert?: boolean;
     profession?: string;
     followed_hubs?: string[];
+    experiences?: ProfessionalExperience[];
+    education?: Education[];
+    skills?: Skill[];
+    role?: string;
+    is_banned?: boolean;
+}
+
+export interface Story {
+    id: string;
+    user_id: string;
+    user_name: string;
+    user_pic: string;
+    content?: string;
+    image_url?: string;
+    background_color?: string;
+    created_at: string;
+    viewers?: string[];
+}
+
+export interface StoryGroup {
+    user_id: string;
+    user_name: string;
+    user_pic: string;
+    has_unseen: boolean;
+    stories: Story[];
 }
 
 export interface Comment {

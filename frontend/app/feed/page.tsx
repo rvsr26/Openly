@@ -8,6 +8,7 @@ import CreatePost from '../components/CreatePost';
 import LeftSidebar from '../components/LeftSidebar';
 import RightSidebar from '../components/RightSidebar';
 import { FeedSkeleton } from '../components/PostSkeleton';
+import StoriesBar from '../components/StoriesBar';
 
 
 import { auth } from '../firebase';
@@ -19,6 +20,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useDraftAutoSave } from '@/hooks/useDraftAutoSave';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import { PollCreateData } from '../components/PollBuilder';
 
 const CATEGORIES = ["All", "Career", "Startup", "Academic", "Relationship", "Health"];
 
@@ -32,6 +34,8 @@ export default function Home() {
   const [collaborators, setCollaborators] = useState<string[]>([]);
   const [isProfessionalInquiry, setIsProfessionalInquiry] = useState(false);
   const [selectedHubs, setSelectedHubs] = useState<string[]>([]);
+  const [pollData, setPollData] = useState<PollCreateData | null>(null);
+  const [communityId, setCommunityId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
   const [sortBy, setSortBy] = useState<"new" | "hot" | "top" | "for-you">("hot");
@@ -110,7 +114,9 @@ export default function Home() {
         timeline_id: selectedTimelineId || null,
         collaborators: collaborators,
         is_professional_inquiry: isProfessionalInquiry,
-        hubs: selectedHubs
+        hubs: selectedHubs,
+        poll: pollData || undefined,
+        ...(communityId ? { community_id: communityId } : {}),
       });
 
       if (res.data.status === "rejected_for_toxicity") {
@@ -122,6 +128,8 @@ export default function Home() {
       setCollaborators([]);
       setIsProfessionalInquiry(false);
       setSelectedHubs([]);
+      setPollData(null);
+      setCommunityId(null);
       clearDraft();
       fetchFeed(activeFilter, sortBy);
 
@@ -208,7 +216,8 @@ export default function Home() {
           {/* CENTER FEED */}
           <div className="flex flex-col gap-6 min-h-screen">
 
-
+            {/* STORIES BAR */}
+            <StoriesBar />
 
             {/* CREATE POST - CENTERED */}
             <CreatePost
@@ -231,6 +240,10 @@ export default function Home() {
               setCollaborators={setCollaborators}
               selectedHubs={selectedHubs}
               setSelectedHubs={setSelectedHubs}
+              pollData={pollData}
+              setPollData={setPollData}
+              communityId={communityId}
+              setCommunityId={setCommunityId}
             />
 
             {/* Draft Status Indicator */}

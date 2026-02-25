@@ -10,6 +10,7 @@ import TextReveal from "../components/ui/TextReveal";
 import AnimatedButton from "../components/ui/AnimatedButton";
 import { useState, useEffect } from "react";
 import UserListModal from "../components/UserListModal";
+import ResumeGenerator from "../components/ResumeGenerator";
 
 interface ProfileHeaderProps {
     user: User;
@@ -231,6 +232,9 @@ export default function ProfileHeader({ user, profileData, isOwner, onRefresh }:
                                         {copied ? <Check size={16} /> : <Share2 size={16} />}
                                         <span>{copied ? "Copied!" : "Share"}</span>
                                     </AnimatedButton>
+
+                                    {/* Export Resume Button */}
+                                    <ResumeGenerator user={profileData?.user_info || user} />
                                 </motion.div>
                             </div>
 

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
+import { useSystem } from "../context/SystemContext";
 import {
   ThumbsUp,
   ThumbsDown,
@@ -31,7 +32,8 @@ import {
   Sparkles,
   Loader2,
   Trophy,
-  Map
+  Map,
+  ShieldAlert
 } from "lucide-react";
 import api, { getAbsUrl } from "../lib/api";
 import { formatDistanceToNow } from "date-fns";
@@ -41,6 +43,8 @@ import ShareImageTemplate from "./ShareImageTemplate";
 import { toPng } from "html-to-image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import PollBlock from "./PollBlock";
+import PostReactions from "./PostReactions";
 
 /* ---------------- HELPER COMPONENTS ---------------- */
 
@@ -48,18 +52,20 @@ const CommentItem = ({
   comment,
   currentUser,
   onReply,
-  depth = 0
+  depth = 0,
+  canComment
 }: {
   comment: Comment,
   currentUser: any | null,
   onReply: (parentId: string, content: string) => void,
-  depth?: number
+  depth?: number,
+  canComment: boolean
 }) => {
   const [isReplying, setIsReplying] = useState(false);
   const [replyText, setReplyText] = useState("");
 
   const handleSubmit = () => {
-    if (!replyText.trim()) return;
+    if (!replyText.trim() || !canComment) return;
     onReply(comment.id, replyText);
     setIsReplying(false);
     setReplyText("");
@@ -120,7 +126,7 @@ const CommentItem = ({
       {comment.replies && comment.replies.length > 0 && (
         <div className="ml-9 border-l border-dashed border-white/10 pl-5">
           {comment.replies.map(reply => (
-            <CommentItem key={reply.id} comment={reply} currentUser={currentUser} onReply={onReply} depth={depth + 1} />
+            <CommentItem key={reply.id} comment={reply} currentUser={currentUser} onReply={onReply} depth={depth + 1} canComment={canComment} />
           ))}
         </div>
       )}
@@ -154,6 +160,7 @@ function buildCommentTree(comments: Comment[]): Comment[] {
 function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: string }) {
   /* ---------------- STATE ---------------- */
   const { user: currentUser } = useAuth();
+  const { readOnlyMode, requireVerifiedEmail } = useSystem();
 
   // Stats
   // Real view count from DB + local increment
@@ -162,9 +169,9 @@ function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: strin
   const [reactionCount, setReactionCount] = useState(post.reaction_count || 0);
   const [downvoteCount, setDownvoteCount] = useState(post.downvote_count || 0);
 
-  const [hasReacted, setHasReacted] = useState(false);
-  const [hasDownvoted, setHasDownvoted] = useState(false);
-  const [isUpvoting, setIsUpvoting] = useState(false); // Loading state for upvote
+  const [currentReaction, setCurrentReaction] = useState<string | undefined>(post.user_reaction);
+  const [hasDownvoted, setHasDownvoted] = useState(post.has_downvoted || false);
+  const [isReacting, setIsReacting] = useState(false); // Loading state for react
   const [isDownvoting, setIsDownvoting] = useState(false); // Loading state for downvote
 
   const [showComments, setShowComments] = useState(false);
@@ -228,48 +235,55 @@ function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: strin
 
 
   /* ---------------- HANDLERS ---------------- */
-  const handleUpvote = useCallback(async () => {
+  const handleReact = useCallback(async (type: string) => {
     if (!currentUser) {
-      toast.error("Please login to vote");
+      toast.error("Please login to react");
       return;
     }
 
-    if (isUpvoting) return;
+    if (isReacting) return;
 
     // Optimistic
-    const wasReacted = hasReacted;
+    const previousReaction = currentReaction;
+    const previousCount = reactionCount;
     const wasDownvoted = hasDownvoted;
 
-    // Toggle Upvote
-    setHasReacted(!wasReacted);
-    setReactionCount(c => wasReacted ? c - 1 : c + 1);
+    setIsReacting(true);
 
-    // If was downvoted, remove downvote
-    if (wasDownvoted) {
-      setHasDownvoted(false);
-      setDownvoteCount(c => c - 1);
+    if (type === "remove") {
+      setCurrentReaction(undefined);
+      setReactionCount(c => Math.max(0, c - 1));
+    } else {
+      setCurrentReaction(type);
+      if (!previousReaction) setReactionCount(c => c + 1);
+
+      if (wasDownvoted) {
+        setHasDownvoted(false);
+        setDownvoteCount(c => Math.max(0, c - 1));
+      }
     }
 
-    setIsUpvoting(true);
-
     try {
-      await api.post(`/posts/${post.id}/react`, { user_id: currentUser.uid });
+      if (type === "remove") {
+        // API expects removing reaction (maybe via downvote/unlike logic, we'll re-use react endpoint with "remove")
+        await api.post(`/posts/${post.id}/reactions`, { user_id: currentUser.uid, type: "remove" });
+      } else {
+        await api.post(`/posts/${post.id}/reactions`, { user_id: currentUser.uid, type });
+      }
     } catch (e) {
       // Rollback
-      console.error("Upvote error:", e);
-      setHasReacted(wasReacted);
-      setReactionCount(c => wasReacted ? c : (wasReacted ? c + 1 : c - 1)); // Reset logic complex, simpler to just force reset but let's try to be precise
-      // Just revert everything
+      console.error("Reaction error:", e);
+      setCurrentReaction(previousReaction);
+      setReactionCount(previousCount);
       if (wasDownvoted) {
         setHasDownvoted(true);
         setDownvoteCount(c => c + 1);
       }
-      setReactionCount(post.reaction_count || 0); // Fallback to prop might be safer if we track delta
-      toast.error("Failed to update vote.");
+      toast.error("Failed to update reaction.");
     } finally {
-      setIsUpvoting(false);
+      setIsReacting(false);
     }
-  }, [currentUser, hasReacted, hasDownvoted, post.id, isUpvoting, post.reaction_count]);
+  }, [currentUser, currentReaction, reactionCount, hasDownvoted, isReacting, post.id]);
 
   const handleDownvote = useCallback(async () => {
     if (!currentUser) {
@@ -279,15 +293,15 @@ function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: strin
     if (isDownvoting) return;
 
     const wasDownvoted = hasDownvoted;
-    const wasReacted = hasReacted;
+    const previousReaction = currentReaction;
 
     // Toggle Downvote
     setHasDownvoted(!wasDownvoted);
     setDownvoteCount(c => wasDownvoted ? c - 1 : c + 1);
 
     // If was upvoted, remove upvote
-    if (wasReacted) {
-      setHasReacted(false);
+    if (previousReaction) {
+      setCurrentReaction(undefined);
       setReactionCount(c => c - 1);
     }
 
@@ -299,9 +313,8 @@ function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: strin
       console.error("Downvote error", e);
       // Rollback
       setHasDownvoted(wasDownvoted);
-      // Revert counts... implies more complex state tracking, simple revert:
-      if (wasReacted) {
-        setHasReacted(true);
+      if (previousReaction) {
+        setCurrentReaction(previousReaction);
         setReactionCount(c => c + 1);
       }
       setDownvoteCount(c => wasDownvoted ? c + 1 : c - 1);
@@ -309,7 +322,7 @@ function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: strin
     } finally {
       setIsDownvoting(false);
     }
-  }, [currentUser, hasReacted, hasDownvoted, isDownvoting, post.id]);
+  }, [currentUser, currentReaction, hasDownvoted, isDownvoting, post.id]);
 
   const handleComment = useCallback(async (parentId: string | null = null, content: string = commentText) => {
     if (!content.trim() || !currentUser) return;
@@ -345,7 +358,7 @@ function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: strin
       setComments(prev => prev.filter(c => c.id !== tempId));
       toast.error("Failed to post comment. Please try again.");
     }
-  }, [commentText, currentUser, post.id]);
+  }, [commentText, currentUser, post.id, readOnlyMode, requireVerifiedEmail]);
 
   const handleShare = useCallback(async () => {
     const url = `${window.location.origin}/post/${post.id}`;
@@ -729,6 +742,8 @@ function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: strin
         </div>
       )}
 
+      {post.poll && <PollBlock poll={post.poll} postId={post.id} />}
+
       {post.image_url && (
         <div className="mb-6 rounded-3xl overflow-hidden border border-border/50 group/img relative cursor-pointer">
           <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover/img:opacity-100 transition-opacity z-10 flex items-center justify-center">
@@ -747,18 +762,16 @@ function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: strin
       )}
 
       {/* 4. ACTIONS BAR */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pt-6 mt-2 border-t border-border/50">
-        <div className="flex items-center gap-2">
-          {/* UPVOTE */}
-          <button
-            onClick={handleUpvote}
-            disabled={isUpvoting}
-            className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl text-xs font-bold transition-all active:scale-95 ${hasReacted ? "bg-primary text-white shadow-xl shadow-primary/20" : "bg-white/5 text-muted-foreground hover:bg-primary/10 hover:text-primary"} ${isUpvoting ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            <ThumbsUp size={16} className={hasReacted ? "fill-white" : ""} />
-            <span>Support</span>
-            {reactionCount > 0 && <span className="ml-1 opacity-80 pl-1 border-l border-current/20 font-black">{reactionCount}</span>}
-          </button>
+      <div className="flex flex-wrap items-center justify-between gap-4 pt-6 mt-2 border-t border-border/50 overflow-visible">
+        <div className="flex items-center gap-2 relative">
+          {/* UPVOTE -> REACTIONS */}
+          <PostReactions
+            postId={post.id}
+            currentReaction={currentReaction}
+            reactionCount={reactionCount}
+            onReact={handleReact}
+            disabled={isReacting}
+          />
 
           {/* DOWNVOTE */}
           <button
@@ -904,48 +917,79 @@ function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: strin
       {showComments && (
         <div className="bg-black/20 -mx-5 -mb-5 mt-5 p-5 border-t border-white/5 animate-in slide-in-from-top-2">
 
-          {/* Main Input */}
-          <div className="flex gap-3 mb-6">
-            <img
-              src={getAbsUrl(currentUser?.photoURL) || '/assets/default_avatar.png'}
-              width={32}
-              height={32}
-              className="rounded-full ring-2 ring-white/10 object-cover"
-              onError={(e) => { if (!e.currentTarget.src.includes('default_avatar')) e.currentTarget.src = '/assets/default_avatar.png'; }}
-              alt="Your avatar"
-            />
-            <div className="flex-1 relative">
-              <input
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                placeholder="Share your thoughts..."
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-all placeholder:text-white/20"
-                onKeyDown={(e) => e.key === "Enter" && handleComment()}
-              />
-              <button
-                onClick={() => handleComment()}
-                disabled={!commentText.trim()}
-                className="absolute right-2 top-1.5 p-1 text-primary hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <CornerDownRight size={18} />
-              </button>
-            </div>
-          </div>
+          {/* Global Restriction Banner for Comments */}
+          {(() => {
+            const isEmailVerified = currentUser?.email_verified === true;
+            const isRestrictedByEmail = requireVerifiedEmail && !isEmailVerified;
+            const isRestrictedOverall = readOnlyMode || isRestrictedByEmail;
+            const isAdmin = currentUser?.role === 'admin' || currentUser?.username === 'admin';
+            const canComment = isAdmin || !isRestrictedOverall;
 
-          <div className="space-y-1">
-            {commentTree.length === 0 ? (
-              <div className="text-center text-white/20 py-8 text-sm italic">No comments yet. Be the first!</div>
-            ) : (
-              commentTree.map((c) => (
-                <CommentItem
-                  key={c.id}
-                  comment={c}
-                  currentUser={currentUser}
-                  onReply={(parentId, content) => handleComment(parentId, content)}
-                />
-              ))
-            )}
-          </div>
+            return (
+              <>
+                {!canComment && (
+                  <div className="mb-6 p-4 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center gap-3">
+                    <ShieldAlert size={18} className="text-destructive shrink-0" />
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {readOnlyMode
+                        ? "Commenting is disabled in Read-Only mode."
+                        : "Verify your email to join the conversation."
+                      }
+                    </p>
+                    {isRestrictedByEmail && !readOnlyMode && (
+                      <a href="/profile" className="ml-auto text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
+                        Verify
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {/* Main Input */}
+                <div className={`flex gap-3 mb-6 transition-all duration-300 ${!canComment ? "opacity-30 pointer-events-none grayscale" : ""}`}>
+                  <img
+                    src={getAbsUrl(currentUser?.photoURL) || '/assets/default_avatar.png'}
+                    width={32}
+                    height={32}
+                    className="rounded-full ring-2 ring-white/10 object-cover"
+                    onError={(e) => { if (!e.currentTarget.src.includes('default_avatar')) e.currentTarget.src = '/assets/default_avatar.png'; }}
+                    alt="Your avatar"
+                  />
+                  <div className="flex-1 relative">
+                    <input
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      placeholder="Share your thoughts..."
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-all placeholder:text-white/20"
+                      onKeyDown={(e) => e.key === "Enter" && handleComment()}
+                    />
+                    <button
+                      onClick={() => handleComment()}
+                      disabled={!commentText.trim()}
+                      className="absolute right-2 top-1.5 p-1 text-primary hover:text-primary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <CornerDownRight size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  {commentTree.length === 0 ? (
+                    <div className="text-center text-white/20 py-8 text-sm italic">No comments yet. Be the first!</div>
+                  ) : (
+                    commentTree.map((c) => (
+                      <CommentItem
+                        key={c.id}
+                        comment={c}
+                        currentUser={currentUser}
+                        canComment={canComment}
+                        onReply={(parentId, content) => handleComment(parentId, content)}
+                      />
+                    ))
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </div>
       )}
 
