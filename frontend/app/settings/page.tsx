@@ -11,7 +11,7 @@ import { authApi } from "../lib/authApi";
 import { uploadImage, getAbsUrl } from "../lib/api";
 
 export default function SettingsPage() {
-    const { user } = useAuth();
+    const { user, refreshSession } = useAuth();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState("profile");
     const [isLoading, setIsLoading] = useState(false);
@@ -430,26 +430,13 @@ export default function SettingsPage() {
                                             </div>
 
                                             <button
-                                                onClick={() => {
-                                                    // Start MFA Setup Flow
-                                                    if (user.two_factor_enabled) { // Assuming user object has this or we check via API?
-                                                        // Actually user object from context might not have it unless we sync it. 
-                                                        // Use local state or assume disabled for now if untracked.
-                                                        // Better: Toggle based on known state.
-                                                        // For now, let's assume if they click the button, we trigger the relevant flow.
-                                                        // Since we don't track 2FA status in user context yet, we might need to fetch it.
-                                                        // Let's assume the button text changes based on status which we should fetch.
-                                                        setIsMfaModalOpen(true);
-                                                    } else {
-                                                        setIsMfaModalOpen(true);
-                                                    }
-                                                }}
-                                                className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${false // Replace with actual status check
+                                                onClick={() => setIsMfaModalOpen(true)}
+                                                className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${user.twoFactorEnabled
                                                     ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
                                                     : "bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/25"
                                                     }`}
                                             >
-                                                Configure 2FA
+                                                {user.twoFactorEnabled ? "Manage / Disable 2FA" : "Configure 2FA"}
                                             </button>
                                         </div>
                                     </section>
@@ -529,6 +516,7 @@ export default function SettingsPage() {
                                                     onClick={async () => {
                                                         try {
                                                             await authApi.disable2FA();
+                                                            await refreshSession();
                                                             toast.success("2FA Disabled");
                                                             setIsMfaModalOpen(false);
                                                         } catch (e) {
@@ -565,6 +553,7 @@ export default function SettingsPage() {
                                                 onClick={async () => {
                                                     try {
                                                         await authApi.enable2FA(mfaCode);
+                                                        await refreshSession();
                                                         toast.success("2FA Enabled Successfully!");
                                                         setIsMfaModalOpen(false);
                                                         setMfaSecret("");

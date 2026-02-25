@@ -1,11 +1,9 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import api from "../../lib/api";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase";
-import Navbar from "../../components/Navbar";
-import { Post } from "../../types";
 
 import ProfileHeader from "../../profile/ProfileHeader";
 import ProfileStats from "../../profile/ProfileStats";
@@ -15,41 +13,46 @@ import ProfileContent from "../../profile/ProfileContent";
 export default function PublicProfilePage() {
   const params = useParams();
   const username = params.username as string;
+
+  // Wait for auth to resolve before we know who the requester is
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Overview");
 
+  // Step 1: Resolve auth first
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
+      setAuthReady(true);  // auth is now settled (user or null)
     });
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
+  // Step 2: Only fetch profile once auth is ready
+  const fetchProfile = async (silent = false) => {
     if (!username || username === "undefined") {
       setLoading(false);
       return;
     }
+    try {
+      if (!silent) setLoading(true);
+      const requesterId = auth.currentUser?.uid;
+      const res = await api.get(`/users/${username}/profile${requesterId ? `?requester_id=${requesterId}` : ''}`);
+      setProfile(res.data);
+    } catch (error) {
+      console.error("Failed to load profile", error);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
 
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
-        const requesterId = auth.currentUser?.uid;
-        // The backend `/users/{id}/profile` now supports username via `get_user_by_any_id`
-        const res = await api.get(`/users/${username}/profile${requesterId ? `?requester_id=${requesterId}` : ''}`);
-        setProfile(res.data);
-      } catch (error) {
-        console.error("Failed to load profile", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+  useEffect(() => {
+    if (!authReady) return; // wait for auth to settle
     fetchProfile();
-  }, [username]);
+  }, [username, authReady]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground animate-pulse">
@@ -65,17 +68,17 @@ export default function PublicProfilePage() {
     </div>
   );
 
-  const isOwnProfile = currentUser?.uid === profile.user_info.id;
+  const isOwnProfile = currentUser?.uid === profile.user_info.id ||
+    currentUser?.uid === profile.user_info.uid;
 
   return (
     <div className="min-h-screen pb-20 overflow-x-hidden">
-      <Navbar />
-
       <main className="mt-20 max-w-6xl mx-auto px-4 pt-10">
         <ProfileHeader
           user={currentUser || { uid: profile.user_info.id, displayName: profile.user_info.display_name }}
           profileData={profile}
           isOwner={isOwnProfile}
+          onRefresh={() => fetchProfile(true)}
         />
 
         <div className="grid grid-cols-1 gap-8">
@@ -87,10 +90,7 @@ export default function PublicProfilePage() {
               posts={profile.posts}
               user={profile.user_info}
               isOwner={isOwnProfile}
-              onRefresh={() => {
-                const requesterId = auth.currentUser?.uid;
-                api.get(`/users/${username}/profile${requesterId ? `?requester_id=${requesterId}` : ''}`).then(res => setProfile(res.data));
-              }}
+              onRefresh={() => fetchProfile(true)}
             />
           </div>
         </div>

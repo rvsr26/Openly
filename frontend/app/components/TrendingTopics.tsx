@@ -26,19 +26,34 @@ export default function TrendingTopics() {
     const fetchTrending = async () => {
         setLoading(true);
         try {
-            // TODO: Replace with actual API call
-            // const res = await api.get(`/trending?range=${timeRange}`);
-            // setTrending(res.data);
+            const [postsRes, tagsRes] = await Promise.all([
+                api.get(`/api/v1/trending/posts?limit=3`),
+                api.get(`/api/v1/trending/tags?limit=3`)
+            ]);
 
-            // Mock data for now
-            const mockData: TrendingItem[] = [
-                { type: 'hashtag', title: '#CareerAdvice', count: 1234, link: '/search?q=%23CareerAdvice' },
-                { type: 'hashtag', title: '#StartupLife', count: 892, link: '/search?q=%23StartupLife' },
-                { type: 'hashtag', title: '#TechTips', count: 756, link: '/search?q=%23TechTips' },
-                { type: 'user', title: 'John Doe', subtitle: '245 posts', link: '/u/johndoe' },
-                { type: 'user', title: 'Jane Smith', subtitle: '198 posts', link: '/u/janesmith' },
-            ];
-            setTrending(mockData);
+            const trendingItems: TrendingItem[] = [];
+
+            // Add top 3 posts
+            postsRes.data.forEach((post: any) => {
+                trendingItems.push({
+                    type: 'post',
+                    title: post.title || post.content.slice(0, 40) + '...',
+                    subtitle: `${post.reaction_count || 0} reactions`,
+                    link: `/post/${post.id}`
+                });
+            });
+
+            // Add top tags
+            tagsRes.data.forEach((tagData: any) => {
+                trendingItems.push({
+                    type: 'hashtag',
+                    title: `#${tagData.tag}`,
+                    count: tagData.count,
+                    link: `/search?q=%23${tagData.tag}`
+                });
+            });
+
+            setTrending(trendingItems);
         } catch (error) {
             console.error('Failed to fetch trending:', error);
         } finally {
@@ -63,8 +78,8 @@ export default function TrendingTopics() {
                         key={range}
                         onClick={() => setTimeRange(range)}
                         className={`flex-1 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${timeRange === range
-                                ? 'bg-primary text-primary-foreground shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground'
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
                             }`}
                     >
                         {range === 'today' ? 'Today' : range === 'week' ? 'Week' : 'Month'}

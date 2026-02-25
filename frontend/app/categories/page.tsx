@@ -1,6 +1,5 @@
 "use client";
 
-import Navbar from "../components/Navbar";
 import Link from "next/link";
 import { Layers, ArrowRight } from "lucide-react";
 
@@ -15,7 +14,6 @@ const CATEGORIES = [
 export default function CategoriesPage() {
     return (
         <div className="min-h-screen bg-background text-foreground">
-            <Navbar />
 
             <main className="pt-24 max-w-4xl mx-auto px-4 pb-20">
                 <div className="flex items-center gap-3 mb-8">
@@ -28,7 +26,7 @@ export default function CategoriesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {CATEGORIES.map((cat) => (
                         <Link
-                            href={`/?category=${cat.name}`}
+                            href={`/feed?category=${cat.name}`}
                             key={cat.name}
                             className="glass-card p-6 rounded-2xl border border-white/10 hover:border-primary/50 transition duration-300 group"
                         >

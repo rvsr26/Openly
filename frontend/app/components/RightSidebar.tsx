@@ -71,7 +71,7 @@ function RightSidebar({
                 <h3 className="text-sm font-black text-foreground mb-6 uppercase tracking-widest">People to Follow</h3>
                 <div className="space-y-4">
                     {suggestedUsers.length > 0 ? (
-                        suggestedUsers.map((u: any) => (
+                        [...new Map(suggestedUsers.map((u: any) => [u.uid, u])).values()].map((u: any) => (
                             <div key={u.uid} className="flex items-center justify-between group">
                                 <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-primary/20 overflow-hidden ring-1 ring-primary/20">

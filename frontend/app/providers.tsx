@@ -18,7 +18,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     },
   }));
 
-  const noNavbarRoutes = ['/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/setup-username'];
+  const noNavbarRoutes = ['/', '/landing', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/setup-username', '/auth/mfa'];
   const showNavbar = !noNavbarRoutes.includes(pathname);
 
   return (

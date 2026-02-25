@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import api, { getAbsUrl } from "../../lib/api";
 
-import Navbar from "../../components/Navbar";
 import { auth } from "../../firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { useRouter } from "next/navigation";
@@ -115,7 +114,6 @@ export default function EditProfilePage() {
 
   return (
     <div className="min-h-screen bg-background pt-24 pb-12 px-4">
-      <Navbar />
 
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">

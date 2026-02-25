@@ -6,7 +6,6 @@ import api from "../lib/api";
 
 import { auth } from "../firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
-import Navbar from "../components/Navbar";
 import PostItem from "../components/PostItem";
 import { useRouter } from "next/navigation";
 import { Post } from "../types";
@@ -55,7 +54,6 @@ export default function BookmarksPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Navbar />
 
       <main className="pt-24 max-w-3xl mx-auto px-4 pb-10">
         <h1 className="text-3xl font-bold mb-8 text-foreground">Saved Posts</h1>

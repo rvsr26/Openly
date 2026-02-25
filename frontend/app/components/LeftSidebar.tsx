@@ -3,13 +3,14 @@
 import { User } from "firebase/auth";
 import Link from "next/link";
 import {
-    LayoutGrid, Flame, Trophy, Layers, Bookmark,
-    PenTool, Home, MessageCircle, Users, Settings,
-    HelpCircle, UserPlus
+    LayoutGrid, Bookmark,
+    PenTool, MessageCircle, Users, Settings,
+    HelpCircle, UserPlus, Cpu
 } from "lucide-react";
 import { getAbsUrl } from "../lib/api";
 import { memo } from "react";
 import { usePathname } from "next/navigation";
+import ProfessionalHubs from "./ProfessionalHubs";
 
 interface LeftSidebarProps {
     user: any | null;
@@ -66,24 +67,11 @@ function LeftSidebar({ user, username, userPhoto }: LeftSidebarProps) {
                 )}
             </div>
 
-            {/* ── PERSONAL NAV ──────────────────────────────── */}
-            <div className="flex flex-col gap-1">
-                <p className="px-4 text-[10px] font-black text-muted-foreground/50 uppercase tracking-widest mb-1">Personal</p>
-                <NavItem href="/profile" icon={LayoutGrid} label="My Reviews" active={pathname === "/profile"} />
-                <NavItem href="/messages" icon={MessageCircle} label="Messages" active={pathname === "/messages"} />
-                <NavItem href="/network" icon={Users} label="My Network" active={pathname === "/network"} />
-                <NavItem href="/follow-requests" icon={UserPlus} label="Follow Requests" active={pathname === "/follow-requests"} />
-                <NavItem href="/drafts" icon={PenTool} label="Drafts" active={pathname === "/drafts"} />
-                <NavItem href="/bookmarks" icon={Bookmark} label="Bookmarks" active={pathname === "/bookmarks"} />
-            </div>
 
-            {/* ── EXPLORE NAV ───────────────────────────────── */}
-            <div className="flex flex-col gap-1">
-                <p className="px-4 text-[10px] font-black text-muted-foreground/50 uppercase tracking-widest mb-1">Explore</p>
-                <NavItem href="/feed" icon={Home} label="Home" active={pathname === "/feed"} />
-                <NavItem href="/feed?sort=hot" icon={Flame} label="Hot" />
-                <NavItem href="/feed?sort=top" icon={Trophy} label="Top Rated" />
-                <NavItem href="/categories" icon={Layers} label="Categories" active={pathname === "/categories"} />
+
+            {/* ── PROFESSIONAL HUBS ─────────────────────────── */}
+            <div className="mt-2">
+                <ProfessionalHubs />
             </div>
 
             {/* ── FOOTER LINKS ──────────────────────────────── */}

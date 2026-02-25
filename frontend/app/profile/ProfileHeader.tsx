@@ -4,28 +4,34 @@ import { User } from "firebase/auth";
 import api, { getAbsUrl } from "../lib/api";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Edit, Share2, MapPin, Calendar, Link as LinkIcon, Check } from "lucide-react";
+import { Edit, Share2, MapPin, Calendar, Link as LinkIcon, Check, UserCheck, Clock } from "lucide-react";
 import PhoenixBadge from "../components/PhoenixBadge";
 import TextReveal from "../components/ui/TextReveal";
 import AnimatedButton from "../components/ui/AnimatedButton";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import UserListModal from "../components/UserListModal";
 
 interface ProfileHeaderProps {
     user: User;
     profileData: any;
     isOwner: boolean;
+    onRefresh?: () => void;
 }
 
-export default function ProfileHeader({ user, profileData, isOwner }: ProfileHeaderProps) {
+export default function ProfileHeader({ user, profileData, isOwner, onRefresh }: ProfileHeaderProps) {
     const username = profileData?.user_info?.username;
     const photoURL = isOwner ? (profileData?.user_info?.photoURL || user?.photoURL) : profileData?.user_info?.photoURL;
     const score = profileData?.user_info?.phoenix_score || 0;
     const badges = profileData?.user_info?.badges || [];
     const [copied, setCopied] = useState(false);
-    const [followStatus, setFollowStatus] = useState<'not_following' | 'pending' | 'accepted'>(
-        profileData?.user_info?.follow_status || (profileData?.user_info?.is_following ? 'accepted' : 'not_following')
-    );
+
+    // Local follow status — synced from profileData on change
+    const [followStatus, setFollowStatus] = useState<'not_following' | 'pending' | 'accepted'>('not_following');
+
+    // Local counts — synced from profileData, updated optimistically on follow/unfollow
+    const [followersCount, setFollowersCount] = useState<number>(profileData?.stats?.followers || 0);
+    const [followingCount, setFollowingCount] = useState<number>(profileData?.stats?.following || 0);
+
     const [isFollowLoading, setIsFollowLoading] = useState(false);
 
     const [modalConfig, setModalConfig] = useState<{ isOpen: boolean; title: string; type: "followers" | "following" }>({
@@ -34,8 +40,23 @@ export default function ProfileHeader({ user, profileData, isOwner }: ProfileHea
         type: "followers"
     });
 
+    // Sync follow status and counts when profileData changes (e.g. on initial load or navigation)
+    useEffect(() => {
+        const status = profileData?.user_info?.follow_status;
+        const isFollowing = profileData?.user_info?.is_following;
+        if (status && status !== 'not_following') {
+            setFollowStatus(status);
+        } else if (isFollowing) {
+            setFollowStatus('accepted');
+        } else {
+            setFollowStatus('not_following');
+        }
+        setFollowersCount(profileData?.stats?.followers || 0);
+        setFollowingCount(profileData?.stats?.following || 0);
+    }, [profileData]);
+
     const handleCopy = () => {
-        const url = `${window.location.origin}/profile/${user.uid}`;
+        const url = `${window.location.origin}/u/${username || user.uid}`;
         navigator.clipboard.writeText(url);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -44,19 +65,33 @@ export default function ProfileHeader({ user, profileData, isOwner }: ProfileHea
     const handleFollowToggle = async () => {
         if (!user || isFollowLoading) return;
         setIsFollowLoading(true);
+        const targetId = profileData?.user_info?.id;
         try {
             if (followStatus === 'accepted' || followStatus === 'pending') {
-                // Unfollow or cancel request
-                await api.delete(`/users/${profileData.user_info.id}/follow?user_id=${user.uid}`);
+                // Unfollow or cancel request — optimistic update
+                await api.delete(`/users/${targetId}/follow?user_id=${user.uid}`);
                 setFollowStatus('not_following');
+                // Decrement count only if was accepted (actually following)
+                if (followStatus === 'accepted') {
+                    setFollowersCount(c => Math.max(0, c - 1));
+                }
             } else {
                 // Send follow request
-                const res = await api.post(`/users/${profileData.user_info.id}/follow`, { user_id: user.uid });
+                const res = await api.post(`/users/${targetId}/follow`, { user_id: user.uid });
                 const status = res.data?.status;
-                if (status === 'pending') setFollowStatus('pending');
-                else if (status === 'already_following') setFollowStatus('accepted');
-                else setFollowStatus('pending');
+                if (status === 'already_following') {
+                    setFollowStatus('accepted');
+                    setFollowersCount(c => c + 1);
+                } else if (status === 'accepted') {
+                    setFollowStatus('accepted');
+                    setFollowersCount(c => c + 1);
+                } else {
+                    // pending
+                    setFollowStatus('pending');
+                }
             }
+            // Trigger parent refetch in background so counts come from server too
+            onRefresh?.();
         } catch (e) {
             console.error("Follow toggle failed", e);
         } finally {
@@ -127,7 +162,7 @@ export default function ProfileHeader({ user, profileData, isOwner }: ProfileHea
                                         <span className="flex items-center gap-1.5"><Calendar size={14} /> Joined {new Date().getFullYear()}</span>
                                     </motion.div>
 
-                                    {/* Stats (Followers/Following) */}
+                                    {/* Stats (Followers/Following) — live local state */}
                                     <motion.div
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
@@ -138,14 +173,14 @@ export default function ProfileHeader({ user, profileData, isOwner }: ProfileHea
                                             onClick={() => setModalConfig({ isOpen: true, title: "Followers", type: "followers" })}
                                             className="group flex gap-2 items-center cursor-pointer transition-transform active:scale-95"
                                         >
-                                            <span className="font-black text-lg text-foreground group-hover:text-primary transition-colors">{profileData?.stats?.followers || 0}</span>
+                                            <span className="font-black text-lg text-foreground group-hover:text-primary transition-colors">{followersCount}</span>
                                             <span className="text-muted-foreground group-hover:text-foreground transition-colors">Followers</span>
                                         </button>
                                         <button
                                             onClick={() => setModalConfig({ isOpen: true, title: "Following", type: "following" })}
                                             className="group flex gap-2 items-center cursor-pointer transition-transform active:scale-95"
                                         >
-                                            <span className="font-black text-lg text-foreground group-hover:text-primary transition-colors">{profileData?.stats?.following || 0}</span>
+                                            <span className="font-black text-lg text-foreground group-hover:text-primary transition-colors">{followingCount}</span>
                                             <span className="text-muted-foreground group-hover:text-foreground transition-colors">Following</span>
                                         </button>
                                     </motion.div>
@@ -169,16 +204,21 @@ export default function ProfileHeader({ user, profileData, isOwner }: ProfileHea
                                         <AnimatedButton
                                             onClick={handleFollowToggle}
                                             variant={followStatus === 'accepted' ? "secondary" : followStatus === 'pending' ? "secondary" : "primary"}
-                                            className="w-full md:w-auto flex items-center gap-2 min-w-[120px]"
+                                            className="w-full md:w-auto flex items-center gap-2 min-w-[130px]"
                                             disabled={isFollowLoading}
                                         >
-                                            {followStatus === 'accepted' ? (
+                                            {isFollowLoading ? (
+                                                <span className="opacity-60">...</span>
+                                            ) : followStatus === 'accepted' ? (
                                                 <>
-                                                    <Check size={16} />
+                                                    <UserCheck size={16} />
                                                     <span>Following</span>
                                                 </>
                                             ) : followStatus === 'pending' ? (
-                                                <span>Requested ✓</span>
+                                                <>
+                                                    <Clock size={16} />
+                                                    <span>Requested</span>
+                                                </>
                                             ) : (
                                                 <span>Follow</span>
                                             )}
@@ -194,16 +234,17 @@ export default function ProfileHeader({ user, profileData, isOwner }: ProfileHea
                                 </motion.div>
                             </div>
 
-                            {/* BIO (Optional) */}
-                            <motion.p
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.8, duration: 0.8 }}
-                                className="mt-6 text-muted-foreground leading-relaxed max-w-2xl"
-                            >
-                                Building resilient systems and sharing the journey. Turning failures into features.
-                                {/* TODO: Add bio to backend profile schema */}
-                            </motion.p>
+                            {/* BIO */}
+                            {profileData?.user_info?.bio && (
+                                <motion.p
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.8, duration: 0.8 }}
+                                    className="mt-6 text-muted-foreground leading-relaxed max-w-2xl"
+                                >
+                                    {profileData.user_info.bio}
+                                </motion.p>
+                            )}
                         </div>
                     </div>
                 </div>

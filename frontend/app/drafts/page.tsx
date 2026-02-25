@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Navbar from "../components/Navbar";
 import { PenTool, Trash2, ArrowRight } from "lucide-react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "../firebase";
@@ -57,7 +56,6 @@ export default function DraftsPage() {
     if (!user) {
         return (
             <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center">
-                <Navbar />
                 <p>Please log in to view drafts.</p>
             </div>
         );
@@ -65,7 +63,6 @@ export default function DraftsPage() {
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            <Navbar />
 
             <main className="pt-32 max-w-2xl mx-auto px-4">
                 <div className="flex items-center gap-4 mb-8">

@@ -6,7 +6,8 @@ import { motion } from "framer-motion";
 import { getAbsUrl, uploadImage } from "../lib/api";
 import { timelineApi, Timeline } from "../lib/timelineApi";
 import { memo, useRef, useState, useMemo, useEffect } from "react";
-import { Image as ImageIcon, X, Loader2, Map, ChevronDown } from "lucide-react";
+import { Image as ImageIcon, X, Loader2, Map, ChevronDown, Sparkles, Trophy } from "lucide-react";
+import api from "../lib/api";
 import dynamic from "next/dynamic";
 import "easymde/dist/easymde.min.css";
 
@@ -28,7 +29,13 @@ interface CreatePostProps {
     setSelectedTimelineId: (val: string | null) => void;
     collaborators: string[];
     setCollaborators: (val: string[]) => void;
+    isProfessionalInquiry: boolean;
+    setIsProfessionalInquiry: (val: boolean) => void;
+    selectedHubs: string[];
+    setSelectedHubs: (val: string[]) => void;
 }
+
+const HUBS = ["Technology", "Business", "Medical", "Education", "Legal", "Finance", "Engineering", "Academic"];
 
 function CreatePost({
     user,
@@ -45,11 +52,24 @@ function CreatePost({
     selectedTimelineId,
     setSelectedTimelineId,
     collaborators,
-    setCollaborators
+    setCollaborators,
+    isProfessionalInquiry,
+    setIsProfessionalInquiry,
+    selectedHubs,
+    setSelectedHubs
 }: CreatePostProps) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
     const [collaboratorInput, setCollaboratorInput] = useState("");
+    const [showHubMenu, setShowHubMenu] = useState(false);
+
+    const toggleHub = (hub: string) => {
+        if (selectedHubs.includes(hub)) {
+            setSelectedHubs(selectedHubs.filter(h => h !== hub));
+        } else {
+            setSelectedHubs([...selectedHubs, hub]);
+        }
+    };
 
     const addCollaborator = () => {
         if (collaboratorInput.trim() && !collaborators.includes(collaboratorInput.trim())) {
@@ -65,6 +85,39 @@ function CreatePost({
     // Timeline State
     const [timelines, setTimelines] = useState<Timeline[]>([]);
     const [showTimelineMenu, setShowTimelineMenu] = useState(false);
+
+    // Tag Suggestions
+    const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
+    const [isSuggesting, setIsSuggesting] = useState(false);
+
+    useEffect(() => {
+        if (!content || content.length < 20) {
+            setSuggestedTags([]);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setIsSuggesting(true);
+            try {
+                const res = await api.get(`/api/v1/posts/suggest-tags?content=${encodeURIComponent(content)}`);
+                setSuggestedTags(res.data.tags || []);
+            } catch (err) {
+                console.error("Failed to suggest tags:", err);
+            } finally {
+                setIsSuggesting(false);
+            }
+        }, 1500); // 1.5s debounce
+
+        return () => clearTimeout(timer);
+    }, [content]);
+
+    const handleAddSuggestedTag = (tag: string) => {
+        // Find existing tags in content or just append them?
+        // Let's just append them to the end of the content with a #
+        if (!content.includes(`#${tag}`)) {
+            setContent(content + ` #${tag}`);
+        }
+    };
 
     useEffect(() => {
         if (user) {
@@ -198,6 +251,54 @@ function CreatePost({
                         )}
                     </div>
                 )}
+
+                {/* Hub Selector */}
+                <div className="relative ml-auto">
+                    <button
+                        onClick={() => setShowHubMenu(!showHubMenu)}
+                        className={`flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl transition-all ${selectedHubs.length > 0
+                                ? "bg-primary text-white shadow-md shadow-primary/20 hover:scale-105 active:scale-95"
+                                : "bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent"
+                            }`}
+                    >
+                        <Trophy size={14} />
+                        <span className="hidden sm:inline">
+                            {selectedHubs.length > 0 ? `${selectedHubs.length} Hub${selectedHubs.length > 1 ? 's' : ''}` : "Select Hubs"}
+                        </span>
+                        <ChevronDown size={14} className={`transition-transform ${showHubMenu ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {showHubMenu && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="absolute right-0 top-full mt-2 w-60 bg-card border border-border rounded-xl shadow-lg overflow-hidden z-50 p-2"
+                        >
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-2 pb-2 border-b border-border mb-1">Select Hubs (multi)</p>
+                            {HUBS.map(hub => (
+                                <button
+                                    key={hub}
+                                    onClick={() => toggleHub(hub)}
+                                    className={`w-full flex items-center justify-between px-3 py-2.5 text-xs rounded-lg transition-colors ${selectedHubs.includes(hub)
+                                            ? "bg-primary/10 text-primary font-bold"
+                                            : "text-foreground font-medium hover:bg-muted"
+                                        }`}
+                                >
+                                    <span>{hub} Hub</span>
+                                    {selectedHubs.includes(hub) && <span className="text-primary">✓</span>}
+                                </button>
+                            ))}
+                            {selectedHubs.length > 0 && (
+                                <button
+                                    onClick={() => setSelectedHubs([])}
+                                    className="w-full text-center text-[10px] text-destructive font-bold py-2 mt-1 border-t border-border hover:bg-destructive/5 rounded-b-lg transition-colors"
+                                >
+                                    Clear All
+                                </button>
+                            )}
+                        </motion.div>
+                    )}
+                </div>
             </div>
 
             {/* Editor */}
@@ -208,6 +309,28 @@ function CreatePost({
                     options={mdeOptions}
                 />
             </div>
+
+            {/* Tag Suggestions UI */}
+            {suggestedTags.length > 0 && (
+                <div className="mb-6 animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center gap-2 mb-3">
+                        <Sparkles size={14} className="text-primary" />
+                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">AI Suggested Tags</span>
+                        {isSuggesting && <Loader2 size={10} className="animate-spin text-primary/40" />}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {suggestedTags.map(tag => (
+                            <button
+                                key={tag}
+                                onClick={() => handleAddSuggestedTag(tag)}
+                                className="px-3 py-1.5 rounded-xl bg-primary/5 hover:bg-primary/20 border border-primary/10 text-primary text-xs font-bold transition-all active:scale-95"
+                            >
+                                + #{tag}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Image Preview */}
             {imageUrl && (
@@ -315,6 +438,25 @@ function CreatePost({
                         </div>
                         <span className="text-xs font-bold text-muted-foreground group-hover/toggle:text-foreground transition-colors uppercase tracking-wider">
                             Anonymous
+                        </span>
+                    </label>
+
+                    {/* Professional Inquiry Toggle */}
+                    <label className="flex items-center gap-3 cursor-pointer group/toggle ml-4">
+                        <div className="relative">
+                            <input
+                                type="checkbox"
+                                checked={isProfessionalInquiry}
+                                onChange={(e) => setIsProfessionalInquiry(e.target.checked)}
+                                className="sr-only"
+                            />
+                            <div className={`w-9 h-5 rounded-full transition-all duration-300 ${isProfessionalInquiry ? "bg-emerald-500" : "bg-muted"}`}>
+                                <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform duration-300 ${isProfessionalInquiry ? "translate-x-4" : "translate-x-0"}`} />
+                            </div>
+                        </div>
+                        <span className="text-xs font-bold text-muted-foreground group-hover/toggle:text-foreground transition-colors uppercase tracking-wider flex items-center gap-1.5">
+                            <Map size={12} className={isProfessionalInquiry ? "text-emerald-500" : ""} />
+                            Professional Inquiry
                         </span>
                     </label>
                 </div>
