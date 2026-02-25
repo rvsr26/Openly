@@ -18,9 +18,12 @@ export interface Post {
     is_flagged?: boolean;
     is_rejected?: boolean;
     created_at?: string;
+    edited_at?: string;
     comments?: Comment[];
     is_archived?: boolean;
     collaborators?: string[];
+    content_warning?: string;
+    tags?: string[];
 }
 
 export interface User {
@@ -65,9 +68,13 @@ export interface Message {
     sender_name: string;
     sender_pic?: string;
     content: string;
+    type?: 'text' | 'image' | 'doc';
+    media_url?: string;
     created_at: string;
     is_read: boolean;
     is_deleted: boolean;
+    is_remote?: boolean;
+    sender_community_url?: string;
 }
 
 export interface Conversation {
@@ -79,6 +86,7 @@ export interface Conversation {
         display_name: string;
         photoURL?: string;
     }[];
+    participant_instances?: Record<string, string>;
     last_message: string;
     last_message_at: string;
     unread_count: number;

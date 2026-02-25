@@ -168,21 +168,20 @@ export default function Home() {
   }, [posts.length, visiblePosts, isPrefetching]);
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen">
 
-      {/* Hero Section with clean spacing */}
-      <main className="relative z-10 mt-20 mb-12 max-w-[1600px] mx-auto px-3 sm:px-4 lg:px-8">
+      <main className="relative z-10 pt-28 pb-24 max-w-[1400px] mx-auto px-6 xl:px-10">
 
-        {/* RESPONSIVE GRID LAYOUT */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8 items-start">
+        {/* 3-COLUMN GRID: narrow left | wide center | narrow right */}
+        <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_280px] gap-8 items-start">
 
-          {/* LEFT SIDEBAR (Sticky on desktop) */}
-          <aside className="hidden lg:block lg:col-span-3 sticky top-24 h-[calc(100vh-7rem)] overflow-y-auto scrollbar-hide">
+          {/* LEFT SIDEBAR */}
+          <aside className="hidden lg:flex flex-col sticky top-24 h-[calc(100vh-7rem)] overflow-y-auto scrollbar-hide">
             <LeftSidebar user={user} username={username} userPhoto={userPhoto} />
           </aside>
 
           {/* CENTER FEED */}
-          <div className="col-span-1 lg:col-span-6 space-y-4 sm:space-y-6 min-h-screen">
+          <div className="flex flex-col gap-6 min-h-screen">
 
 
 
@@ -206,52 +205,40 @@ export default function Home() {
             />
 
             {/* FILTER & SORT SECTION */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="glass-card p-4 sm:p-6 sticky top-20 sm:top-24 z-40 backdrop-blur-3xl"
-            >
-              <div className="flex flex-col gap-4">
-
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 sm:p-2.5 bg-gradient-to-br from-primary to-primary/60 rounded-2xl shadow-lg shadow-primary/25">
-                      <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-foreground tracking-tight">
-                        Community Feed
-                      </h2>
-                      <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        Discover impactful stories
-                      </p>
-                    </div>
-                  </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/60 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/25 shrink-0">
+                  <Sparkles className="w-5 h-5 text-white" />
                 </div>
-
-                {/* Sort Tabs */}
-                <div className="flex items-center gap-2 p-1.5 bg-muted/30 rounded-2xl border border-border/50">
-                  {[
-                    { id: "new", label: "Newest", icon: Clock },
-                    { id: "hot", label: "Trending", icon: Flame },
-                    { id: "top", label: "Top", icon: Trophy }
-                  ].map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => setSortBy(s.id as "new" | "hot" | "top")}
-                      className={`flex-1 flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-300 ${sortBy === s.id
-                        ? "bg-primary text-white shadow-lg shadow-primary/30 scale-105"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                        }`}
-                    >
-                      <s.icon className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span className="hidden sm:inline">{s.label}</span>
-                    </button>
-                  ))}
+                <div>
+                  <h2 className="text-xl font-black text-foreground tracking-tight">Community Feed</h2>
+                  <p className="text-xs text-muted-foreground">Discover impactful stories</p>
                 </div>
               </div>
-            </motion.div>
+            </div>
+
+            {/* Sticky Sort Tabs */}
+            <div className="sticky top-[76px] sm:top-[84px] z-40 pt-1 pb-1">
+              <div className="flex items-center gap-2 p-1.5 bg-background/80 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-xl shadow-black/20">
+                {[
+                  { id: "new", label: "Newest", icon: Clock },
+                  { id: "hot", label: "Trending", icon: Flame },
+                  { id: "top", label: "Top", icon: Trophy }
+                ].map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSortBy(s.id as "new" | "hot" | "top")}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 ${sortBy === s.id
+                      ? "bg-primary text-white shadow-lg shadow-primary/30"
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                      }`}
+                  >
+                    <s.icon className="w-4 h-4" />
+                    <span>{s.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* POSTS LIST */}
             <AnimatePresence mode="popLayout">
@@ -268,20 +255,15 @@ export default function Home() {
                   </motion.div>
                 ))}
 
-                {/* Load More Button */}
+                {/* Infinite Scroll Sentinel */}
                 {posts.length > visiblePosts && (
-                  <div ref={loadMoreRef}>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={handleLoadMore}
-                      className="w-full py-4 sm:py-5 glass-card hover:glass-premium text-primary font-bold text-xs sm:text-sm uppercase tracking-widest transition-all duration-300 group"
-                    >
-                      <span className="flex items-center justify-center gap-2">
-                        {isPrefetching ? "Loading..." : "Load more insights"}
-                        {!isPrefetching && <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" />}
-                      </span>
-                    </motion.button>
+                  <div ref={loadMoreRef} className="flex justify-center py-6">
+                    {isPrefetching && (
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs font-semibold">
+                        <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                        Loading more...
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -333,8 +315,8 @@ export default function Home() {
             </AnimatePresence>
           </div>
 
-          {/* RIGHT SIDEBAR (Sticky on desktop) */}
-          <aside className="hidden xl:block xl:col-span-3 sticky top-24 h-[calc(100vh-7rem)] overflow-y-auto scrollbar-hide">
+          {/* RIGHT SIDEBAR */}
+          <aside className="hidden xl:flex flex-col sticky top-24 h-[calc(100vh-7rem)] overflow-y-auto scrollbar-hide">
             <RightSidebar
               user={user}
               userPhoto={userPhoto}

@@ -20,6 +20,8 @@ export default function EditProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [displayName, setDisplayName] = useState("");
+  const [username, setUsername] = useState("");
   const [headline, setHeadline] = useState("");
   const [bio, setBio] = useState("");
   const [website, setWebsite] = useState("");
@@ -36,6 +38,8 @@ export default function EditProfilePage() {
         try {
           const res = await api.get(`/users/${u.uid}/profile`);
           const info = res.data.user_info || {};
+          setDisplayName(info.display_name || u.displayName || "");
+          setUsername(info.username || "");
           setHeadline(info.headline || "");
           setBio(info.bio || "");
           setWebsite(info.website || "");
@@ -89,6 +93,8 @@ export default function EditProfilePage() {
     try {
       await api.post("/users/profile/update", {
         user_id: user.uid,
+        display_name: displayName,
+        username,
         headline,
         bio,
         website,
@@ -158,6 +164,33 @@ export default function EditProfilePage() {
           </div>
 
           <div className="space-y-6">
+            {/* Display Name */}
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-foreground">Display Name</label>
+              <input
+                type="text"
+                className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border focus:ring-2 focus:ring-primary/20 outline-none transition"
+                placeholder="Your Name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+              />
+            </div>
+
+            {/* Username */}
+            <div>
+              <label className="block text-sm font-semibold mb-2 text-foreground">Username</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">@</span>
+                <input
+                  type="text"
+                  className="w-full pl-8 pr-4 py-3 rounded-xl bg-secondary/50 border border-border focus:ring-2 focus:ring-primary/20 outline-none transition"
+                  placeholder="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                />
+              </div>
+            </div>
+
             {/* Headline */}
             <div>
               <label className="block text-sm font-semibold mb-2 text-foreground">Headline</label>

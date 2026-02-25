@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
+import Link from 'next/link';
 import { Conversation, Message } from '../types';
 import UserSearchModal from '../components/UserSearchModal';
 import { useWebSocket } from '../lib/useWebSocket';
@@ -15,7 +16,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
-import api from '../lib/api';
+import api, { getAbsUrl } from '../lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -217,12 +218,12 @@ function MessagesContent() {
         }
     }, [lastMessage, activeConversation?.id, currentUser]);
 
-    const handleSendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!activeConversation || !currentUser || !newMessage.trim()) return;
+    const handleSendMessage = async (e: React.FormEvent, mediaUrl?: string, mediaType: 'text' | 'image' | 'doc' = 'text') => {
+        if (e) e.preventDefault();
+        if (!activeConversation || !currentUser || (!newMessage.trim() && !mediaUrl)) return;
 
-        const content = newMessage.trim();
-        setNewMessage(""); // Clear immediately
+        const content = mediaUrl || newMessage.trim();
+        if (!mediaUrl) setNewMessage(""); // Clear immediately if it's a text message
 
         const otherUserId = activeConversation.participants.find(p => p !== currentUser.uid);
         let contentToSend = content;
@@ -239,7 +240,9 @@ function MessagesContent() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         sender_id: currentUser.uid,
-                        content: contentToSend
+                        content: contentToSend,
+                        type: mediaType,
+                        media_url: mediaUrl
                     })
                 }
             );
@@ -252,11 +255,13 @@ function MessagesContent() {
                 setConversations(prev => {
                     const updated = prev.map(conv =>
                         conv.id === activeConversation.id
-                            ? { ...conv, last_message: content, last_message_at: newMsgObj.created_at }
+                            ? { ...conv, last_message: mediaType === 'image' ? "📷 Image" : content, last_message_at: newMsgObj.created_at }
                             : conv
                     );
+                    const currentConv = updated.find(c => c.id === activeConversation.id);
+                    if (!currentConv) return prev;
                     return [
-                        updated.find(c => c.id === activeConversation.id)!,
+                        currentConv,
                         ...updated.filter(c => c.id !== activeConversation.id)
                     ];
                 });
@@ -266,18 +271,44 @@ function MessagesContent() {
         }
     };
 
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !currentUser) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            setIsLoadingMessages(true); // Show loading state during upload
+            const response = await fetch(`${API_URL}/upload/image`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const isImage = file.type.startsWith('image/');
+                await handleSendMessage(null as any, data.url, isImage ? 'image' : 'doc');
+            }
+        } catch (error) {
+            console.error("Upload failed", error);
+        } finally {
+            setIsLoadingMessages(false);
+        }
+    };
+
     // --- RENDER HELPERS ---
 
     // Get Other User Details helper
     const getOtherUser = (conv: Conversation) => {
-        // Implementation depends on how your API returns user details in conversation
-        // For now assuming conv has a `users` array populated, or we just have basic info.
-        // If your API API returns `users` array with user objects:
-        if ((conv as any).users) {
-            return (conv as any).users.find((u: any) => u.uid !== currentUser?.uid) || {};
+        // Backend returns participant_info array with {id, username, display_name, photoURL}
+        const info = (conv as any).participant_info;
+        if (info && info.length > 0) {
+            const other = info.find((u: any) => u.id !== currentUser?.uid) || info[0];
+            return other;
         }
-        // Fallback or if you only have IDs
-        return { display_name: "User", photoURL: null };
+        // Fallback
+        return { display_name: "User", photoURL: null, username: null };
     };
 
     if (isLoading) {
@@ -344,14 +375,19 @@ function MessagesContent() {
                                     >
                                         {/* Avatar */}
                                         <div className="relative">
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-md overflow-hidden">
                                                 {otherUser.photoURL ? (
-                                                    <img src={otherUser.photoURL} alt="" className="w-full h-full rounded-full object-cover" />
+                                                    <img
+                                                        src={getAbsUrl(otherUser.photoURL)}
+                                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                        alt=""
+                                                        className="w-full h-full rounded-full object-cover"
+                                                    />
                                                 ) : (
-                                                    (otherUser.display_name || "?")[0]
+                                                    <span>{(otherUser.display_name || "?")[0]}</span>
                                                 )}
                                             </div>
-                                            {/* Online Badge (Mock) */}
+                                            {/* Online Badge */}
                                             <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></div>
                                         </div>
 
@@ -395,21 +431,27 @@ function MessagesContent() {
                                     >
                                         <ArrowLeft size={20} />
                                     </button>
-
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-sm">
-                                        {getOtherUser(activeConversation).photoURL ? (
-                                            <img src={getOtherUser(activeConversation).photoURL} alt="" className="w-full h-full rounded-full object-cover" />
-                                        ) : (
-                                            (getOtherUser(activeConversation).display_name || "?")[0]
-                                        )}
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-sm">{getOtherUser(activeConversation).display_name || "Unknown User"}</h3>
-                                        <div className="flex items-center gap-1.5">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                                            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Online</span>
+                                    <Link href={`/u/${getOtherUser(activeConversation).username || getOtherUser(activeConversation).id}`} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-sm overflow-hidden">
+                                            {getOtherUser(activeConversation).photoURL ? (
+                                                <img
+                                                    src={getAbsUrl(getOtherUser(activeConversation).photoURL)}
+                                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                    alt=""
+                                                    className="w-full h-full rounded-full object-cover"
+                                                />
+                                            ) : (
+                                                <span>{(getOtherUser(activeConversation).display_name || "?")[0]}</span>
+                                            )}
                                         </div>
-                                    </div>
+                                        <div>
+                                            <h3 className="font-bold text-sm">{getOtherUser(activeConversation).display_name || "Unknown User"}</h3>
+                                            <div className="flex items-center gap-1.5">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                                                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">Online</span>
+                                            </div>
+                                        </div>
+                                    </Link>
                                 </div>
 
                                 <div className="flex items-center gap-2">
@@ -456,7 +498,31 @@ function MessagesContent() {
                                                         ? 'bg-primary text-primary-foreground rounded-tr-none'
                                                         : 'bg-white/10 backdrop-blur-md text-foreground rounded-tl-none border border-white/5'
                                                         }`}>
-                                                        {msg.content}
+                                                        {msg.type === 'image' ? (
+                                                            <div className="space-y-2">
+                                                                <img
+                                                                    src={msg.media_url || msg.content}
+                                                                    alt="Shared Image"
+                                                                    className="max-w-full rounded-lg border border-white/10 cursor-pointer hover:opacity-90 transition-opacity"
+                                                                    onClick={() => window.open(msg.media_url || msg.content, '_blank')}
+                                                                />
+                                                            </div>
+                                                        ) : msg.type === 'doc' ? (
+                                                            <div className="flex items-center gap-3 p-2 bg-black/20 rounded-lg border border-white/5">
+                                                                <Paperclip size={20} className="text-primary" />
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="truncate font-medium">{msg.content.split('/').pop() || "Document"}</p>
+                                                                    <button
+                                                                        onClick={() => window.open(msg.media_url || msg.content, '_blank')}
+                                                                        className="text-[10px] text-primary hover:underline font-bold"
+                                                                    >
+                                                                        Download
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            msg.content
+                                                        )}
 
                                                         {/* Timestamp */}
                                                         <div className={`text-[9px] mt-1 font-medium opacity-50 ${isMe ? 'text-right text-primary-foreground' : 'text-left'}`}>
@@ -474,12 +540,14 @@ function MessagesContent() {
                             {/* Input Area */}
                             <div className="p-4 bg-white/5 backdrop-blur-md border-t border-white/5">
                                 <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                                    <button type="button" className="p-3 text-muted-foreground hover:text-foreground hover:bg-white/10 rounded-full transition-colors hidden sm:flex">
+                                    <label className="p-3 text-muted-foreground hover:text-foreground hover:bg-white/10 rounded-full transition-colors cursor-pointer hidden sm:flex">
                                         <ImageIcon size={20} />
-                                    </button>
-                                    <button type="button" className="p-3 text-muted-foreground hover:text-foreground hover:bg-white/10 rounded-full transition-colors hidden sm:flex">
+                                        <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+                                    </label>
+                                    <label className="p-3 text-muted-foreground hover:text-foreground hover:bg-white/10 rounded-full transition-colors cursor-pointer hidden sm:flex">
                                         <Paperclip size={20} />
-                                    </button>
+                                        <input type="file" className="hidden" onChange={handleFileUpload} />
+                                    </label>
 
                                     <div className="flex-1 relative">
                                         <input

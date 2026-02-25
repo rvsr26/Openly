@@ -1,178 +1,165 @@
 "use client";
 
-import { useState } from 'react';
-import { ArrowRight, CheckCircle, Users, TrendingUp, Shield, Zap, Heart, MessageCircle, Star } from 'lucide-react';
+import { useRef } from 'react';
+import { ArrowRight, Users, TrendingUp, Shield, Zap, Heart, Star, Flame, Lock, Globe, ChevronDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import Image from 'next/image';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import Link from 'next/link';
+
+const features = [
+    { icon: Lock, title: 'Share Anonymously', description: 'Use ghost aliases to share your real story without fear of judgment.', color: 'from-violet-500 to-purple-600' },
+    { icon: TrendingUp, title: 'Learn & Grow', description: 'Turn failures into lessons. Every stumble is a step forward.', color: 'from-blue-500 to-cyan-500' },
+    { icon: Shield, title: 'Safe Community', description: 'AI moderation keeps the space supportive and judgment-free.', color: 'from-emerald-500 to-teal-500' },
+    { icon: Zap, title: 'Phoenix Score', description: 'Earn karma points by sharing and helping. Rise like a Phoenix.', color: 'from-amber-500 to-orange-500' },
+];
+
+const stats = [
+    { number: '10K+', label: 'Stories Shared' },
+    { number: '50K+', label: 'Community Members' },
+    { number: '95%', label: 'Feel Supported' },
+    { number: '4.9', label: 'User Rating' },
+];
+
+const testimonials = [
+    { name: 'Sarah Chen', role: 'Startup Founder', content: 'Sharing my startup failure here helped me process it and move forward. The community support was incredible.', avatar: 'SC' },
+    { name: 'Michael R.', role: 'Software Engineer', content: 'I learned more from reading others\' failures than from any success story. This platform is a goldmine.', avatar: 'MR' },
+    { name: 'Emily Watson', role: 'Product Manager', content: 'The anonymous feature gave me the courage to share. Now I help others avoid the same mistakes.', avatar: 'EW' },
+];
+
+const steps = [
+    { step: '01', title: 'Create Account', desc: 'Sign up in seconds. Choose to share openly or as a ghost.' },
+    { step: '02', title: 'Share Your Story', desc: 'Write about your failure honestly. Be real, be vulnerable.' },
+    { step: '03', title: 'Learn & Connect', desc: 'Read others\' stories, offer support, and grow together.' },
+];
 
 export default function LandingPage() {
     const router = useRouter();
-    const [email, setEmail] = useState('');
-
-    const features = [
-        {
-            icon: Users,
-            title: 'Share Anonymously',
-            description: 'Share your failures without fear. Use anonymous aliases to protect your identity.',
-        },
-        {
-            icon: TrendingUp,
-            title: 'Learn & Grow',
-            description: 'Learn from others\' mistakes. Turn failures into valuable lessons.',
-        },
-        {
-            icon: Shield,
-            title: 'Safe Community',
-            description: 'AI-powered moderation ensures a supportive, judgment-free environment.',
-        },
-        {
-            icon: Zap,
-            title: 'Phoenix Score',
-            description: 'Earn points for sharing and helping others. Rise from your failures.',
-        },
-    ];
-
-    const stats = [
-        { number: '10K+', label: 'Stories Shared' },
-        { number: '50K+', label: 'Community Members' },
-        { number: '95%', label: 'Feel Supported' },
-        { number: '4.9/5', label: 'User Rating' },
-    ];
-
-    const testimonials = [
-        {
-            name: 'Sarah Chen',
-            role: 'Startup Founder',
-            content: 'Sharing my startup failure here helped me process it and move forward. The community support was incredible.',
-            avatar: '👩‍💼',
-        },
-        {
-            name: 'Michael Rodriguez',
-            role: 'Software Engineer',
-            content: 'I learned more from reading others\' failures than from any success story. This platform is a goldmine.',
-            avatar: '👨‍💻',
-        },
-        {
-            name: 'Emily Watson',
-            role: 'Product Manager',
-            content: 'The anonymous feature gave me the courage to share. Now I help others avoid the same mistakes.',
-            avatar: '👩‍🎨',
-        },
-    ];
+    const heroRef = useRef<HTMLDivElement>(null);
+    const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
+    const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
+    const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-background via-background to-muted">
-            {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
-                <div className="container-custom max-w-7xl mx-auto px-4 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                                <Heart className="w-6 h-6 text-primary-foreground" />
-                            </div>
-                            <span className="text-xl font-bold text-foreground">Openly</span>
+        <div className="min-h-screen bg-background overflow-x-hidden">
+
+            {/* ── NAVBAR ─────────────────────────────────────── */}
+            <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/80 backdrop-blur-xl">
+                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 bg-gradient-to-br from-primary to-primary/60 rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
+                            <Flame className="w-5 h-5 text-white" />
                         </div>
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => router.push('/login')}
-                                className="btn-secondary"
-                            >
-                                Sign In
-                            </button>
-                            <button
-                                onClick={() => router.push('/signup')}
-                                className="btn-primary"
-                            >
-                                Get Started
-                            </button>
-                        </div>
+                        <span className="text-xl font-black text-foreground tracking-tight">Openly</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => router.push('/login')} className="px-4 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">
+                            Sign In
+                        </button>
+                        <button onClick={() => router.push('/signup')} className="px-5 py-2.5 text-sm font-bold bg-primary text-white rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-105">
+                            Get Started
+                        </button>
                     </div>
                 </div>
             </nav>
 
-            {/* Hero Section */}
-            <section className="pt-32 pb-20 px-4">
-                <div className="container-custom max-w-7xl mx-auto">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-center max-w-4xl mx-auto"
-                    >
-                        <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6">
-                            Turn Your <span className="text-primary">Failures</span> Into
-                            <br />
-                            Valuable Lessons
-                        </h1>
-                        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                            Join a supportive community where failures are celebrated as stepping stones to success.
-                            Share anonymously, learn from others, and grow together.
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <button
-                                onClick={() => router.push('/signup')}
-                                className="btn-primary text-lg px-8 py-4"
-                            >
-                                Start Sharing
-                                <ArrowRight className="w-5 h-5 ml-2" />
-                            </button>
-                            <button
-                                onClick={() => router.push('/login')}
-                                className="btn-secondary text-lg px-8 py-4"
-                            >
-                                Explore Stories
-                            </button>
-                        </div>
+            {/* ── HERO ───────────────────────────────────────── */}
+            <section ref={heroRef} className="relative min-h-screen flex items-center justify-center overflow-hidden">
+                {/* Background orbs */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
+                    <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-violet-500/15 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-blue-500/5 rounded-full blur-[150px]" />
+                </div>
+
+                {/* Grid pattern overlay */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,black,transparent)]" />
+
+                <motion.div style={{ y: heroY, opacity: heroOpacity }} className="relative z-10 text-center max-w-5xl mx-auto px-6 pt-24">
+                    {/* Badge */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-semibold mb-8">
+                        <Flame className="w-4 h-4" />
+                        <span>Join 50K+ brave souls</span>
                     </motion.div>
 
-                    {/* Stats */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 40 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20"
-                    >
-                        {stats.map((stat, index) => (
-                            <div key={index} className="text-center">
-                                <div className="text-4xl font-bold text-primary mb-2">{stat.number}</div>
-                                <div className="text-sm text-muted-foreground">{stat.label}</div>
+                    {/* Headline */}
+                    <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
+                        className="text-6xl md:text-7xl lg:text-8xl font-black text-foreground tracking-tight leading-[0.9] mb-6">
+                        Turn Your<br />
+                        <span className="bg-gradient-to-r from-primary via-violet-400 to-blue-400 bg-clip-text text-transparent">
+                            Failures
+                        </span>
+                        <br />Into Lessons
+                    </motion.h1>
+
+                    {/* Subtitle */}
+                    <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
+                        className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
+                        A brave community where failures are celebrated as stepping stones.
+                        Share anonymously, learn from others, and rise like a Phoenix.
+                    </motion.p>
+
+                    {/* CTAs */}
+                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}
+                        className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+                        <button onClick={() => router.push('/signup')}
+                            className="group flex items-center justify-center gap-2 px-8 py-4 bg-primary text-white font-bold text-base rounded-2xl hover:bg-primary/90 transition-all shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-105">
+                            Start Sharing Free
+                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                        </button>
+                        <button onClick={() => router.push('/login')}
+                            className="flex items-center justify-center gap-2 px-8 py-4 bg-white/5 border border-white/10 text-foreground font-bold text-base rounded-2xl hover:bg-white/10 transition-all">
+                            Explore Stories
+                        </button>
+                    </motion.div>
+
+                    {/* Stats row */}
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.5 }}
+                        className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto">
+                        {stats.map((s, i) => (
+                            <div key={i} className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+                                <div className="text-3xl font-black text-primary mb-1">{s.number}</div>
+                                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{s.label}</div>
                             </div>
                         ))}
                     </motion.div>
-                </div>
+
+                    {/* Scroll hint */}
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}
+                        className="mt-16 flex flex-col items-center gap-2 text-muted-foreground/50">
+                        <span className="text-xs font-medium uppercase tracking-widest">Scroll to explore</span>
+                        <ChevronDown className="w-4 h-4 animate-bounce" />
+                    </motion.div>
+                </motion.div>
             </section>
 
-            {/* Features */}
-            <section className="py-20 px-4 bg-muted/30">
-                <div className="container-custom max-w-7xl mx-auto">
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold text-foreground mb-4">
-                            Why Choose Openly?
-                        </h2>
-                        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                            A safe space designed to help you learn, grow, and connect through shared experiences.
+            {/* ── FEATURES ───────────────────────────────────── */}
+            <section className="py-32 px-6 relative">
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/3 to-transparent pointer-events-none" />
+                <div className="max-w-7xl mx-auto">
+                    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                        className="text-center mb-20">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-muted-foreground text-xs font-semibold uppercase tracking-widest mb-4">
+                            Why Openly
+                        </div>
+                        <h2 className="text-4xl md:text-5xl font-black text-foreground tracking-tight mb-4">Built for Brave Souls</h2>
+                        <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+                            Every feature designed to make vulnerability safe and growth inevitable.
                         </p>
-                    </div>
+                    </motion.div>
 
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {features.map((feature, index) => {
-                            const Icon = feature.icon;
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {features.map((f, i) => {
+                            const Icon = f.icon;
                             return (
-                                <motion.div
-                                    key={index}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    whileInView={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.1 }}
-                                    viewport={{ once: true }}
-                                    className="card-simple p-6 hover:shadow-lg transition-shadow"
-                                >
-                                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
-                                        <Icon className="w-6 h-6 text-primary" />
+                                <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: i * 0.1 }} viewport={{ once: true }}
+                                    className="group p-6 rounded-3xl bg-white/3 border border-white/8 hover:border-white/15 hover:bg-white/6 transition-all duration-300 hover:-translate-y-1">
+                                    <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${f.color} flex items-center justify-center mb-5 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                                        <Icon className="w-6 h-6 text-white" />
                                     </div>
-                                    <h3 className="text-xl font-semibold text-foreground mb-2">
-                                        {feature.title}
-                                    </h3>
-                                    <p className="text-muted-foreground">{feature.description}</p>
+                                    <h3 className="text-lg font-black text-foreground mb-2">{f.title}</h3>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">{f.description}</p>
                                 </motion.div>
                             );
                         })}
@@ -180,71 +167,65 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* How It Works */}
-            <section className="py-20 px-4">
-                <div className="container-custom max-w-7xl mx-auto">
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold text-foreground mb-4">
+            {/* ── HOW IT WORKS ───────────────────────────────── */}
+            <section className="py-32 px-6">
+                <div className="max-w-7xl mx-auto">
+                    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                        className="text-center mb-20">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-muted-foreground text-xs font-semibold uppercase tracking-widest mb-4">
                             How It Works
-                        </h2>
-                        <p className="text-lg text-muted-foreground">
-                            Three simple steps to start your journey
-                        </p>
-                    </div>
+                        </div>
+                        <h2 className="text-4xl md:text-5xl font-black text-foreground tracking-tight mb-4">Three Simple Steps</h2>
+                    </motion.div>
 
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {[
-                            { step: '01', title: 'Create Account', desc: 'Sign up in seconds. Choose to share openly or anonymously.' },
-                            { step: '02', title: 'Share Your Story', desc: 'Write about your failure. Be honest, be vulnerable, be real.' },
-                            { step: '03', title: 'Learn & Connect', desc: 'Read others\' stories, offer support, and grow together.' },
-                        ].map((item, index) => (
-                            <motion.div
-                                key={index}
-                                initial={{ opacity: 0, x: -20 }}
-                                whileInView={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.2 }}
-                                viewport={{ once: true }}
-                                className="relative"
-                            >
-                                <div className="text-6xl font-bold text-primary/20 mb-4">{item.step}</div>
-                                <h3 className="text-2xl font-semibold text-foreground mb-2">{item.title}</h3>
-                                <p className="text-muted-foreground">{item.desc}</p>
+                    <div className="grid md:grid-cols-3 gap-8 relative">
+                        {/* Connector line */}
+                        <div className="hidden md:block absolute top-16 left-[calc(16.67%+2rem)] right-[calc(16.67%+2rem)] h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+                        {steps.map((item, i) => (
+                            <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.15 }} viewport={{ once: true }}
+                                className="relative text-center">
+                                <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-6 text-primary font-black text-xl">
+                                    {item.step}
+                                </div>
+                                <h3 className="text-xl font-black text-foreground mb-3">{item.title}</h3>
+                                <p className="text-muted-foreground leading-relaxed">{item.desc}</p>
                             </motion.div>
                         ))}
                     </div>
                 </div>
             </section>
 
-            {/* Testimonials */}
-            <section className="py-20 px-4 bg-muted/30">
-                <div className="container-custom max-w-7xl mx-auto">
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl font-bold text-foreground mb-4">
-                            What Our Community Says
-                        </h2>
-                    </div>
+            {/* ── TESTIMONIALS ───────────────────────────────── */}
+            <section className="py-32 px-6 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-violet-500/5 to-transparent pointer-events-none" />
+                <div className="max-w-7xl mx-auto">
+                    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                        className="text-center mb-20">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-muted-foreground text-xs font-semibold uppercase tracking-widest mb-4">
+                            Community Love
+                        </div>
+                        <h2 className="text-4xl md:text-5xl font-black text-foreground tracking-tight">What They're Saying</h2>
+                    </motion.div>
 
-                    <div className="grid md:grid-cols-3 gap-8">
-                        {testimonials.map((testimonial, index) => (
-                            <motion.div
-                                key={index}
-                                initial={{ opacity: 0, y: 20 }}
-                                whileInView={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
-                                viewport={{ once: true }}
-                                className="card-simple p-6"
-                            >
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {testimonials.map((t, i) => (
+                            <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.1 }} viewport={{ once: true }}
+                                className="p-6 rounded-3xl bg-white/3 border border-white/8 hover:border-white/15 transition-all duration-300">
                                 <div className="flex items-center gap-1 mb-4">
-                                    {[...Array(5)].map((_, i) => (
-                                        <Star key={i} className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+                                    {[...Array(5)].map((_, j) => (
+                                        <Star key={j} className="w-4 h-4 fill-amber-400 text-amber-400" />
                                     ))}
                                 </div>
-                                <p className="text-foreground mb-4 italic">"{testimonial.content}"</p>
+                                <p className="text-foreground/80 text-sm leading-relaxed mb-6 italic">"{t.content}"</p>
                                 <div className="flex items-center gap-3">
-                                    <div className="text-3xl">{testimonial.avatar}</div>
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-violet-500 flex items-center justify-center text-white text-xs font-black">
+                                        {t.avatar}
+                                    </div>
                                     <div>
-                                        <div className="font-semibold text-foreground">{testimonial.name}</div>
-                                        <div className="text-sm text-muted-foreground">{testimonial.role}</div>
+                                        <div className="font-black text-sm text-foreground">{t.name}</div>
+                                        <div className="text-xs text-muted-foreground">{t.role}</div>
                                     </div>
                                 </div>
                             </motion.div>
@@ -253,74 +234,49 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* CTA Section */}
-            <section className="py-20 px-4">
-                <div className="container-custom max-w-4xl mx-auto">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        viewport={{ once: true }}
-                        className="card-simple p-12 text-center bg-gradient-to-br from-primary/10 to-primary/5"
-                    >
-                        <h2 className="text-4xl font-bold text-foreground mb-4">
-                            Ready to Turn Failures Into Growth?
+            {/* ── CTA ────────────────────────────────────────── */}
+            <section className="py-32 px-6">
+                <div className="max-w-4xl mx-auto">
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}
+                        className="relative p-12 md:p-16 rounded-[2.5rem] overflow-hidden text-center border border-white/10 bg-gradient-to-br from-primary/15 via-violet-500/10 to-blue-500/5">
+                        {/* Glow */}
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-violet-500/10 blur-3xl -z-10" />
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/15 text-sm font-semibold mb-6">
+                            <Heart className="w-4 h-4 text-red-400" />
+                            <span>Join the movement</span>
+                        </div>
+                        <h2 className="text-4xl md:text-5xl font-black text-foreground mb-4 tracking-tight">
+                            Ready to Rise?
                         </h2>
-                        <p className="text-lg text-muted-foreground mb-8">
-                            Join thousands who are learning, growing, and succeeding together.
+                        <p className="text-muted-foreground text-lg mb-10 max-w-xl mx-auto">
+                            Thousands are already turning their failures into fuel. Your story matters — share it today.
                         </p>
-                        <button
-                            onClick={() => router.push('/signup')}
-                            className="btn-primary text-lg px-8 py-4"
-                        >
-                            Get Started for Free
-                            <ArrowRight className="w-5 h-5 ml-2" />
+                        <button onClick={() => router.push('/signup')}
+                            className="group inline-flex items-center gap-2 px-10 py-4 bg-primary text-white font-black text-base rounded-2xl hover:bg-primary/90 transition-all shadow-xl shadow-primary/40 hover:scale-105 hover:shadow-primary/60">
+                            Get Started Free
+                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </button>
                     </motion.div>
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer className="py-12 px-4 border-t border-border">
-                <div className="container-custom max-w-7xl mx-auto">
-                    <div className="grid md:grid-cols-4 gap-8 mb-8">
-                        <div>
-                            <div className="flex items-center gap-2 mb-4">
-                                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                                    <Heart className="w-5 h-5 text-primary-foreground" />
-                                </div>
-                                <span className="text-lg font-bold text-foreground">Openly</span>
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                                A safe space to share failures and grow together.
-                            </p>
+            {/* ── FOOTER ─────────────────────────────────────── */}
+            <footer className="py-12 px-6 border-t border-white/8">
+                <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/60 rounded-xl flex items-center justify-center">
+                            <Flame className="w-4 h-4 text-white" />
                         </div>
-                        <div>
-                            <h4 className="font-semibold text-foreground mb-4">Product</h4>
-                            <ul className="space-y-2 text-sm text-muted-foreground">
-                                <li><a href="#" className="hover:text-primary">Features</a></li>
-                                <li><a href="#" className="hover:text-primary">Pricing</a></li>
-                                <li><a href="#" className="hover:text-primary">FAQ</a></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h4 className="font-semibold text-foreground mb-4">Company</h4>
-                            <ul className="space-y-2 text-sm text-muted-foreground">
-                                <li><a href="#" className="hover:text-primary">About</a></li>
-                                <li><a href="#" className="hover:text-primary">Blog</a></li>
-                                <li><a href="#" className="hover:text-primary">Careers</a></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h4 className="font-semibold text-foreground mb-4">Legal</h4>
-                            <ul className="space-y-2 text-sm text-muted-foreground">
-                                <li><a href="#" className="hover:text-primary">Privacy</a></li>
-                                <li><a href="#" className="hover:text-primary">Terms</a></li>
-                                <li><a href="#" className="hover:text-primary">Guidelines</a></li>
-                            </ul>
-                        </div>
+                        <span className="text-lg font-black text-foreground">Openly</span>
                     </div>
-                    <div className="pt-8 border-t border-border text-center text-sm text-muted-foreground">
-                        © 2024 Openly. All rights reserved. Built with ❤️ for those who dare to fail.
+                    <div className="flex items-center gap-8 text-sm text-muted-foreground">
+                        <a href="#" className="hover:text-foreground transition-colors">Features</a>
+                        <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
+                        <a href="#" className="hover:text-foreground transition-colors">Terms</a>
+                        <a href="#" className="hover:text-foreground transition-colors">About</a>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                        © 2025 Openly. Built with ❤️ for the brave.
                     </div>
                 </div>
             </footer>

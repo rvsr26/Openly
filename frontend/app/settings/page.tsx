@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { profileApi } from "../lib/profileApi";
 import { authApi } from "../lib/authApi";
-import { uploadImage } from "../lib/api";
+import { uploadImage, getAbsUrl } from "../lib/api";
 
 export default function SettingsPage() {
     const { user } = useAuth();
@@ -208,7 +208,7 @@ export default function SettingsPage() {
                                     <div className="flex flex-col sm:flex-row items-center gap-8 pb-8 border-b border-border/40">
                                         <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                                             <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-background shadow-2xl ring-2 ring-border/50 group-hover:ring-primary/50 transition-all">
-                                                <img src={photoURL || "/assets/default_avatar.png"} alt="Avatar" className="w-full h-full object-cover" />
+                                                <img src={photoURL ? getAbsUrl(photoURL) : "/assets/default_avatar.png"} alt="Avatar" className="w-full h-full object-cover" />
                                             </div>
                                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all rounded-full backdrop-blur-sm">
                                                 <Camera size={32} className="text-white drop-shadow-md" />

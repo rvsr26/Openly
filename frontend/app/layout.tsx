@@ -8,6 +8,7 @@ import ShortcutsHelpModal from "./components/ShortcutsHelpModal";
 import GlobalShortcuts from "./components/GlobalShortcuts";
 import { Toaster } from "sonner";
 import ActivityTracker from "./components/ActivityTracker";
+import MobileNav from "./components/MobileNav";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,6 +49,7 @@ export default function RootLayout({
           </div>
           <BackToTop />
           <ShortcutsHelpModal />
+          <MobileNav />
           <Toaster position="bottom-right" richColors theme="system" />
         </Providers>
       </body>

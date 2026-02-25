@@ -8,9 +8,9 @@ import hashlib
 from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Callable
-from fastapi import Request, HTTPException
+from fastapi import Request, HTTPException, Response
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.datastructures import MutableHeaders
 import secrets
 
 # Rate Limiting
@@ -72,97 +72,107 @@ class CSRFProtection:
 csrf_protection = CSRFProtection()
 
 # Middleware Classes
-class RateLimitMiddleware(BaseHTTPMiddleware):
+class RateLimitMiddleware:
     """Rate limiting middleware"""
-    
-    async def dispatch(self, request: Request, call_next: Callable):
-        # Get client identifier (IP address)
-        client_ip = request.client.host
+    def __init__(self, app):
+        self.app = app
         
-        # Check rate limit
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+            
+        request = Request(scope, receive)
+        client_ip = request.client.host if request.client else "unknown"
+        
         if not rate_limiter.is_allowed(client_ip):
-            return JSONResponse(
+            response = JSONResponse(
                 status_code=429,
                 content={"detail": "Too many requests. Please try again later."}
             )
-        
-        response = await call_next(request)
-        return response
+            return await response(scope, receive, send)
+            
+        return await self.app(scope, receive, send)
 
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+class SecurityHeadersMiddleware:
     """Add security headers to all responses"""
-    
-    async def dispatch(self, request: Request, call_next: Callable):
-        response = await call_next(request)
+    def __init__(self, app):
+        self.app = app
         
-        # Security headers
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
-        
-        return response
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+            
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                headers.append("X-Content-Type-Options", "nosniff")
+                headers.append("X-Frame-Options", "DENY")
+                headers.append("X-XSS-Protection", "1; mode=block")
+                headers.append("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+                headers.append("Referrer-Policy", "strict-origin-when-cross-origin")
+                headers.append("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+            await send(message)
+            
+        return await self.app(scope, receive, send_wrapper)
 
-class RequestLoggingMiddleware(BaseHTTPMiddleware):
+class RequestLoggingMiddleware:
     """Log all requests for monitoring"""
-    
-    async def dispatch(self, request: Request, call_next: Callable):
+    def __init__(self, app):
+        self.app = app
+        
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+            
         start_time = time.time()
+        request = Request(scope, receive)
+        client_host = request.client.host if request.client else "unknown"
+        print(f"📥 {request.method} {request.url.path} - {client_host}")
         
-        # Log request
-        print(f"📥 {request.method} {request.url.path} - {request.client.host}")
-        
+        status_code = [500]
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                status_code[0] = message["status"]
+            await send(message)
+            
         try:
-            response = await call_next(request)
-            
-            # Calculate duration
+            await self.app(scope, receive, send_wrapper)
             duration = time.time() - start_time
-            
-            # Log response
-            print(f"📤 {request.method} {request.url.path} - {response.status_code} ({duration:.2f}s)")
-            
-            return response
+            print(f"📤 {request.method} {request.url.path} - {status_code[0]} ({duration:.2f}s)")
         except Exception as e:
             duration = time.time() - start_time
             print(f"❌ {request.method} {request.url.path} - ERROR ({duration:.2f}s): {str(e)}")
             raise
 
-class CSRFMiddleware(BaseHTTPMiddleware):
+class CSRFMiddleware:
     """CSRF protection for state-changing requests"""
-    
     SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
     EXEMPT_PATHS = {"/api/v1/auth/login", "/api/v1/auth/signup", "/ws"}
     
-    async def dispatch(self, request: Request, call_next: Callable):
-        # Skip CSRF check for safe methods
-        if request.method in self.SAFE_METHODS:
-            return await call_next(request)
+    def __init__(self, app):
+        self.app = app
         
-        # Skip CSRF check for exempt paths
-        if any(request.url.path.startswith(path) for path in self.EXEMPT_PATHS):
-            return await call_next(request)
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+            
+        request = Request(scope, receive)
         
-        # Get CSRF token from header
+        if request.method in self.SAFE_METHODS or any(request.url.path.startswith(path) for path in self.EXEMPT_PATHS):
+            return await self.app(scope, receive, send)
+            
         csrf_token = request.headers.get("X-CSRF-Token")
         session_id = request.cookies.get("session_id")
         
         if not csrf_token or not session_id:
-            return JSONResponse(
-                status_code=403,
-                content={"detail": "CSRF token missing"}
-            )
-        
-        # Validate token
+            response = JSONResponse(status_code=403, content={"detail": "CSRF token missing"})
+            return await response(scope, receive, send)
+            
         if not csrf_protection.validate_token(session_id, csrf_token):
-            return JSONResponse(
-                status_code=403,
-                content={"detail": "Invalid CSRF token"}
-            )
-        
-        response = await call_next(request)
-        return response
+            response = JSONResponse(status_code=403, content={"detail": "Invalid CSRF token"})
+            return await response(scope, receive, send)
+            
+        return await self.app(scope, receive, send)
 
 # Input Validation Helpers
 def sanitize_input(text: str, max_length: int = 10000) -> str:
@@ -232,14 +242,26 @@ def generate_request_id() -> str:
     """Generate unique request ID"""
     return secrets.token_urlsafe(16)
 
-class RequestIDMiddleware(BaseHTTPMiddleware):
+class RequestIDMiddleware:
     """Add unique request ID to each request"""
-    
-    async def dispatch(self, request: Request, call_next: Callable):
+    def __init__(self, app):
+        self.app = app
+        
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+            
         request_id = generate_request_id()
-        request.state.request_id = request_id
         
-        response = await call_next(request)
-        response.headers["X-Request-ID"] = request_id
+        # Inject into scope so endpoints can access if needed
+        if "state" not in scope:
+            scope["state"] = {}
+        scope["state"]["request_id"] = request_id
         
-        return response
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                headers.append("X-Request-ID", request_id)
+            await send(message)
+            
+        return await self.app(scope, receive, send_wrapper)

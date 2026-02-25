@@ -36,3 +36,7 @@ user_aliases_collection = db.get_collection("user_aliases")
 group_chats_collection = db.get_collection("group_chats")
 message_reactions_collection = db.get_collection("message_reactions")
 timelines_collection = db.get_collection("timelines")
+
+# Moderation collections
+blocks_collection = db.get_collection("blocks")
+mutes_collection = db.get_collection("mutes")

@@ -22,7 +22,11 @@ import {
   Archive,
   RefreshCcw,
   Check,
-  X
+  X,
+  BarChart2,
+  ShieldOff,
+  VolumeX,
+  AlertTriangle
 } from "lucide-react";
 import api, { getAbsUrl } from "../lib/api";
 import { formatDistanceToNow } from "date-fns";
@@ -63,11 +67,12 @@ const CommentItem = ({
       )}
 
       <div className="flex gap-3 relative group">
-        <Image
-          src={getAbsUrl(comment.user_pic) || '/assets/default-user.png'}
+        <img
+          src={getAbsUrl(comment.user_pic) || '/assets/default_avatar.png'}
           width={24}
           height={24}
           className="rounded-full ring-2 ring-primary/20 object-cover shadow-sm"
+          onError={(e) => { if (!e.currentTarget.src.includes('default_avatar')) e.currentTarget.src = '/assets/default_avatar.png'; }}
           alt={comment.user_name}
         />
         <div className="flex-1">
@@ -181,6 +186,12 @@ function PostItem({ post }: { post: Post }) {
   const [localIsArchived, setLocalIsArchived] = useState(post.is_archived || false);
   const [isUpdating, setIsUpdating] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // New feature states
+  const [showInsights, setShowInsights] = useState(false);
+  const [insights, setInsights] = useState<any>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [cwRevealed, setCwRevealed] = useState(false); // content warning toggle
 
   // Close menu on click outside
   useEffect(() => {
@@ -404,6 +415,46 @@ function PostItem({ post }: { post: Post }) {
     }
   };
 
+  const handleInsights = async () => {
+    if (!currentUser) return;
+    setShowInsights(true);
+    if (insights) return;
+    setInsightsLoading(true);
+    try {
+      const res = await api.get(`/posts/${post.id}/insights?user_id=${currentUser.uid}`);
+      setInsights(res.data);
+    } catch { toast.error("Failed to load insights"); }
+    finally { setInsightsLoading(false); }
+  };
+
+  const handleBlock = async () => {
+    if (!currentUser || !post.user_id) return;
+    try {
+      await api.post(`/users/${post.user_id}/block`, { user_id: currentUser.uid });
+      toast.success("User blocked");
+      setShowMenu(false);
+    } catch { toast.error("Failed to block"); }
+  };
+
+  const handleMute = async () => {
+    if (!currentUser || !post.user_id) return;
+    try {
+      await api.post(`/users/${post.user_id}/mute`, { user_id: currentUser.uid });
+      toast.success("User muted — their posts will be hidden");
+      setShowMenu(false);
+    } catch { toast.error("Failed to mute"); }
+  };
+
+  // Linkify #hashtags in content
+  const renderContent = (text: string) => {
+    const parts = text.split(/(#\w+)/g);
+    return parts.map((part, i) =>
+      /^#\w+$/.test(part)
+        ? <Link key={i} href={`/tags/${part.slice(1)}`} className="text-primary font-semibold hover:underline">{part}</Link>
+        : part
+    );
+  };
+
 
   /* ---------------- RENDER ---------------- */
   const formattedDate = post.created_at
@@ -461,13 +512,29 @@ function PostItem({ post }: { post: Post }) {
                   </button>
                 </>
               ) : (
-                <button
-                  onClick={() => { setReportModalConfig({ isOpen: true, targetId: post.id, targetType: "post" }); setShowMenu(false); }}
-                  className="w-full flex items-center gap-3 px-5 py-4 text-xs font-bold text-foreground hover:bg-white/5 transition-colors"
-                >
-                  <Flag size={14} className="text-destructive" />
-                  Report Post
-                </button>
+                <>
+                  <button
+                    onClick={() => { setReportModalConfig({ isOpen: true, targetId: post.id, targetType: "post" }); setShowMenu(false); }}
+                    className="w-full flex items-center gap-3 px-5 py-4 text-xs font-bold text-foreground hover:bg-white/5 transition-colors"
+                  >
+                    <Flag size={14} className="text-destructive" />
+                    Report Post
+                  </button>
+                  <button
+                    onClick={handleMute}
+                    className="w-full flex items-center gap-3 px-5 py-4 text-xs font-bold text-foreground hover:bg-white/5 transition-colors"
+                  >
+                    <VolumeX size={14} className="text-amber-500" />
+                    Mute User
+                  </button>
+                  <button
+                    onClick={handleBlock}
+                    className="w-full flex items-center gap-3 px-5 py-4 text-xs font-bold text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <ShieldOff size={14} />
+                    Block User
+                  </button>
+                </>
               )}
             </div>
           )}
@@ -484,6 +551,7 @@ function PostItem({ post }: { post: Post }) {
                 fill
                 className="object-cover"
                 alt="Anonymous Author"
+                sizes="(max-width: 768px) 48px, 48px"
               />
             </div>
             <div>
@@ -496,10 +564,10 @@ function PostItem({ post }: { post: Post }) {
         ) : (
           <Link href={`/u/${(post.username && post.username !== "@user" && post.username !== "@anonymous") ? post.username.replace('@', '') : post.user_id}`} className="flex gap-4 group/author">
             <div className="w-12 h-12 rounded-[1.25rem] overflow-hidden ring-4 ring-background shadow-lg transition-transform group-hover/author:scale-105 relative">
-              <Image
-                src={getAbsUrl(post.user_pic || post.author_pic) || '/assets/default-user.png'}
-                fill
-                className="object-cover"
+              <img
+                src={getAbsUrl(post.user_pic || post.author_pic) || '/assets/default_avatar.png'}
+                className="object-cover w-12 h-12"
+                onError={(e) => { if (!e.currentTarget.src.includes('default_avatar')) e.currentTarget.src = '/assets/default_avatar.png'; }}
                 alt={post.user_name || "Author"}
               />
             </div>
@@ -557,23 +625,44 @@ function PostItem({ post }: { post: Post }) {
         </div>
       ) : (
         <div className="mb-6">
-          {post.title && (
-            <Link href={`/post/${post.id}`}>
-              <h3 className="text-xl md:text-2xl font-black text-foreground mb-3 leading-[1.2] tracking-tight group-hover/post:text-primary transition-colors">
-                {post.title}
-              </h3>
-            </Link>
-          )}
-          <Link href={`/post/${post.id}`} className="block mb-2">
-            <div className="markdown-content text-sm md:text-base font-medium leading-relaxed !text-muted-foreground/90">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {post.content.length > 250 ? post.content.slice(0, 250) + "..." : post.content}
-              </ReactMarkdown>
+          {/* Content Warning Overlay */}
+          {post.content_warning && !cwRevealed ? (
+            <div className="relative rounded-2xl overflow-hidden cursor-pointer" onClick={() => setCwRevealed(true)}>
+              <div className="blur-md pointer-events-none select-none">
+                {post.title && <h3 className="text-xl font-black text-foreground mb-3">{post.title}</h3>}
+                <p className="text-sm text-muted-foreground">{post.content.slice(0, 120)}...</p>
+              </div>
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/60 backdrop-blur-sm gap-2">
+                <AlertTriangle className="w-6 h-6 text-amber-500" />
+                <span className="text-xs font-black text-amber-500 uppercase tracking-widest">Content Warning</span>
+                <span className="text-[11px] text-muted-foreground font-medium">{post.content_warning}</span>
+                <span className="text-[10px] text-primary font-bold mt-1">Click to reveal</span>
+              </div>
             </div>
-            {post.content.length > 250 && (
-              <span className="text-primary font-black text-[10px] uppercase tracking-widest mt-3 block hover:underline">Read full insight</span>
-            )}
-          </Link>
+          ) : (
+            <>
+              {post.title && (
+                <Link href={`/post/${post.id}`}>
+                  <h3 className="text-xl md:text-2xl font-black text-foreground mb-3 leading-[1.2] tracking-tight group-hover/post:text-primary transition-colors">
+                    {post.title}
+                  </h3>
+                </Link>
+              )}
+              <Link href={`/post/${post.id}`} className="block mb-2">
+                <div className="text-sm md:text-base font-medium leading-relaxed text-muted-foreground/90">
+                  {post.content.length > 250
+                    ? <>{renderContent(post.content.slice(0, 250))}<span>...</span>
+                      <span className="text-primary font-black text-[10px] uppercase tracking-widest mt-3 block hover:underline">Read full insight</span>
+                    </>
+                    : renderContent(post.content)
+                  }
+                </div>
+              </Link>
+              {post.edited_at && (
+                <span className="text-[10px] text-muted-foreground/50 italic">edited</span>
+              )}
+            </>
+          )}
         </div>
       )}
 
@@ -645,13 +734,55 @@ function PostItem({ post }: { post: Post }) {
           </button>
         </div>
 
-        <div className="flex items-center gap-4 text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.2em]">
-          <div className="flex items-center gap-1.5 p-2 bg-white/5 rounded-xl">
+        <div className="flex items-center gap-2">
+          {/* Insights — own posts only */}
+          {currentUser?.uid === post.user_id && (
+            <button
+              onClick={handleInsights}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 text-muted-foreground hover:bg-violet-500/10 hover:text-violet-400 transition-all text-xs font-bold"
+              title="View post insights"
+            >
+              <BarChart2 size={14} />
+              <span className="hidden sm:inline">Insights</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-1.5 p-2 bg-white/5 rounded-xl text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.2em]">
             <Eye size={14} className="text-muted-foreground/50" />
             <span>{viewCount} Views</span>
           </div>
         </div>
       </div>
+
+      {/* INSIGHTS PANEL */}
+      {showInsights && currentUser?.uid === post.user_id && (
+        <div className="mt-4 p-4 rounded-2xl bg-white/3 border border-white/8 animate-in slide-in-from-top-2 relative">
+          <button onClick={() => setShowInsights(false)} className="absolute top-3 right-3 text-muted-foreground hover:text-foreground transition-colors">
+            <X size={14} />
+          </button>
+          <h4 className="text-xs font-black text-foreground uppercase tracking-widest mb-3 flex items-center gap-1.5">
+            <BarChart2 size={13} className="text-violet-400" /> Post Insights
+          </h4>
+          {insightsLoading ? (
+            <div className="flex gap-2 items-center text-muted-foreground text-xs"><div className="w-3 h-3 border border-primary/30 border-t-primary rounded-full animate-spin" /> Loading...</div>
+          ) : insights ? (
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+              {[
+                { label: "Views", val: insights.views, color: "text-blue-400" },
+                { label: "Reactions", val: insights.reactions, color: "text-primary" },
+                { label: "Comments", val: insights.comments, color: "text-emerald-400" },
+                { label: "Bookmarks", val: insights.bookmarks, color: "text-amber-400" },
+                { label: "Downvotes", val: insights.downvotes, color: "text-red-400" },
+              ].map(({ label, val, color }) => (
+                <div key={label} className="flex flex-col items-center gap-0.5 p-2 bg-white/3 rounded-xl">
+                  <span className={`text-lg font-black ${color}`}>{val}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {/* COMMENTS SECTION */}
       {showComments && (
@@ -659,11 +790,12 @@ function PostItem({ post }: { post: Post }) {
 
           {/* Main Input */}
           <div className="flex gap-3 mb-6">
-            <Image
-              src={getAbsUrl(currentUser?.photoURL) || '/assets/default-user.png'}
+            <img
+              src={getAbsUrl(currentUser?.photoURL) || '/assets/default_avatar.png'}
               width={32}
               height={32}
               className="rounded-full ring-2 ring-white/10 object-cover"
+              onError={(e) => { if (!e.currentTarget.src.includes('default_avatar')) e.currentTarget.src = '/assets/default_avatar.png'; }}
               alt="Your avatar"
             />
             <div className="flex-1 relative">
@@ -716,3 +848,4 @@ function PostItem({ post }: { post: Post }) {
 }
 
 export default memo(PostItem);
+
