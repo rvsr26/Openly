@@ -4,7 +4,6 @@ import { useParams, useRouter } from "next/navigation";
 import api from "../../lib/api";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase";
-import Navbar from "../../components/Navbar";
 import { Post } from "../../types";
 
 import ProfileHeader from "../ProfileHeader";
@@ -16,39 +15,42 @@ export default function PublicProfile() {
   const params = useParams();
   const userId = params.id as string;
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Overview");
 
+  // Resolve Firebase auth first
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
+      setAuthReady(true);
     });
     return () => unsubscribe();
   }, []);
+
+  const fetchProfile = async (silent = false) => {
+    try {
+      if (!silent) setLoading(true);
+      const requesterId = auth.currentUser?.uid;
+      const res = await api.get(`/users/${userId}/profile${requesterId ? `?requester_id=${requesterId}` : ''}`);
+      setProfile(res.data);
+    } catch (error) {
+      console.error("Failed to load profile", error);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!userId || userId === "undefined") {
       setLoading(false);
       return;
     }
-
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
-        const requesterId = auth.currentUser?.uid;
-        const res = await api.get(`/users/${userId}/profile${requesterId ? `?requester_id=${requesterId}` : ''}`);
-        setProfile(res.data);
-      } catch (error) {
-        console.error("Failed to load profile", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    if (!authReady) return; // wait for auth to settle
     fetchProfile();
-  }, [userId]);
+  }, [userId, authReady]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-background text-muted-foreground animate-pulse">
@@ -68,13 +70,13 @@ export default function PublicProfile() {
 
   return (
     <div className="min-h-screen pb-20">
-      <Navbar />
 
       <main className="mt-20 max-w-6xl mx-auto px-4 pt-10">
         <ProfileHeader
           user={currentUser || { uid: userId, displayName: profile.user_info.display_name }}
           profileData={profile}
           isOwner={isOwnProfile}
+          onRefresh={() => fetchProfile(true)}
         />
 
         <div className="grid grid-cols-1 gap-8">

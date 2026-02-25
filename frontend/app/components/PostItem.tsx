@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, memo, useMemo } from "react";
 import { Post, Comment } from "../types";
 import { auth } from "../firebase";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
@@ -26,7 +27,11 @@ import {
   BarChart2,
   ShieldOff,
   VolumeX,
-  AlertTriangle
+  AlertTriangle,
+  Sparkles,
+  Loader2,
+  Trophy,
+  Map
 } from "lucide-react";
 import api, { getAbsUrl } from "../lib/api";
 import { formatDistanceToNow } from "date-fns";
@@ -146,7 +151,7 @@ function buildCommentTree(comments: Comment[]): Comment[] {
   return roots;
 }
 
-function PostItem({ post }: { post: Post }) {
+function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: string }) {
   /* ---------------- STATE ---------------- */
   const { user: currentUser } = useAuth();
 
@@ -192,6 +197,9 @@ function PostItem({ post }: { post: Post }) {
   const [insights, setInsights] = useState<any>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [cwRevealed, setCwRevealed] = useState(false); // content warning toggle
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
 
   // Close menu on click outside
   useEffect(() => {
@@ -427,6 +435,24 @@ function PostItem({ post }: { post: Post }) {
     finally { setInsightsLoading(false); }
   };
 
+  const handleSummarize = async () => {
+    if (summary) {
+      setShowSummary(!showSummary);
+      return;
+    }
+    setSummarizing(true);
+    setShowSummary(true);
+    try {
+      const res = await api.get(`/api/v1/posts/${post.id}/summarize`);
+      setSummary(res.data.summary);
+    } catch {
+      toast.error("Failed to generate summary");
+      setShowSummary(false);
+    } finally {
+      setSummarizing(false);
+    }
+  };
+
   const handleBlock = async () => {
     if (!currentUser || !post.user_id) return;
     try {
@@ -445,14 +471,29 @@ function PostItem({ post }: { post: Post }) {
     } catch { toast.error("Failed to mute"); }
   };
 
-  // Linkify #hashtags in content
+  // Linkify #hashtags and highlight search queries in content
   const renderContent = (text: string) => {
     const parts = text.split(/(#\w+)/g);
-    return parts.map((part, i) =>
-      /^#\w+$/.test(part)
-        ? <Link key={i} href={`/tags/${part.slice(1)}`} className="text-primary font-semibold hover:underline">{part}</Link>
-        : part
-    );
+
+    return parts.map((part, i) => {
+      if (/^#\w+$/.test(part)) {
+        return <Link key={`tag-${i}`} href={`/tags/${part.slice(1)}`} className="text-primary font-semibold hover:underline">{part}</Link>;
+      }
+
+      if (highlightQuery && highlightQuery.trim().length > 0) {
+        const escapedQuery = highlightQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`(${escapedQuery})`, 'gi');
+        const subParts = part.split(regex);
+
+        return subParts.map((sub, j) =>
+          sub.toLowerCase() === highlightQuery.toLowerCase()
+            ? <mark key={`mark-${i}-${j}`} className="bg-primary/20 text-primary font-bold rounded-sm px-1 selection:bg-primary/40 leading-none">{sub}</mark>
+            : sub
+        );
+      }
+
+      return part;
+    });
   };
 
 
@@ -461,18 +502,16 @@ function PostItem({ post }: { post: Post }) {
     ? formatDistanceToNow(new Date(post.created_at), { addSuffix: true })
     : "Recently";
 
-  // Mock Tags based on category or content keywords
-  const tags = [post.category || "General", "Review"];
-
   return (
     <div className="glass-card p-6 md:p-8 mb-6 relative overflow-hidden group/post transition-all duration-500">
 
       {/* 1. TOP TAGS & MENU */}
       <div className="flex justify-between items-start mb-6">
-        <div className="flex gap-2">
-          {tags.map((tag, i) => (
-            <Link key={i} href={`/?category=${tag}`} className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all ${i === 0 ? "bg-primary/10 text-primary" : "bg-purple-500/10 text-purple-400"}`}>
-              {tag}
+        <div className="flex flex-wrap gap-2">
+          {(post.hubs && post.hubs.length > 0) && post.hubs.map(hub => (
+            <Link key={hub} href={`/hubs/${hub.toLowerCase()}`} className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary/30 transition-all">
+              <Trophy size={10} />
+              {hub} Hub
             </Link>
           ))}
         </div>
@@ -558,7 +597,19 @@ function PostItem({ post }: { post: Post }) {
               <h4 className="text-sm font-black text-foreground flex items-center gap-2">
                 Anonymous
               </h4>
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{formattedDate}</p>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-2">
+                {formattedDate}
+                <span className="w-1 h-1 rounded-full bg-muted-foreground/30"></span>
+                <span className="text-primary/70">{Math.ceil(post.content.split(/\s+/).length / 200)} min read</span>
+                {post.is_professional_inquiry && (
+                  <>
+                    <span className="w-1 h-1 rounded-full bg-muted-foreground/30"></span>
+                    <span className="text-emerald-500 flex items-center gap-1 font-black">
+                      <Map size={10} /> Professional Inquiry
+                    </span>
+                  </>
+                )}
+              </p>
             </div>
           </div>
         ) : (
@@ -584,7 +635,19 @@ function PostItem({ post }: { post: Post }) {
                   </span>
                 )}
               </h4>
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{formattedDate}</p>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-2">
+                {formattedDate}
+                <span className="w-1 h-1 rounded-full bg-muted-foreground/30"></span>
+                <span className="text-primary/70">{Math.ceil(post.content.split(/\s+/).length / 200)} min read</span>
+                {post.is_professional_inquiry && (
+                  <>
+                    <span className="w-1 h-1 rounded-full bg-muted-foreground/30"></span>
+                    <span className="text-emerald-500 flex items-center gap-1 font-black">
+                      <Map size={10} /> Professional Inquiry
+                    </span>
+                  </>
+                )}
+              </p>
             </div>
           </Link>
         )}
@@ -747,6 +810,36 @@ function PostItem({ post }: { post: Post }) {
             </button>
           )}
 
+          {/* AI Summarize */}
+          {/* Endorse Button */}
+          <button
+            onClick={async () => {
+              try {
+                const res = await api.post(`/api/v1/posts/${post.id}/endorse?user_id=${currentUser?.uid || "guest"}`);
+                toast.success(res.data.msg);
+              } catch (err) {
+                toast.error("Failed to endorse");
+              }
+            }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all text-xs font-bold bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 active:scale-95`}
+            title="Expert Endorsement"
+          >
+            <Trophy size={14} />
+            <span className="hidden sm:inline">Endorse</span>
+            {(post.endorsements_count ?? 0) > 0 && <span>({post.endorsements_count})</span>}
+          </button>
+
+          {post.content.length > 200 && (
+            <button
+              onClick={handleSummarize}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all text-xs font-bold ${showSummary ? "bg-primary/20 text-primary" : "bg-white/5 text-muted-foreground hover:bg-primary/10 hover:text-primary"}`}
+              title="AI Summarize"
+            >
+              {summarizing ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              <span className="hidden sm:inline">{showSummary && summary ? "Hide Summary" : "AI Summarize"}</span>
+            </button>
+          )}
+
           <div className="flex items-center gap-1.5 p-2 bg-white/5 rounded-xl text-[10px] font-black text-muted-foreground/30 uppercase tracking-[0.2em]">
             <Eye size={14} className="text-muted-foreground/50" />
             <span>{viewCount} Views</span>
@@ -782,6 +875,29 @@ function PostItem({ post }: { post: Post }) {
             </div>
           ) : null}
         </div>
+      )}
+
+      {/* SUMMARY PANEL */}
+      {showSummary && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="mt-4 p-4 rounded-2xl bg-primary/5 border border-primary/10 relative overflow-hidden"
+        >
+          <div className="absolute top-0 left-0 w-1 h-full bg-primary/30" />
+          <h4 className="text-[10px] font-black text-primary uppercase tracking-widest mb-2 flex items-center gap-1.5">
+            <Sparkles size={12} /> AI Summary
+          </h4>
+          {summarizing ? (
+            <div className="flex gap-2 items-center text-muted-foreground text-xs italic">
+              <Loader2 size={12} className="animate-spin" /> Distilling insights...
+            </div>
+          ) : (
+            <p className="text-xs text-foreground/90 leading-relaxed italic">
+              "{summary}"
+            </p>
+          )}
+        </motion.div>
       )}
 
       {/* COMMENTS SECTION */}

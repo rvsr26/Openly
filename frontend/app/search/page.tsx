@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import api, { getAbsUrl } from '../lib/api';
 import PostItem from '../components/PostItem';
 import { Post } from '../types';
-import { User, MessageCircle, Search as SearchIcon, Users, UserPlus } from 'lucide-react';
+import { User, MessageCircle, Search as SearchIcon, Users, UserPlus, Filter, Calendar, Tag, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 
@@ -20,11 +20,24 @@ function SearchResults() {
   // Derive tab from URL parameter - Source of Truth
   const activeTab: 'posts' | 'users' = typeParam === 'users' ? 'users' : 'posts';
 
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [excludeTopics, setExcludeTopics] = useState('');
+
+  const [tempStartDate, setTempStartDate] = useState('');
+  const [tempEndDate, setTempEndDate] = useState('');
+  const [tempExcludeTopics, setTempExcludeTopics] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+
   const { data: results, isLoading } = useQuery({
-    queryKey: ['search', query],
+    queryKey: ['search', query, startDate, endDate, excludeTopics],
     queryFn: async () => {
       if (!query) return [];
-      const res = await api.get(`/search/?q=${query}`);
+      let url = `/search/?q=${encodeURIComponent(query)}`;
+      if (startDate) url += `&start_date=${startDate}`;
+      if (endDate) url += `&end_date=${endDate}`;
+      if (excludeTopics) url += `&exclude_topics=${encodeURIComponent(excludeTopics)}`;
+      const res = await api.get(url);
       return res.data;
     },
     enabled: !!query,
@@ -56,44 +69,119 @@ function SearchResults() {
         Search results for <span className="text-primary">"{query}"</span>
       </h1>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-2 mb-8 border-b border-border/50 pb-1">
-        <button
-          onClick={() => handleTabChange('posts')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-t-xl font-bold text-sm transition-all relative ${activeTab === 'posts'
-            ? 'text-primary'
-            : 'text-muted-foreground hover:text-foreground'
-            }`}
-        >
-          <MessageCircle size={18} />
-          <span>Posts</span>
-          <span className="bg-muted px-2 py-0.5 rounded-full text-xs ml-1">{posts.length}</span>
-          {activeTab === 'posts' && (
-            <motion.div
-              layoutId="activeTab"
-              className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
-            />
-          )}
-        </button>
+      {/* Tabs and Filters */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-border/50 pb-1 mb-8 gap-4">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleTabChange('posts')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-t-xl font-bold text-sm transition-all relative ${activeTab === 'posts'
+              ? 'text-primary'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
+          >
+            <MessageCircle size={18} />
+            <span>Posts</span>
+            <span className="bg-muted px-2 py-0.5 rounded-full text-xs ml-1">{posts.length}</span>
+            {activeTab === 'posts' && (
+              <motion.div
+                layoutId="activeTab"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+              />
+            )}
+          </button>
+
+          <button
+            onClick={() => handleTabChange('users')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-t-xl font-bold text-sm transition-all relative ${activeTab === 'users'
+              ? 'text-primary'
+              : 'text-muted-foreground hover:text-foreground'
+              }`}
+          >
+            <Users size={18} />
+            <span>People</span>
+            <span className="bg-muted px-2 py-0.5 rounded-full text-xs ml-1">{users.length}</span>
+            {activeTab === 'users' && (
+              <motion.div
+                layoutId="activeTab"
+                className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
+              />
+            )}
+          </button>
+        </div>
 
         <button
-          onClick={() => handleTabChange('users')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-t-xl font-bold text-sm transition-all relative ${activeTab === 'users'
-            ? 'text-primary'
-            : 'text-muted-foreground hover:text-foreground'
-            }`}
+          onClick={() => setShowFilters(!showFilters)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all mb-2 border ${showFilters ? 'bg-primary/10 text-primary border-primary/20' : 'bg-secondary text-foreground border-border hover:bg-secondary/80'}`}
         >
-          <Users size={18} />
-          <span>People</span>
-          <span className="bg-muted px-2 py-0.5 rounded-full text-xs ml-1">{users.length}</span>
-          {activeTab === 'users' && (
-            <motion.div
-              layoutId="activeTab"
-              className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
-            />
-          )}
+          <Filter size={14} />
+          Filters
+          {showFilters ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>
       </div>
+
+      {showFilters && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          className="glass-card p-6 mb-8 rounded-2xl border border-primary/20 bg-primary/5 overflow-hidden"
+        >
+          <h3 className="text-sm font-black mb-4 flex items-center gap-2">
+            <Filter size={16} className="text-primary" /> Advanced Filters
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-bold text-muted-foreground mb-1.5 flex items-center gap-1.5"><Calendar size={12} /> Start Date</label>
+              <input
+                type="date"
+                value={tempStartDate}
+                onChange={e => setTempStartDate(e.target.value)}
+                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-primary/50 text-foreground"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-muted-foreground mb-1.5 flex items-center gap-1.5"><Calendar size={12} /> End Date</label>
+              <input
+                type="date"
+                value={tempEndDate}
+                onChange={e => setTempEndDate(e.target.value)}
+                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-primary/50 text-foreground"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-muted-foreground mb-1.5 flex items-center gap-1.5"><Tag size={12} /> Exclude Topics</label>
+              <input
+                type="text"
+                placeholder="e.g. politics, drama"
+                value={tempExcludeTopics}
+                onChange={e => setTempExcludeTopics(e.target.value)}
+                className="w-full bg-background border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-primary/50 text-foreground"
+              />
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <button
+              onClick={() => {
+                setTempStartDate(''); setTempEndDate(''); setTempExcludeTopics('');
+                setStartDate(''); setEndDate(''); setExcludeTopics('');
+              }}
+              className="px-4 py-2 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Clear
+            </button>
+            <button
+              onClick={() => {
+                setStartDate(tempStartDate);
+                setEndDate(tempEndDate);
+                setExcludeTopics(tempExcludeTopics);
+              }}
+              className="px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold hover:brightness-110 transition-all shadow-lg shadow-primary/20"
+            >
+              Apply Filters
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {isLoading ? (
         <div className="space-y-4">
@@ -106,7 +194,7 @@ function SearchResults() {
           {activeTab === 'posts' && (
             <>
               {posts.length > 0 ? (
-                posts.map((post: Post) => <PostItem key={post.id} post={post} />)
+                posts.map((post: Post) => <PostItem key={post.id} post={post} highlightQuery={query} />)
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
                   No posts found matching "{query}"

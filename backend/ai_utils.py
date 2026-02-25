@@ -86,3 +86,33 @@ def extract_keywords(text: str) -> list:
     except Exception as e:
         print(f"Keyword Extraction Error: {e}")
         return []
+
+def summarize_text(text: str) -> str:
+    """
+    Summarizes text using Hugging Face Inference API.
+    Uses facebook/bart-large-cnn model.
+    """
+    if not HF_TOKEN:
+        return "Summarization skipped: No API key."
+        
+    if not text or len(text) < 100:
+        return text # Too short to summarize
+
+    API_URL_SUMMARIZE = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    payload = {
+        "inputs": text,
+        "parameters": {"max_length": 100, "min_length": 30}
+    }
+
+    try:
+        response = requests.post(API_URL_SUMMARIZE, headers=headers, json=payload)
+        data = response.json()
+        
+        if isinstance(data, list) and len(data) > 0:
+            return data[0].get('summary_text', text)
+        
+        return text
+    except Exception as e:
+        print(f"Summarization Error: {e}")
+        return text

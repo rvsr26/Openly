@@ -50,6 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     email: userData.email,
                     displayName: userData.display_name,
                     photoURL: userData.photoURL,
+                    twoFactorEnabled: userData.two_factor_enabled,
                     isFromToken: true
                 });
 
@@ -102,8 +103,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         const data = await response.json();
 
                         if (data['2fa_required']) {
+                            const currentToken = localStorage.getItem('token');
+
+                            // If a token already exists, the user is likely in an active session.
+                            // We do not want to force an MFA redirect loop when Firebase re-syncs.
+                            if (currentToken && currentToken !== "undefined" && currentToken !== "null") {
+                                console.log("🔐 MFA is enabled, but user already has a backend token. Skipping redirect.");
+                                setUser((prev: any) => prev ? { ...prev, twoFactorEnabled: true } : { ...fbUser, twoFactorEnabled: true });
+                                return;
+                            }
+
                             console.log("🔐 MFA Required");
-                            window.location.href = `/auth/mfa?uid=${data.user_id}`;
+                            if (!window.location.pathname.startsWith("/auth/mfa")) {
+                                window.location.href = `/auth/mfa?uid=${data.user_id}`;
+                            }
                             return;
                         }
 
@@ -111,7 +124,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                             localStorage.setItem('token', data.access_token);
                         }
                         console.log("✅ Synced with backend");
-                        setUser(fbUser);
+                        setUser({
+                            ...fbUser,
+                            twoFactorEnabled: data.two_factor_enabled
+                        });
                     } else {
                         console.error("Failed to sync with backend");
                     }

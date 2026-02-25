@@ -9,6 +9,7 @@ export interface Post {
     user_pic?: string;
     author_pic?: string;
     category: string;
+    hubs?: string[];
     view_count?: number;
     reaction_count?: number;
     downvote_count?: number;
@@ -24,6 +25,8 @@ export interface Post {
     collaborators?: string[];
     content_warning?: string;
     tags?: string[];
+    is_professional_inquiry?: boolean;
+    endorsements_count?: number;
 }
 
 export interface User {
@@ -37,6 +40,9 @@ export interface User {
     location?: string;
     phoenix_score?: number;
     badges?: string[];
+    is_expert?: boolean;
+    profession?: string;
+    followed_hubs?: string[];
 }
 
 export interface Comment {

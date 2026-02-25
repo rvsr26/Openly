@@ -73,7 +73,7 @@ function MFAContent() {
         setError("");
 
         try {
-            const res = await api.post("/auth/2fa/verify-login", {
+            const res = await api.post("/api/v1/auth/2fa/verify-login", {
                 user_id: uid,
                 code: fullCode
             });

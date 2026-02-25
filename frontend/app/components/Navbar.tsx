@@ -21,7 +21,9 @@ import {
   ChevronDown,
   Menu,
   X,
-  Home
+  Home,
+  Bookmark,
+  PenTool
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -40,7 +42,9 @@ function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showSavedDropdown, setShowSavedDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const savedDropdownRef = useRef<HTMLDivElement>(null);
   const [storedAccounts, setStoredAccounts] = useState<any[]>([]);
 
   // All useEffect hooks must also be before conditional returns
@@ -64,6 +68,9 @@ function Navbar() {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
+      }
+      if (savedDropdownRef.current && !savedDropdownRef.current.contains(event.target as Node)) {
+        setShowSavedDropdown(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -119,8 +126,8 @@ function Navbar() {
     else router.push("/create-post");
   }, [authUser, router]);
 
-  // Hide navbar on landing, login, and signup pages
-  const hiddenPaths = ['/', '/landing', '/login', '/signup'];
+  // Hide navbar on special pages (now managed by Providers.tsx)
+  const hiddenPaths = ['/landing', '/login', '/signup', '/auth/mfa'];
   if (hiddenPaths.includes(pathname)) {
     return null;
   }
@@ -182,7 +189,7 @@ function Navbar() {
         <div className="flex items-center justify-between h-16">
 
           {/* LOGO */}
-          <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
+          <Link href={authUser ? "/feed" : "/"} className="flex items-center gap-2 group flex-shrink-0">
             <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
               <div className="w-5 h-5 bg-white rounded-md"></div>
             </div>
@@ -224,6 +231,46 @@ function Navbar() {
               <Link href="/feed" className="btn-icon" title="Home">
                 <Home className="w-5 h-5" />
               </Link>
+
+              <div className="relative" ref={savedDropdownRef}>
+                <button
+                  onClick={() => setShowSavedDropdown(!showSavedDropdown)}
+                  className="btn-icon"
+                  title="Saved Content"
+                >
+                  <Bookmark className="w-5 h-5" />
+                </button>
+                <AnimatePresence>
+                  {showSavedDropdown && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2 w-48 card-elevated rounded-xl overflow-hidden z-[60]"
+                    >
+                      <div className="py-1">
+                        <Link
+                          href="/drafts"
+                          onClick={() => setShowSavedDropdown(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
+                        >
+                          <PenTool className="w-4 h-4 text-muted-foreground" />
+                          <span>Drafts</span>
+                        </Link>
+                        <Link
+                          href="/bookmarks"
+                          onClick={() => setShowSavedDropdown(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 transition-colors"
+                        >
+                          <Bookmark className="w-4 h-4 text-muted-foreground" />
+                          <span>Bookmarks</span>
+                        </Link>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
               <Link href="/messages" className="btn-icon relative">
                 <MessageCircle className="w-5 h-5" />
@@ -314,28 +361,30 @@ function Navbar() {
                       {storedAccounts.filter((acc: any) => acc.uid !== authUser.uid).length > 0 && (
                         <div className="border-t border-border py-2">
                           <p className="px-4 text-xs font-semibold text-muted-foreground uppercase mb-1">Switch Accounts</p>
-                          {storedAccounts.filter((acc: any) => acc.uid !== authUser.uid).map((acc: any) => (
-                            <div key={acc.uid} className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 group transition-colors cursor-pointer" onClick={() => handleSwitchAccount(acc)}>
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-full overflow-hidden relative border border-border">
-                                  <img src={getAbsUrl(acc.photoURL)} className="object-cover w-6 h-6" onError={(e) => { if (!e.currentTarget.src.includes('default_avatar')) e.currentTarget.src = '/assets/default_avatar.png'; }} alt={acc.displayName || 'User'} />
+                          {[...new Map(storedAccounts.map((acc: any) => [acc.uid, acc])).values()]
+                            .filter((acc: any) => acc.uid !== authUser.uid)
+                            .map((acc: any) => (
+                              <div key={acc.uid} className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 group transition-colors cursor-pointer" onClick={() => handleSwitchAccount(acc)}>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full overflow-hidden relative border border-border">
+                                    <img src={getAbsUrl(acc.photoURL)} className="object-cover w-6 h-6" onError={(e) => { if (!e.currentTarget.src.includes('default_avatar')) e.currentTarget.src = '/assets/default_avatar.png'; }} alt={acc.displayName || 'User'} />
+                                  </div>
+                                  <div className="max-w-[120px]">
+                                    <p className="text-sm font-medium text-foreground truncate">{acc.displayName || 'User'}</p>
+                                  </div>
                                 </div>
-                                <div className="max-w-[120px]">
-                                  <p className="text-sm font-medium text-foreground truncate">{acc.displayName || 'User'}</p>
-                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveAccount(acc.uid);
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-all"
+                                  title="Remove account"
+                                >
+                                  <X size={12} />
+                                </button>
                               </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRemoveAccount(acc.uid);
-                                }}
-                                className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-destructive transition-all"
-                                title="Remove account"
-                              >
-                                <X size={12} />
-                              </button>
-                            </div>
-                          ))}
+                            ))}
                         </div>
                       )}
 

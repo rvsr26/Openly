@@ -87,7 +87,7 @@ export default function UserListModal({ isOpen, onClose, title, userId, type }: 
                         ) : users.length === 0 ? (
                             <div className="p-8 text-center text-muted-foreground">No users found.</div>
                         ) : (
-                            users.map((u) => (
+                            [...new Map(users.map((u: any) => [u.user_id, u])).values()].map((u: any) => (
                                 <Link
                                     key={u.user_id}
                                     href={`/u/${u.username || u.user_id}`}

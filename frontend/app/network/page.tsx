@@ -12,8 +12,6 @@ import { Check, X, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
-import Navbar from "../components/Navbar";
-
 import { useAuth } from "@/context/AuthContext";
 
 export default function MyNetworkPage() {
@@ -59,7 +57,6 @@ export default function MyNetworkPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <Navbar />
             <main className="mt-28 pb-10 px-4 md:px-8 max-w-7xl mx-auto">
                 <h1 className="text-3xl font-bold mb-8 text-foreground">My Network</h1>
 
@@ -119,7 +116,7 @@ export default function MyNetworkPage() {
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {connections.map((conn) => (
+                            {[...new Map(connections.map((conn: any) => [conn.user_id, conn])).values()].map((conn: any) => (
                                 <Link href={`/u/${conn.username}`} key={conn.user_id}>
                                     <div className="glass-card p-4 rounded-xl flex flex-col items-center text-center cursor-pointer hover:border-primary/50 transition h-full">
                                         <img

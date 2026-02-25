@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import api from "../lib/api";
 
-import Navbar from "../components/Navbar";
 import PostItem from "../components/PostItem";
 import { Post } from "../types";
 
@@ -51,7 +50,6 @@ export default function AdminPage() {
 
   return (
     <>
-      <Navbar />
 
       <main className="pt-24 max-w-6xl mx-auto px-4">
         <h1 className="text-3xl font-bold mb-6">🛡️ Admin Dashboard</h1>

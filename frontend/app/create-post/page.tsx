@@ -7,6 +7,7 @@ import api, { uploadImage, getAbsUrl } from "../lib/api";
 import { Image as ImageIcon, X, Loader2 } from "lucide-react";
 
 import { auth } from "../firebase";
+import CreatePost from "../components/CreatePost";
 
 const MAX_CHARS = 500;
 
@@ -17,29 +18,23 @@ export default function CreatePostPage() {
   const [anonymous, setAnonymous] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
   const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // New props for CreatePost component
+  const [selectedTimelineId, setSelectedTimelineId] = useState<string | null>(null);
+  const [collaborators, setCollaborators] = useState<string[]>([]);
+  const [isProfessionalInquiry, setIsProfessionalInquiry] = useState(false);
+  const [selectedHubs, setSelectedHubs] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setUploading(true);
-      try {
-        const url = await uploadImage(e.target.files[0]);
-        setImageUrl(url);
-      } catch (err) {
-        console.error("Upload failed", err);
-        setError("Failed to upload image");
-      } finally {
-        setUploading(false);
-      }
-    }
+  const handleSaveDraft = async () => {
+    // Basic draft stub for the prop
+    console.log("Saving draft...");
   };
 
   /* ---------------- SUBMIT ---------------- */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     setError("");
 
     if (!content.trim()) {
@@ -77,10 +72,14 @@ export default function CreatePostPage() {
         user_pic: user.photoURL || null,
         content: content.trim(),
         is_anonymous: anonymous,
-        image_url: imageUrl
+        image_url: imageUrl,
+        timeline_id: selectedTimelineId,
+        collaborators: collaborators,
+        is_professional_inquiry: isProfessionalInquiry,
+        hubs: selectedHubs
       });
 
-      router.push("/");
+      router.push("/feed");
     } catch (err: unknown) {
       console.error("CREATE POST ERROR:", err);
 
@@ -95,99 +94,29 @@ export default function CreatePostPage() {
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
-      <form className="glass-card w-full max-w-lg p-8 md:p-10 rounded-2xl animate-in fade-in zoom-in-95 duration-300" onSubmit={handleSubmit}>
-        <h1 className="text-3xl font-bold text-center mb-2 text-foreground">Post a Review 💭</h1>
-        <p className="text-center text-muted-foreground mb-8">Share your suggestions and help the community grow</p>
-
-        {error && <div className="bg-destructive/10 text-destructive p-3 rounded-xl mb-6 text-sm text-center font-medium">{error}</div>}
-
-        {/* CONTENT */}
-        <textarea
-          placeholder="What's on your mind? Share a suggestion or review..."
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          rows={6}
-          className="w-full px-4 py-4 mb-2 rounded-xl border border-input bg-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium placeholder:text-muted-foreground resize-none"
-        />
-
-        {/* IMAGE PREVIEW */}
-        {imageUrl && (
-          <div className="relative w-full h-48 mb-4 bg-secondary/50 rounded-xl overflow-hidden group/image">
-            <img src={getAbsUrl(imageUrl)} alt="Preview" className="w-full h-full object-cover" />
-            <button
-              type="button"
-              onClick={() => setImageUrl("")}
-              className="absolute top-2 right-2 p-1.5 bg-black/50 text-white rounded-full hover:bg-destructive transition-colors"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
-
-        {/* UPLOAD PROGRESS */}
-        {uploading && (
-          <div className="w-full h-12 mb-4 flex items-center justify-center bg-primary/10 rounded-xl">
-            <Loader2 className="animate-spin text-primary mr-2" size={16} />
-            <span className="text-xs font-bold text-primary">Uploading...</span>
-          </div>
-        )}
-
-        {/* TOOLBAR */}
-        <div className="flex items-center gap-2 mb-4">
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept="image/*"
-            onChange={handleFileSelect}
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading || loading}
-            className="p-2.5 rounded-xl bg-secondary hover:bg-secondary/80 text-foreground transition-all flex items-center gap-2 text-sm font-medium"
-          >
-            <ImageIcon size={18} />
-            <span>Add Image</span>
-          </button>
-        </div>
-
-        {/* CHARACTER COUNT */}
-        <div className="text-right text-xs text-muted-foreground mb-6 font-medium">
-          {content.length}/{MAX_CHARS}
-        </div>
-
-        {/* ANONYMOUS */}
-        <label className="flex items-center gap-3 mb-8 cursor-pointer group">
-          <input
-            type="checkbox"
-            checked={anonymous}
-            onChange={(e) => setAnonymous(e.target.checked)}
-            className="w-5 h-5 rounded border-border text-primary focus:ring-primary/20"
-          />
-          <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">Post anonymously</span>
-        </label>
-
-        {/* ACTIONS */}
-        <div className="flex gap-4">
-          <button
-            type="button"
-            className="flex-1 py-3.5 rounded-xl bg-secondary text-foreground font-bold hover:bg-secondary/80 transition"
-            onClick={() => router.back()}
-          >
-            Cancel
-          </button>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-[2] py-3.5 rounded-xl bg-primary text-primary-foreground font-bold hover:opacity-90 disabled:opacity-70 transition shadow-sm active:scale-95"
-          >
-            {loading ? "Posting..." : "Post"}
-          </button>
-        </div>
-      </form>
+    <main className="min-h-screen pt-24 pb-20 max-w-3xl mx-auto px-4">
+      {error && <div className="bg-destructive/10 text-destructive p-3 rounded-xl mb-6 text-sm text-center font-medium">{error}</div>}
+      <CreatePost
+        user={auth.currentUser}
+        userPhoto={auth.currentUser?.photoURL || undefined}
+        content={content}
+        setContent={setContent}
+        isAnonymous={anonymous}
+        setIsAnonymous={setAnonymous}
+        handleSubmit={handleSubmit}
+        handleSaveDraft={handleSaveDraft}
+        loading={loading}
+        imageUrl={imageUrl}
+        setImageUrl={setImageUrl}
+        selectedTimelineId={selectedTimelineId}
+        setSelectedTimelineId={setSelectedTimelineId}
+        collaborators={collaborators}
+        setCollaborators={setCollaborators}
+        isProfessionalInquiry={isProfessionalInquiry}
+        setIsProfessionalInquiry={setIsProfessionalInquiry}
+        selectedHubs={selectedHubs}
+        setSelectedHubs={setSelectedHubs}
+      />
     </main>
   );
 }

@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useDraftAutoSave } from '@/hooks/useDraftAutoSave';
 import { toast } from 'sonner';
+import { formatDistanceToNow } from 'date-fns';
 
 const CATEGORIES = ["All", "Career", "Startup", "Academic", "Relationship", "Health"];
 
@@ -29,9 +30,15 @@ export default function Home() {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [selectedTimelineId, setSelectedTimelineId] = useState<string | null>(null);
   const [collaborators, setCollaborators] = useState<string[]>([]);
+  const [isProfessionalInquiry, setIsProfessionalInquiry] = useState(false);
+  const [selectedHubs, setSelectedHubs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
   const [sortBy, setSortBy] = useState<"new" | "hot" | "top" | "for-you">("hot");
+
+  const { saveDraft, loadDraft, clearDraft, lastSaved, isSaving } = useDraftAutoSave(
+    content, imageUrl, isAnonymous, selectedTimelineId, collaborators
+  );
 
   const [isPrefetching, setIsPrefetching] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -71,6 +78,19 @@ export default function Home() {
   const username = profile?.user_info?.username || "";
   const userPhoto = profile?.user_info?.photoURL || user?.photoURL || "";
 
+  // Load draft on mount
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      setContent(draft.content);
+      setImageUrl(draft.imageUrl);
+      setIsAnonymous(draft.isAnonymous);
+      setSelectedTimelineId(draft.selectedTimelineId);
+      setCollaborators(draft.collaborators);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     fetchFeed(activeFilter, sortBy, user?.uid);
   }, [activeFilter, sortBy, fetchFeed, user?.uid]);
@@ -88,7 +108,9 @@ export default function Home() {
         is_anonymous: isAnonymous,
         image_url: imageUrl,
         timeline_id: selectedTimelineId || null,
-        collaborators: collaborators
+        collaborators: collaborators,
+        is_professional_inquiry: isProfessionalInquiry,
+        hubs: selectedHubs
       });
 
       if (res.data.status === "rejected_for_toxicity") {
@@ -98,6 +120,9 @@ export default function Home() {
       setContent('');
       setImageUrl('');
       setCollaborators([]);
+      setIsProfessionalInquiry(false);
+      setSelectedHubs([]);
+      clearDraft();
       fetchFeed(activeFilter, sortBy);
 
     } catch (error: any) {
@@ -193,6 +218,8 @@ export default function Home() {
               setContent={setContent}
               isAnonymous={isAnonymous}
               setIsAnonymous={setIsAnonymous}
+              isProfessionalInquiry={isProfessionalInquiry}
+              setIsProfessionalInquiry={setIsProfessionalInquiry}
               handleSubmit={handleSubmit}
               handleSaveDraft={handleSaveDraft}
               loading={loading}
@@ -202,7 +229,26 @@ export default function Home() {
               setSelectedTimelineId={setSelectedTimelineId}
               collaborators={collaborators}
               setCollaborators={setCollaborators}
+              selectedHubs={selectedHubs}
+              setSelectedHubs={setSelectedHubs}
             />
+
+            {/* Draft Status Indicator */}
+            {(isSaving || lastSaved) && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-xl border border-white/5 w-fit self-end text-[10px] font-bold uppercase tracking-widest text-muted-foreground transition-all animate-in fade-in slide-in-from-right-2">
+                {isSaving ? (
+                  <>
+                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                    <span>Saving Draft...</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                    <span>Draft Saved {lastSaved && formatDistanceToNow(lastSaved, { addSuffix: true })}</span>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* FILTER & SORT SECTION */}
             <div className="flex items-center gap-4">

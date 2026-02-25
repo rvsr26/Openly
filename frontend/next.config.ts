@@ -28,6 +28,25 @@ const nextConfig: NextConfig = {
 
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: '/register',
+        destination: '/signup',
+        permanent: true,
+      },
+      {
+        source: '/create',
+        destination: '/feed#create',
+        permanent: true,
+      },
+      {
+        source: '/follow-requests',
+        destination: '/network',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
