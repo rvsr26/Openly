@@ -18,6 +18,7 @@ interface ProfileContentProps {
 import { useState, useEffect } from "react";
 import api from "../lib/api";
 import { toast } from "sonner";
+import { auth } from "../firebase";
 
 export default function ProfileContent({ activeTab, posts, user, isOwner, onRefresh }: ProfileContentProps) {
     const [isAddingExp, setIsAddingExp] = useState(false);
@@ -98,6 +99,20 @@ export default function ProfileContent({ activeTab, posts, user, isOwner, onRefr
             if (onRefresh) onRefresh();
         } catch (e) {
             toast.error("Failed to add skill");
+        }
+    };
+
+    const handleEndorseSkill = async (skillName: string) => {
+        try {
+            await api.post(`/users/${user.id || user.uid}/skills/${encodeURIComponent(skillName)}/endorse?endorser_id=${auth.currentUser?.uid}`);
+            toast.success("Skill endorsed!");
+            if (onRefresh) onRefresh();
+        } catch (e: any) {
+            if (e.response?.status === 400) {
+                toast.error("You cannot endorse your own skill.");
+            } else {
+                toast.error("Failed to endorse skill.");
+            }
         }
     };
 
@@ -385,13 +400,22 @@ export default function ProfileContent({ activeTab, posts, user, isOwner, onRefr
 
                         {(user.skills && user.skills.length > 0) ? (
                             <div className="flex flex-wrap gap-4">
-                                {user.skills.map((skill: any, idx: number) => (
-                                    <div key={idx} className="px-5 py-3 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-3 hover:border-primary/50 transition-all cursor-default group">
-                                        <span className="text-sm font-black text-foreground/80 group-hover:text-primary transition-colors">{skill.name}</span>
-                                        <div className="h-4 w-[1px] bg-white/10" />
-                                        <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full ring-1 ring-primary/20">{skill.endorsements || 0}</span>
-                                    </div>
-                                ))}
+                                {user.skills.map((skill: any, idx: number) => {
+                                    const hasEndorsed = skill.endorsers?.includes(auth.currentUser?.uid);
+                                    return (
+                                        <div key={idx} className={`px-5 py-3 ${hasEndorsed ? 'bg-primary/20 border-primary/40' : 'bg-white/5 border-white/10'} border rounded-2xl flex items-center gap-3 hover:border-primary/50 transition-all cursor-default group`}>
+                                            <span className="text-sm font-black text-foreground/80 group-hover:text-primary transition-colors">{skill.name}</span>
+                                            <div className="h-4 w-[1px] bg-white/10" />
+                                            <button
+                                                onClick={() => !isOwner && handleEndorseSkill(skill.name)}
+                                                disabled={isOwner}
+                                                className={`text-[10px] font-black ${hasEndorsed ? 'bg-primary text-white' : 'bg-primary/10 text-primary'} px-2 py-0.5 rounded-full ring-1 ring-primary/20 ${!isOwner && 'hover:scale-110 active:scale-95 transition-transform'}`}
+                                            >
+                                                {skill.endorsements || 0}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         ) : !isAddingSkill && (
                             <div className="text-center py-12 border-2 border-dashed border-border rounded-3xl">

@@ -27,9 +27,8 @@ export default function AdminGuard({
           `/users/${user.uid}/profile`
         );
 
-        // 🔴 TEMP ADMIN CHECK
-        // Later: use role field (admin/mod)
-        if (res.data?.user_info?.username === "admin") {
+        // Check for role 'admin' or fallback to username 'admin'
+        if (res.data?.user_info?.role === "admin" || res.data?.user_info?.username === "admin") {
           setAllowed(true);
         } else {
           window.location.href = "/";

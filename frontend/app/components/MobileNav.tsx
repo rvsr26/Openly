@@ -1,15 +1,15 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Search, PlusCircle, Bell, User } from "lucide-react";
+import { Home, Search, PlusCircle, Bell, User, Users } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 
 const navItems = [
     { href: "/feed", icon: Home, label: "Home" },
     { href: "/search", icon: Search, label: "Search" },
-    { href: "/feed#create", icon: PlusCircle, label: "Create", highlight: true },
-    { href: "/notifications", icon: Bell, label: "Alerts" },
+    { href: "/create-post", icon: PlusCircle, label: "Create", highlight: true },
+    { href: "/communities", icon: Users, label: "Groups" },
     { href: "/profile", icon: User, label: "Profile" },
 ];
 

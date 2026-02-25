@@ -339,6 +339,12 @@ async def handle_oauth_login(provider: str, access_token: str, user_info: dict):
         )
         user_id = user["_id"]
     else:
+        # Check Registration Pause before creating a new user
+        from database import settings_collection
+        settings = await settings_collection.find_one({"_id": "global_settings"})
+        if settings and settings.get("pause_registrations"):
+            raise HTTPException(status_code=403, detail="New registrations are temporarily paused.")
+            
         # Create new user
         new_user = {
             "_id": user_info.get("id") or secrets.token_urlsafe(16),

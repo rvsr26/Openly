@@ -12,13 +12,13 @@ load_dotenv()  # Load environment variables early
 import cloudinary
 import cloudinary.uploader
 import re
-from ai_utils import is_toxic, extract_keywords, summarize_text
+from ai_utils import is_toxic, extract_keywords, summarize_text, enhance_content, get_sentiment, cluster_tags
 from database import (
     posts_collection, users_collection, comments_collection, reactions_collection, 
     bookmarks_collection, reports_collection, drafts_collection, downvotes_collection, 
     views_collection, messages_collection, conversations_collection,
     verification_tokens_collection, password_reset_tokens_collection,
-    connections_collection
+    connections_collection, settings_collection
 )
 from bson import ObjectId
 from cache_utils import get_cached_feed, set_cached_feed, generate_cache_key, invalidate_category_cache
@@ -30,6 +30,14 @@ from alias_manager import (
     delete_alias, activate_alias, deactivate_all_aliases, get_active_alias,
     AliasCreate, AliasUpdate
 )
+from communities import (
+    create_community, get_community, list_communities, update_community, delete_community,
+    join_community, leave_community, get_members, approve_member, kick_member,
+    promote_member, demote_member, get_user_communities, get_community_posts,
+    CommunityCreate, CommunityUpdate
+)
+from polls import PollCreate, build_poll_doc, cast_vote, get_poll
+from insights import send_insight_report
 
 # Import authentication and middleware (optional - won't break app if missing)
 AUTH_ENABLED = False
@@ -105,6 +113,15 @@ class Skill(BaseModel):
     level: Optional[str] = None 
     endorsements: int = 0
 
+class User(BaseModel):
+    uid: str
+    email: str
+    display_name: str
+    username: str
+    photoURL: Optional[str] = None
+    role: str = "user"
+    is_banned: bool = False
+    
 class ProfessionalInfoUpdate(BaseModel):
     headline: Optional[str] = None
     bio: Optional[str] = None
@@ -246,6 +263,21 @@ async def create_indexes():
         await posts_collection.create_index([("is_rejected", 1), ("category", 1)])
         
         print("[SUCCESS] Database indexes created successfully")
+
+        # Initialize default System Settings if none exist
+        existing_settings = await settings_collection.find_one({"_id": "global_settings"})
+        if not existing_settings:
+            await settings_collection.insert_one({
+                "_id": "global_settings",
+                "maintenance_mode": False,
+                "broadcast_message": "",
+                "read_only_mode": False,
+                "pause_registrations": False,
+                "disable_dms": False,
+                "require_verified_email": False
+            })
+            print("[SUCCESS] Initialized default global system settings.")
+
     except Exception as e:
         print(f"[ERROR] Error creating indexes: {e}")
 
@@ -265,6 +297,8 @@ class PostRequest(BaseModel):
     collaborators: List[str] = [] # List of user_ids
     tags: List[str] = [] 
     is_professional_inquiry: Optional[bool] = False
+    poll: Optional[PollCreate] = None
+    community_id: Optional[str] = None
 
 class PostUpdate(BaseModel):
     title: Optional[str] = None
@@ -312,6 +346,17 @@ class TwoFactorEnableRequest(BaseModel):
 class TwoFactorVerifyLoginRequest(BaseModel):
     user_id: str
     code: str
+
+class EnhancePostRequest(BaseModel):
+    content: str
+    title: Optional[str] = ""
+
+class SentimentRequest(BaseModel):
+    text: str
+
+class ChatRequest(BaseModel):
+    message: str
+    history: Optional[List[dict]] = [] # [{"role": "user", "parts": ["..."]}, ...]
 
 # --- 3. HELPER FUNCTIONS ---
 
@@ -552,6 +597,11 @@ async def api_sync_user(req: UserSyncRequest):
         
         await users_collection.update_one({"_id": req.uid}, {"$set": update_data})
     else:
+        # Check Registration Pause before creating a new user
+        settings = await settings_collection.find_one({"_id": "global_settings"})
+        if settings and settings.get("pause_registrations"):
+            raise HTTPException(status_code=403, detail="New registrations are temporarily paused.")
+
         # Create user
         new_user = {
             "_id": req.uid,
@@ -782,6 +832,150 @@ async def api_get_active_alias(user = Depends(get_current_user)):
 
 
 
+# --- AI ENDPOINTS ---
+
+@app.post("/api/v1/ai/enhance-post")
+async def api_enhance_post(req: EnhancePostRequest):
+    """Enhances post content and title using Gemini AI."""
+    result = await enhance_content(req.content, req.title)
+    return result
+
+@app.post("/api/v1/ai/sentiment")
+async def api_get_sentiment(req: SentimentRequest):
+    """Analyzes the sentiment of a given text."""
+    sentiment = get_sentiment(req.text)
+    return {"sentiment": sentiment}
+
+@app.get("/api/v1/ai/post-summary/{post_id}")
+async def api_get_post_summary(post_id: str):
+    """Generates a summary for a specific post."""
+    post = await posts_collection.find_one({"_id": ObjectId(post_id) if ObjectId.is_valid(post_id) else post_id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    summary = summarize_text(post.get("content", ""))
+    return {"summary": summary}
+
+@app.post("/api/v1/ai/chat")
+async def api_ai_chat(req: ChatRequest):
+    """Interactive chat with Openly AI Assistant."""
+    from ai_utils import model
+    
+    if not model:
+        return {"response": "I'm currently offline. Please check your Gemini API key."}
+    
+    try:
+        # Gemini expects a specific history format
+        # We'll simplify for now and just send the message or use provided history
+        chat = model.start_chat(history=req.history)
+        response = chat.send_message(req.message)
+        return {
+            "response": response.text,
+            "history": [
+                *req.history,
+                {"role": "user", "parts": [req.message]},
+                {"role": "model", "parts": [response.text]}
+            ]
+        }
+    except Exception as e:
+        print(f"Gemini Chat Error: {e}")
+        return {"response": "Oops! I encountered an error. Try again shortly."}
+
+@app.get("/api/v1/hubs/{hub_name}/sentiment")
+async def api_get_hub_sentiment(hub_name: str):
+    """Analyzes the collective sentiment of recent posts in a hub."""
+    # Find recent posts in this hub
+    recent_posts = await posts_collection.find({"hubs": hub_name, "is_rejected": False}).sort("created_at", -1).to_list(10)
+    
+    if not recent_posts:
+        return {"sentiment": "NEUTRAL", "score": 0.5, "post_count": 0}
+    
+    combined_text = " ".join([p.get("content", "") for p in recent_posts])
+    sentiment = get_sentiment(combined_text)
+    
+    # Map sentiment to a score for the UI
+    score_map = {"POSITIVE": 0.8, "NEGATIVE": 0.2, "NEUTRAL": 0.5}
+    return {
+        "hub": hub_name,
+        "sentiment": sentiment,
+        "score": score_map.get(sentiment, 0.5),
+        "post_count": len(recent_posts)
+    }
+
+@app.get("/api/v1/search/semantic")
+async def api_semantic_search(q: str = Query(...), category: Optional[str] = None):
+    """Performs context-aware semantic search using Gemini to expand queries."""
+    from ai_utils import model
+    
+    if not model:
+        # Fallback to basic text search
+        query = {"$text": {"$search": q}} if category is None else {"$text": {"$search": q}, "category": category}
+        cursor = posts_collection.find(query).limit(20)
+        return [serialize_doc(doc) for doc in await cursor.to_list(20)]
+        
+    try:
+        # Step 1: Use Gemini to expand the query with related terms
+        expansion_prompt = f"Given the search query '{q}', provide 5-10 related professional keywords or concepts. Respond ONLY with a comma-separated list."
+        expansion_response = model.generate_content(expansion_prompt)
+        expanded_terms = expansion_response.text.strip()
+        
+        # Step 2: Perform a text search with expanded terms
+        # This is a simple implementation of semantic expansion
+        search_query = f"{q} {expanded_terms}"
+        mongo_query = {"$or": [
+            {"content": {"$regex": q, "$options": "i"}},
+            {"title": {"$regex": q, "$options": "i"}},
+            {"tags": {"$in": [q]}}
+        ]}
+        
+        if category and category != "All":
+            mongo_query = {"$and": [mongo_query, {"category": category}]}
+            
+        cursor = posts_collection.find(mongo_query).sort("created_at", -1).limit(20)
+        results = [serialize_doc(doc) for doc in await cursor.to_list(20)]
+        
+        return {
+            "query": q,
+            "expanded_terms": expanded_terms,
+            "results": results
+        }
+    except Exception as e:
+        print(f"Semantic Search Error: {e}")
+        # Final fallback
+        cursor = posts_collection.find({"content": {"$regex": q, "$options": "i"}}).limit(10)
+        return {"results": [serialize_doc(doc) for doc in await cursor.to_list(10)]}
+
+@app.get("/api/v1/ai/data/clusters")
+async def api_get_tag_clusters():
+    """Returns AI-grouped clusters of all existing tags."""
+    # 1. Fetch all unique tags from all posts
+    all_tags = await posts_collection.distinct("tags")
+    if not all_tags:
+        return {"Themes": {}, "Uncategorized": []}
+        
+    # 2. Use Gemini to cluster them
+    clusters = await cluster_tags(all_tags)
+    return clusters
+
+@app.get("/api/v1/ai/data/posts-by-theme")
+async def api_get_posts_by_theme():
+    """Separates posts into data groups based on AI-generated themes."""
+    # 1. Get clusters
+    all_tags = await posts_collection.distinct("tags")
+    clusters = await cluster_tags(all_tags)
+    
+    themes = clusters.get("Themes", {})
+    grouped_data = {}
+    
+    for theme_name, tags in themes.items():
+        # Find posts that have ANY of these tags
+        cursor = posts_collection.find({"tags": {"$in": tags}, "is_rejected": False}).sort("created_at", -1).limit(50)
+        posts = [serialize_doc(doc) for doc in await cursor.to_list(50)]
+        grouped_data[theme_name] = posts
+        
+    return grouped_data
+
+
 # --- POSTS ---
 
 def assign_hub_from_category(category: str):
@@ -806,8 +1000,31 @@ def assign_hub_from_category(category: str):
     return None
 
 
+async def check_global_settings(user_id: Optional[str] = None):
+    settings = await settings_collection.find_one({"_id": "global_settings"})
+    if not settings:
+        return {}
+        
+    user = None
+    if user_id:
+        user = await get_user_by_any_id(user_id)
+        # Admins bypass these restrictions
+        if user and (user.get("role") == "admin" or user.get("username") == "admin"):
+            return settings
+            
+    if settings.get("read_only_mode"):
+        raise HTTPException(status_code=403, detail="Platform is currently in read-only mode")
+        
+    if settings.get("require_verified_email") and user and not user.get("email_verified", False):
+        raise HTTPException(status_code=403, detail="Email verification required to perform this action")
+        
+    return settings
+
+
 @app.post("/posts/")
 async def create_post(post: PostRequest):
+    await check_global_settings(post.user_id)
+    
     if is_toxic(post.content):
         # Log rejected post
         await posts_collection.insert_one({
@@ -857,6 +1074,15 @@ async def create_post(post: PostRequest):
         "is_archived": False,
         "hubs": post.hubs
     }
+
+    if post.poll:
+        try:
+            new_post["poll"] = build_poll_doc(post.poll)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+            
+    if post.community_id:
+        new_post["community_id"] = post.community_id
 
     result = await posts_collection.insert_one(new_post)
     
@@ -1234,6 +1460,175 @@ async def get_post_insights(post_id: str, user_id: str):
         "created_at": post.get("created_at"),
         "edited_at": post.get("edited_at"),
     }
+
+
+# ─── ADMIN DASHBOARD ──────────────────────────────────────────────────────────
+
+@app.get("/admin/stats")
+async def get_admin_stats(user_id: str):
+    # Security: check if user is admin
+    user = await get_user_by_any_id(user_id)
+    if not user or user.get("role") != "admin":
+        # Check backward compatibility just in case
+        if not user or user.get("username") != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+
+    total_users = await users_collection.count_documents({})
+    total_posts = await posts_collection.count_documents({})
+    flagged_posts = await posts_collection.count_documents({"is_flagged": True})
+    total_reports = await reports_collection.count_documents({})
+    
+    # We could also get community count if we imported communities_collection, let's keep it simple
+    return {
+        "total_users": total_users,
+        "total_posts": total_posts,
+        "flagged_posts": flagged_posts,
+        "total_reports": total_reports
+    }
+
+@app.get("/admin/users")
+async def get_all_users_admin(user_id: str, skip: int = 0, limit: int = 50):
+    user = await get_user_by_any_id(user_id)
+    if not user or (user.get("role") != "admin" and user.get("username") != "admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+        
+    cursor = users_collection.find().skip(skip).limit(limit)
+    users = []
+    async for doc in cursor:
+        doc["_id"] = str(doc["_id"])
+        uid = doc.get("uid") or doc["_id"]
+        users.append({
+            "id": str(doc["_id"]),
+            "uid": uid,
+            "username": doc.get("username", ""),
+            "display_name": doc.get("display_name", ""),
+            "email": doc.get("email", ""),
+            "role": doc.get("role", "user"),
+            "is_banned": doc.get("is_banned", False),
+            "created_at": doc.get("created_at")
+        })
+    
+    total = await users_collection.count_documents({})
+    return {"users": users, "total": total}
+
+@app.patch("/admin/users/{target_id}/role")
+async def update_user_role(target_id: str, new_role: str, admin_id: str = Query(...)):
+    admin = await get_user_by_any_id(admin_id)
+    if not admin or (admin.get("role") != "admin" and admin.get("username") != "admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+        
+    if new_role not in ["user", "expert", "admin"]:
+        raise HTTPException(status_code=400, detail="Invalid role")
+        
+    obj_id = ObjectId(target_id) if len(target_id) == 24 else None
+    query = {"$or": [{"uid": target_id}, {"_id": obj_id}]} if obj_id else {"uid": target_id}
+    
+    result = await users_collection.update_one(query, {"$set": {"role": new_role}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return {"status": "success", "new_role": new_role}
+
+@app.patch("/admin/users/{target_id}/ban")
+async def toggle_user_ban(target_id: str, admin_id: str = Query(...)):
+    admin = await get_user_by_any_id(admin_id)
+    if not admin or (admin.get("role") != "admin" and admin.get("username") != "admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+        
+    obj_id = ObjectId(target_id) if len(target_id) == 24 else None
+    query = {"$or": [{"uid": target_id}, {"_id": obj_id}]} if obj_id else {"uid": target_id}
+    
+    target_user = await users_collection.find_one(query)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    current_status = target_user.get("is_banned", False)
+    new_status = not current_status
+    
+    await users_collection.update_one(query, {"$set": {"is_banned": new_status}})
+    return {"status": "success", "is_banned": new_status}
+
+@app.patch("/admin/posts/{post_id}/unflag")
+async def unflag_post(post_id: str, admin_id: str = Query(...)):
+    admin = await get_user_by_any_id(admin_id)
+    if not admin or (admin.get("role") != "admin" and admin.get("username") != "admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+        
+    try:
+        oid = ObjectId(post_id)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid post ID")
+        
+    result = await posts_collection.update_one(
+        {"_id": oid}, 
+        {"$set": {"is_flagged": False, "is_rejected": False}, "$set": {"report_count": 0}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Post not found")
+        
+    return {"status": "success", "message": "Post unflagged and approved"}
+
+
+# ─── SYSTEM SETTINGS ──────────────────────────────────────────────────────────
+
+class SystemSettingsUpdate(BaseModel):
+    maintenance_mode: Optional[bool] = None
+    broadcast_message: Optional[str] = None
+    read_only_mode: Optional[bool] = None
+    pause_registrations: Optional[bool] = None
+    disable_dms: Optional[bool] = None
+    require_verified_email: Optional[bool] = None
+
+@app.get("/api/v1/system/settings")
+async def get_system_settings():
+    settings = await settings_collection.find_one({"_id": "global_settings"})
+    if not settings:
+        return {
+            "maintenance_mode": False, 
+            "broadcast_message": "",
+            "read_only_mode": False,
+            "pause_registrations": False,
+            "disable_dms": False,
+            "require_verified_email": False
+        }
+    
+    return {
+        "maintenance_mode": settings.get("maintenance_mode", False),
+        "broadcast_message": settings.get("broadcast_message", ""),
+        "read_only_mode": settings.get("read_only_mode", False),
+        "pause_registrations": settings.get("pause_registrations", False),
+        "disable_dms": settings.get("disable_dms", False),
+        "require_verified_email": settings.get("require_verified_email", False),
+    }
+
+@app.patch("/admin/system/settings")
+async def update_system_settings(updates: SystemSettingsUpdate, admin_id: str = Query(...)):
+    admin = await get_user_by_any_id(admin_id)
+    if not admin or (admin.get("role") != "admin" and admin.get("username") != "admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+        
+    update_data = {}
+    if updates.maintenance_mode is not None:
+        update_data["maintenance_mode"] = updates.maintenance_mode
+    if updates.broadcast_message is not None:
+        update_data["broadcast_message"] = updates.broadcast_message
+    if updates.read_only_mode is not None:
+        update_data["read_only_mode"] = updates.read_only_mode
+    if updates.pause_registrations is not None:
+        update_data["pause_registrations"] = updates.pause_registrations
+    if updates.disable_dms is not None:
+        update_data["disable_dms"] = updates.disable_dms
+    if updates.require_verified_email is not None:
+        update_data["require_verified_email"] = updates.require_verified_email
+        
+    if update_data:
+        await settings_collection.update_one(
+            {"_id": "global_settings"},
+            {"$set": update_data},
+            upsert=True
+        )
+        
+    return {"status": "success", "updated": update_data}
 
 
 # ─── HASHTAG FEED ────────────────────────────────────────────────────────────
@@ -1780,6 +2175,22 @@ async def get_user_profile_v2(user_id: str, requester_id: Optional[str] = None):
         "posts": user_posts
     }
 
+@app.post("/users/{user_id}/insights/send")
+async def send_weekly_insights(user_id: str):
+    user = await get_user_by_any_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    user_name = user.get("display_name") or user.get("username") or "User"
+    email = user.get("email") or "user@example.com"
+    
+    try:
+        result = await send_insight_report(str(user["_id"]), email, user_name)
+        return result
+    except Exception as e:
+        print(f"[ERROR] Failed to send insights: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/users/{user_id}/hubs/{hub_name}/join")
 async def join_hub(user_id: str, hub_name: str):
     user = await get_user_by_any_id(user_id)
@@ -1887,6 +2298,22 @@ class ProfileUpdateRequest(BaseModel):
     location: Optional[str] = None
     display_name: Optional[str] = None
     username: Optional[str] = None
+    # Professional fields
+    profession: Optional[str] = None
+    experiences: Optional[List[ProfessionalExperience]] = None
+    education: Optional[List[Education]] = None
+    skills: Optional[List[Skill]] = None
+
+class StoryCreate(BaseModel):
+    user_id: str
+    content: Optional[str] = None
+    image_url: Optional[str] = None
+    background_color: Optional[str] = None
+
+class ReactionCreate(BaseModel):
+    user_id: str
+    type: str # e.g. 'like', 'laugh', 'insightful', 'clap'
+
 
 @app.post("/users/profile/update")
 async def update_profile(req: ProfileUpdateRequest):
@@ -2033,6 +2460,20 @@ async def toggle_downvote(post_id: str, req: ViewRequest):
 
     return {"status": status}
 
+class PollVoteRequest(BaseModel):
+    user_id: str
+    option_id: str
+
+@app.post("/posts/{post_id}/poll/vote")
+async def vote_on_poll(post_id: str, payload: PollVoteRequest):
+    try:
+        updated_poll = await cast_vote(post_id, payload.option_id, payload.user_id)
+        return {"message": "Vote cast", "poll": updated_poll}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # --- BOOKMARKS ---
 
 @app.post("/posts/{post_id}/bookmark")
@@ -2111,6 +2552,8 @@ async def get_comments(post_id: str):
 
 @app.post("/posts/{post_id}/comments")
 async def add_comment(post_id: str, comment: CommentRequest):
+    await check_global_settings(comment.user_id)
+    
     await comments_collection.insert_one({
         "post_id": post_id,
         "content": comment.content,
@@ -2856,4 +3299,375 @@ async def invite_collaborator(post_id: str, collaborator_id: str):
         return {"status": "collaborator_added"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error adding collaborator: {e}")
+
+
+# ==================== COMMUNITIES ENDPOINTS ====================
+
+@app.post("/api/v1/communities/")
+async def api_create_community(data: CommunityCreate, user = Depends(get_current_user)):
+    """Create a new community."""
+    try:
+        community = await create_community(user["_id"], data)
+        return community
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create community: {e}")
+
+
+@app.get("/api/v1/communities/")
+async def api_list_communities(
+    search: str = Query(""),
+    category: str = Query(""),
+    sort: str = Query("members"),
+    skip: int = Query(0),
+    limit: int = Query(20),
+):
+    """Discover / list communities (public endpoint)."""
+    communities = await list_communities(search=search, category=category, sort=sort, skip=skip, limit=limit)
+    return {"communities": communities}
+
+
+@app.get("/api/v1/communities/{slug}")
+async def api_get_community(slug: str):
+    """Get a community by slug."""
+    community = await get_community(slug)
+    if not community:
+        raise HTTPException(status_code=404, detail="Community not found")
+    return community
+
+
+@app.patch("/api/v1/communities/{slug}")
+async def api_update_community(slug: str, data: CommunityUpdate, user = Depends(get_current_user)):
+    """Update community details (mod/owner only)."""
+    community = await get_community(slug)
+    if not community:
+        raise HTTPException(status_code=404, detail="Community not found")
+    try:
+        updated = await update_community(user["_id"], community["id"], data)
+        return updated
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@app.delete("/api/v1/communities/{slug}")
+async def api_delete_community(slug: str, user = Depends(get_current_user)):
+    """Delete a community (owner only)."""
+    community = await get_community(slug)
+    if not community:
+        raise HTTPException(status_code=404, detail="Community not found")
+    try:
+        await delete_community(user["_id"], community["id"])
+        return {"status": "deleted"}
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@app.post("/api/v1/communities/{slug}/join")
+async def api_join_community(slug: str, user = Depends(get_current_user)):
+    """Join a community (public: instant; private: request)."""
+    community = await get_community(slug)
+    if not community:
+        raise HTTPException(status_code=404, detail="Community not found")
+    try:
+        return await join_community(user["_id"], community["id"])
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/v1/communities/{slug}/leave")
+async def api_leave_community(slug: str, user = Depends(get_current_user)):
+    """Leave a community."""
+    community = await get_community(slug)
+    if not community:
+        raise HTTPException(status_code=404, detail="Community not found")
+    try:
+        await leave_community(user["_id"], community["id"])
+        return {"status": "left"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/v1/communities/{slug}/members")
+async def api_get_members(
+    slug: str,
+    status: str = Query("active"),
+    skip: int = Query(0),
+    limit: int = Query(50),
+):
+    """List community members."""
+    community = await get_community(slug)
+    if not community:
+        raise HTTPException(status_code=404, detail="Community not found")
+    members = await get_members(community["id"], status=status, skip=skip, limit=limit)
+    return {"members": members}
+
+
+@app.post("/api/v1/communities/{slug}/approve/{target_uid}")
+async def api_approve_member(slug: str, target_uid: str, user = Depends(get_current_user)):
+    """Approve a pending join request (mod/owner only)."""
+    community = await get_community(slug)
+    if not community:
+        raise HTTPException(status_code=404, detail="Community not found")
+    try:
+        await approve_member(user["_id"], community["id"], target_uid)
+        return {"status": "approved"}
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@app.delete("/api/v1/communities/{slug}/kick/{target_uid}")
+async def api_kick_member(slug: str, target_uid: str, user = Depends(get_current_user)):
+    """Remove a member from the community (mod/owner only)."""
+    community = await get_community(slug)
+    if not community:
+        raise HTTPException(status_code=404, detail="Community not found")
+    try:
+        await kick_member(user["_id"], community["id"], target_uid)
+        return {"status": "kicked"}
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@app.post("/api/v1/communities/{slug}/promote/{target_uid}")
+async def api_promote_member(slug: str, target_uid: str, user = Depends(get_current_user)):
+    """Promote a member to mod (owner only)."""
+    community = await get_community(slug)
+    if not community:
+        raise HTTPException(status_code=404, detail="Community not found")
+    try:
+        await promote_member(user["_id"], community["id"], target_uid)
+        return {"status": "promoted"}
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@app.post("/api/v1/communities/{slug}/demote/{target_uid}")
+async def api_demote_member(slug: str, target_uid: str, user = Depends(get_current_user)):
+    """Demote a mod to regular member (owner only)."""
+    community = await get_community(slug)
+    if not community:
+        raise HTTPException(status_code=404, detail="Community not found")
+    try:
+        await demote_member(user["_id"], community["id"], target_uid)
+        return {"status": "demoted"}
+    except ValueError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+@app.get("/api/v1/communities/{slug}/posts")
+async def api_get_community_posts(
+    slug: str,
+    sort: str = Query("new"),
+    skip: int = Query(0),
+    limit: int = Query(20),
+):
+    """Get posts in a community feed."""
+    community = await get_community(slug)
+    if not community:
+        raise HTTPException(status_code=404, detail="Community not found")
+    posts = await get_community_posts(community["id"], sort=sort, skip=skip, limit=limit)
+    return {"posts": posts}
+
+
+@app.get("/api/v1/users/{user_id}/communities")
+async def api_get_user_communities(user_id: str):
+    """Get communities a user belongs to."""
+    comms = await get_user_communities(user_id)
+    return {"communities": comms}
+
+# ==================== PHASE 2: PROFESSIONAL PROFILES & ENGAGEMENT ====================
+from database import stories_collection
+from fastapi.responses import JSONResponse
+
+# --- PROFESSIONAL PROFILES (Endorse Skill) ---
+@app.post("/users/{user_id}/skills/{skill_name}/endorse")
+async def endorse_skill(user_id: str, skill_name: str, endorser_id: str = Query(...)):
+    if user_id == endorser_id:
+        raise HTTPException(status_code=400, detail="Cannot endorse your own skill")
+    
+    user = await users_collection.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    skills = user.get("skills", [])
+    skill_found = False
+    
+    for skill in skills:
+        if skill.get("name") == skill_name:
+            if "endorsers" not in skill:
+                skill["endorsers"] = []
+                
+            if endorser_id in skill["endorsers"]:
+                skill["endorsers"].remove(endorser_id)
+                skill["endorsements"] = max(0, skill.get("endorsements", 1) - 1)
+            else:
+                skill["endorsers"].append(endorser_id)
+                skill["endorsements"] = skill.get("endorsements", 0) + 1
+            skill_found = True
+            break
+            
+    if not skill_found:
+        raise HTTPException(status_code=404, detail="Skill not found for this user")
+        
+    await users_collection.update_one(
+        {"id": user_id},
+        {"$set": {"skills": skills}}
+    )
+    
+    if endorser_id in [s.get("endorsers", []) for s in skills if s.get("name") == skill_name][0]:
+        await create_notification(
+            user_id=user_id,
+            type="skill_endorsement",
+            actor_id=endorser_id,
+            message=f"endorsed you for {skill_name}"
+        )
+        
+    return {"message": "Skill endorsement updated", "skills": skills}
+
+
+# --- STORIES ---
+@app.post("/stories")
+async def create_story(story_data: StoryCreate):
+    import uuid
+    from datetime import datetime
+    
+    story = story_data.dict()
+    story["id"] = f"story_{uuid.uuid4().hex[:12]}"
+    story["created_at"] = datetime.utcnow().isoformat()
+    story["viewers"] = []
+    
+    user = await users_collection.find_one({"id": story_data.user_id})
+    if user:
+        story["user_name"] = user.get("display_name", user.get("username", "Unknown"))
+        story["user_pic"] = user.get("photoURL", "")
+        
+    await stories_collection.insert_one(story)
+    story.pop("_id", None)
+    return story
+
+@app.get("/stories/feed")
+async def get_stories_feed(user_id: str = Query(...)):
+    """Get active stories (last 24h) from followed users + self"""
+    from datetime import datetime, timedelta
+    
+    following_cursor = follows_collection.find({"follower_id": user_id})
+    following_docs = await following_cursor.to_list(length=1000)
+    followed_ids = [doc["followed_id"] for doc in following_docs]
+    followed_ids.append(user_id)
+    
+    time_threshold = (datetime.utcnow() - timedelta(hours=24)).isoformat()
+    
+    stories_cursor = stories_collection.find({
+        "user_id": {"$in": followed_ids},
+        "created_at": {"$gte": time_threshold}
+    }).sort("created_at", 1)
+    
+    stories = await stories_cursor.to_list(length=100)
+    for s in stories:
+        s.pop("_id", None)
+        
+    grouped_stories = {}
+    for story in stories:
+        uid = story["user_id"]
+        if uid not in grouped_stories:
+            grouped_stories[uid] = {
+                "user_id": uid,
+                "user_name": story.get("user_name", "User"),
+                "user_pic": story.get("user_pic", ""),
+                "has_unseen": user_id not in story.get("viewers", []),
+                "stories": []
+            }
+        grouped_stories[uid]["stories"].append(story)
+        if user_id not in story.get("viewers", []):
+             grouped_stories[uid]["has_unseen"] = True
+             
+    result_list = list(grouped_stories.values())
+    result_list.sort(key=lambda x: (not x["has_unseen"], -len(x["stories"])))
+    return result_list
+
+@app.post("/stories/{story_id}/view")
+async def view_story(story_id: str, viewer_id: str = Query(...)):
+    await stories_collection.update_one(
+        {"id": story_id},
+        {"$addToSet": {"viewers": viewer_id}}
+    )
+    return {"status": "success"}
+
+
+# --- POST REACTIONS (Animated Emojis) ---
+@app.post("/posts/{post_id}/reactions")
+async def toggle_post_reaction(post_id: str, reaction: ReactionCreate):
+    post = await posts_collection.find_one({"id": post_id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+        
+    reactions = post.get("specific_reactions", {})
+    user_id = reaction.user_id
+    rtype = reaction.type
+    
+    if "user_reactions" not in post:
+        post["user_reactions"] = {}
+        
+    user_reactions = post.get("user_reactions", {})
+    current_user_reaction = user_reactions.get(user_id)
+    
+    if current_user_reaction == rtype:
+        del user_reactions[user_id]
+        if rtype in reactions and reactions[rtype] > 0:
+            reactions[rtype] -= 1
+        
+        await posts_collection.update_one(
+            {"id": post_id},
+            {
+                "$set": {
+                    "specific_reactions": reactions,
+                    "user_reactions": user_reactions
+                },
+                "$inc": {"reaction_count": -1}
+            }
+        )
+        action = "removed"
+    else:
+        if current_user_reaction and current_user_reaction in reactions:
+            if reactions[current_user_reaction] > 0:
+                reactions[current_user_reaction] -= 1
+                
+        reactions[rtype] = reactions.get(rtype, 0) + 1
+        user_reactions[user_id] = rtype
+        
+        inc_val = 1 if not current_user_reaction else 0
+        
+        await posts_collection.update_one(
+            {"id": post_id},
+            {
+                "$set": {
+                    "specific_reactions": reactions,
+                    "user_reactions": user_reactions
+                },
+                "$inc": {"reaction_count": inc_val}
+            }
+        )
+        
+        if post.get("user_id") != user_id:
+            await create_notification(
+                user_id=post.get("user_id"),
+                type="reaction",
+                actor_id=user_id,
+                resource_id=post_id,
+                message=f"reacted to your post with {rtype}"
+            )
+            
+        action = "added"
+        
+    return {
+        "status": "success", 
+        "action": action, 
+        "specific_reactions": reactions,
+        "user_reaction": user_reactions.get(user_id)
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
 

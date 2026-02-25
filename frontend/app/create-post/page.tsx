@@ -1,18 +1,26 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import api, { uploadImage, getAbsUrl } from "../lib/api";
-import { Image as ImageIcon, X, Loader2 } from "lucide-react";
+import { Image as ImageIcon, X, Loader2, Users } from "lucide-react";
+import Link from "next/link";
+import { PollCreateData } from "../components/PollBuilder";
 
 import { auth } from "../firebase";
 import CreatePost from "../components/CreatePost";
 
 const MAX_CHARS = 500;
 
-export default function CreatePostPage() {
+function CreatePostContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const paramCommunityId = searchParams.get("community") || null;
+  const communityName = searchParams.get("community_name") || null;
+
+  const [communityId, setCommunityId] = useState<string | null>(paramCommunityId);
 
   const [content, setContent] = useState("");
   const [anonymous, setAnonymous] = useState(false);
@@ -24,12 +32,12 @@ export default function CreatePostPage() {
   const [collaborators, setCollaborators] = useState<string[]>([]);
   const [isProfessionalInquiry, setIsProfessionalInquiry] = useState(false);
   const [selectedHubs, setSelectedHubs] = useState<string[]>([]);
+  const [pollData, setPollData] = useState<PollCreateData | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSaveDraft = async () => {
-    // Basic draft stub for the prop
     console.log("Saving draft...");
   };
 
@@ -68,7 +76,7 @@ export default function CreatePostPage() {
     try {
       await api.post("/posts/", {
         user_id: user.uid,
-        user_name: userName,        // ✅ REQUIRED
+        user_name: userName,
         user_pic: user.photoURL || null,
         content: content.trim(),
         is_anonymous: anonymous,
@@ -76,10 +84,19 @@ export default function CreatePostPage() {
         timeline_id: selectedTimelineId,
         collaborators: collaborators,
         is_professional_inquiry: isProfessionalInquiry,
-        hubs: selectedHubs
+        hubs: selectedHubs,
+        poll: pollData || undefined,
+        // Community targeting
+        ...(communityId ? { community_id: communityId } : {}),
       });
 
-      router.push("/feed");
+      // Redirect back to community if posting from one
+      if (communityId) {
+        // Try to find slug from API or just go to communities
+        router.push("/communities");
+      } else {
+        router.push("/feed");
+      }
     } catch (err: unknown) {
       console.error("CREATE POST ERROR:", err);
 
@@ -116,7 +133,20 @@ export default function CreatePostPage() {
         setIsProfessionalInquiry={setIsProfessionalInquiry}
         selectedHubs={selectedHubs}
         setSelectedHubs={setSelectedHubs}
+        pollData={pollData}
+        setPollData={setPollData}
+        communityId={communityId}
+        setCommunityId={setCommunityId}
       />
     </main>
   );
 }
+
+export default function CreatePostPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin text-primary" size={32} /></div>}>
+      <CreatePostContent />
+    </Suspense>
+  );
+}
+

@@ -232,6 +232,10 @@ function Navbar() {
                 <Home className="w-5 h-5" />
               </Link>
 
+              <Link href="/communities" className="btn-icon" title="Communities">
+                <Users className="w-5 h-5" />
+              </Link>
+
               <div className="relative" ref={savedDropdownRef}>
                 <button
                   onClick={() => setShowSavedDropdown(!showSavedDropdown)}

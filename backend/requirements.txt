@@ -13,3 +13,4 @@ email-validator
 pyotp
 qrcode
 cloudinary
+google-generativeai
