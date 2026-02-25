@@ -240,6 +240,19 @@ body {
   @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/30 transition-colors;
 }
 
+/* Hide scrollbar visually but keep scrollable */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* IE / Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+  /* Chrome / Safari / Opera */
+}
+
 /* ========== MORE UTILITIES ========== */
 
 @layer utilities {
@@ -357,7 +370,8 @@ body {
   @apply border-l-4 border-primary/30 pl-4 italic text-muted-foreground my-4;
 }
 
-/* Note: All custom utilities are now defined in @layer utilities blocks above *//* ============================================
+/* Note: All custom utilities are now defined in @layer utilities blocks above */
+/* ============================================
    VIEW MODES
    ============================================ */
 
@@ -385,10 +399,21 @@ body {
    ============================================ */
 
 /* Font Sizes */
-[data-font-size="small"] { font-size: 14px; }
-[data-font-size="medium"] { font-size: 16px; }
-[data-font-size="large"] { font-size: 18px; }
-[data-font-size="x-large"] { font-size: 20px; }
+[data-font-size="small"] {
+  font-size: 14px;
+}
+
+[data-font-size="medium"] {
+  font-size: 16px;
+}
+
+[data-font-size="large"] {
+  font-size: 18px;
+}
+
+[data-font-size="x-large"] {
+  font-size: 20px;
+}
 
 /* High Contrast */
 .high-contrast {
@@ -433,6 +458,7 @@ body {
 
 /* Touch-friendly tap targets */
 @media (max-width: 768px) {
+
   button,
   a {
     min-height: 44px;
@@ -451,4 +477,77 @@ body {
 .pull-to-refresh-container {
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Premium Components */
+.premium-card {
+  @apply relative bg-card/60 backdrop-blur-xl border border-border/50 rounded-2xl shadow-xl overflow-hidden transition-all duration-300;
+  background-image: radial-gradient(circle at top left, hsl(var(--primary)/0.03), transparent);
+}
+
+.premium-card::before {
+  content: '';
+  @apply absolute inset-0 -z-10 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 opacity-0 transition-opacity duration-300;
+}
+
+.premium-card:hover::before {
+  @apply opacity-100;
+}
+
+.premium-card:hover {
+  @apply border-primary/20 shadow-primary/5;
+}
+
+/* ========== SIMPLEMDE OVERRIDES ========== */
+
+.editor-toolbar {
+  @apply !bg-muted/30 !border-border !rounded-t-xl !border-0 !border-b !py-3 !px-4;
+  backdrop-filter: blur(8px);
+}
+
+.editor-toolbar button {
+  @apply !text-muted-foreground !transition-all !duration-200 !rounded-lg !mx-0.5;
+}
+
+.editor-toolbar button:hover,
+.editor-toolbar button.active {
+  @apply !bg-primary/10 !text-primary !border-transparent;
+}
+
+.editor-toolbar i.separator {
+  @apply !border-l !border-border !mx-2;
+}
+
+.CodeMirror {
+  @apply !bg-transparent !text-foreground !border-0 !font-sans !text-[15px] !p-4 !min-h-[140px] !transition-all !duration-300;
+  border-bottom-left-radius: 0.75rem !important;
+  border-bottom-right-radius: 0.75rem !important;
+}
+
+.CodeMirror-focused {
+  @apply !ring-0;
+}
+
+.CodeMirror-placeholder {
+  @apply !text-muted-foreground/60 !italic;
+}
+
+.CodeMirror-cursor {
+  @apply !border-primary;
+}
+
+.editor-preview-side {
+  @apply !bg-card !text-foreground !border-border;
+}
+
+.editor-statusbar {
+  @apply !text-muted-foreground !py-2 !px-4;
+}
+
+.editor-container {
+  @apply transition-all duration-300 rounded-xl border border-border/50 bg-background/50 overflow-hidden;
+}
+
+.editor-container:focus-within {
+  @apply border-primary/30 bg-background/80 shadow-lg shadow-primary/5;
 }

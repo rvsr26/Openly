@@ -49,7 +49,7 @@ export default function PhoenixBadge({ badges = [], score = 0, size = "sm", show
                 </motion.div>
             )}
 
-            {showScore && (
+            {showScore && score > 0 && (
                 <div className={`flex items-center gap-1 font-mono font-bold text-muted-foreground ${size === 'lg' ? 'text-sm' : 'text-[10px]'}`}>
                     <span>{score}</span>
                     <span className="text-primary">XP</span>

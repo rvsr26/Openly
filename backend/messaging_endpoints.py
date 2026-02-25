@@ -1,60 +1,65 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 import json
+import httpx
 from bson import ObjectId
 from websocket_manager import manager
 from database import (
     follows_collection, 
     conversations_collection, 
     messages_collection, 
-    users_collection
+    users_collection,
+    notifications_collection
 )
 
 router = APIRouter()
 
-# Helper function
+# --- HELPER FUNCTIONS ---
+
 def serialize_doc(doc):
     if not doc: return None
     doc["id"] = str(doc["_id"])
-    del doc["_id"]
+    if "_id" in doc: del doc["_id"]
     return doc
+
+async def deliver_federated_message(receiver_community_url: str, payload: dict):
+    """Asynchronously deliver a message to a remote instance."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(f"{receiver_community_url}/api/messages/remote", json=payload)
+            response.raise_for_status()
+            print(f"✅ Federated message delivered to {receiver_community_url}")
+    except Exception as e:
+        print(f"❌ Federation delivery failed: {e}")
 
 class ConversationRequest(BaseModel):
     user_id: str
     target_user_id: str
+    target_community_url: Optional[str] = None # For federation
 
 class MessageRequest(BaseModel):
     sender_id: str
     content: str
+    type: Optional[str] = "text" # text, image, doc
+    media_url: Optional[str] = None
+
+class RemoteMessageRequest(BaseModel):
+    sender_id: str
+    sender_name: str
+    sender_pic: Optional[str] = None
+    sender_community_url: str
+    receiver_id: str
+    content: str
+    type: str = "text"
+    media_url: Optional[str] = None
+    timestamp: str
 
 class ReadRequest(BaseModel):
     user_id: str
 
-# WebSocket endpoint for real-time messaging
-@router.websocket("/ws/{user_id}")
-async def websocket_endpoint(websocket: WebSocket, user_id: str):
-    await manager.connect(user_id, websocket)
-    try:
-        while True:
-            # Keep connection alive and listen for messages
-            data = await websocket.receive_text()
-            # Handle incoming WebSocket messages (typing indicators, etc.)
-            try:
-                message_data = json.loads(data)
-                if message_data.get("type") == "typing":
-                    # Broadcast typing indicator to other participant
-                    conversation_id = message_data.get("conversation_id")
-                    if conversation_id:
-                        conv = await conversations_collection.find_one({"_id": ObjectId(conversation_id)})
-                        if conv:
-                            other_user = [p for p in conv["participants"] if p != user_id][0]
-                            await manager.send_typing_indicator(other_user, conversation_id, message_data.get("is_typing", False))
-            except:
-                pass
-    except WebSocketDisconnect:
-        manager.disconnect(user_id)
+
 
 # Create or get existing conversation
 @router.post("/conversations/")
@@ -92,10 +97,13 @@ async def create_or_get_conversation(req: ConversationRequest):
     # Create new conversation
     new_conversation = {
         "participants": participants,
+        "participant_instances": {
+            req.target_user_id: req.target_community_url
+        } if req.target_community_url else {},
         "last_message": "",
-        "last_message_at": datetime.utcnow().isoformat(),
+        "last_message_at": datetime.now(timezone.utc).isoformat(),
         "unread_count": {req.user_id: 0, req.target_user_id: 0},
-        "created_at": datetime.utcnow().isoformat()
+        "created_at": datetime.now(timezone.utc).isoformat()
     }
     
     result = await conversations_collection.insert_one(new_conversation)
@@ -194,13 +202,13 @@ async def get_messages(conversation_id: str, limit: int = 50, before: Optional[s
 
 # Send a message
 @router.post("/conversations/{conversation_id}/messages")
-async def send_message(conversation_id: str, req: MessageRequest):
+async def send_message(conversation_id: str, req: MessageRequest, background_tasks: BackgroundTasks):
     try:
         conv_oid = ObjectId(conversation_id)
     except:
         raise HTTPException(404, "Conversation not found")
     
-    # Verify conversation exists and sender is a participant
+    # 1. Verify conversation exists and sender is a participant
     conv = await conversations_collection.find_one({"_id": conv_oid})
     if not conv:
         raise HTTPException(404, "Conversation not found")
@@ -208,26 +216,29 @@ async def send_message(conversation_id: str, req: MessageRequest):
     if req.sender_id not in conv["participants"]:
         raise HTTPException(403, "Not a participant in this conversation")
     
-    # Create message
+    # 2. Save new message
     new_message = {
         "conversation_id": conversation_id,
         "sender_id": req.sender_id,
         "content": req.content,
-        "created_at": datetime.utcnow().isoformat(),
+        "type": req.type or "text",
+        "media_url": req.media_url,
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "is_read": False,
         "is_deleted": False
     }
     
     result = await messages_collection.insert_one(new_message)
-    
-    # Update conversation metadata
+    message_id = str(result.inserted_id)
+
+    # 3. Update conversation metadata
     other_user_id = [p for p in conv["participants"] if p != req.sender_id][0]
     
     await conversations_collection.update_one(
         {"_id": conv_oid},
         {
             "$set": {
-                "last_message": req.content[:100],  # Store preview
+                "last_message": req.content[:100],
                 "last_message_at": new_message["created_at"]
             },
             "$inc": {
@@ -236,38 +247,146 @@ async def send_message(conversation_id: str, req: MessageRequest):
         }
     )
     
-    # Fetch sender info for WebSocket broadcast
+    # 4. Fetch sender info for WebSocket broadcast
     sender = await users_collection.find_one({"_id": req.sender_id})
+    sender_data = serialize_doc(sender) if sender else {}
     
-    # Broadcast via WebSocket if recipient is online
-    ws_message = {
-        "type": "new_message",
-        "message": {
-            "id": str(result.inserted_id),
-            "conversation_id": conversation_id,
-            "sender_id": req.sender_id,
-            "sender_name": sender.get("display_name") if sender else "User",
-            "sender_pic": sender.get("photoURL") if sender else None,
-            "content": req.content,
-            "created_at": new_message["created_at"],
-            "is_read": False
-        }
+    # 5. WebSocket payload
+    ws_payload = {
+        "id": message_id,
+        "conversation_id": conversation_id,
+        "sender_id": req.sender_id,
+        "sender_name": sender_data.get("display_name") or sender_data.get("username") or "User",
+        "sender_pic": sender_data.get("photoURL"),
+        "content": req.content,
+        "type": new_message["type"],
+        "media_url": new_message["media_url"],
+        "created_at": new_message["created_at"],
+        "is_read": False
     }
     
-    await manager.send_personal_message(other_user_id, ws_message)
+    # 6. Broadcast via WebSocket if recipient is online
+    await manager.send_personal_message(other_user_id, {"type": "new_message", "message": ws_payload})
+
+    # 7. Outgoing Federation
+    participant_instances = conv.get("participant_instances", {})
+    receiver_community_url = participant_instances.get(other_user_id)
     
-    # Return the created message
-    return {
+    if receiver_community_url:
+        instance_url = str(router.prefix) if hasattr(router, 'prefix') else ""
+        remote_payload = {
+            "sender_id": req.sender_id,
+            "sender_name": ws_payload["sender_name"],
+            "sender_pic": ws_payload["sender_pic"],
+            "sender_community_url": instance_url,
+            "receiver_id": other_user_id,
+            "content": req.content,
+            "type": new_message["type"],
+            "media_url": new_message["media_url"],
+            "timestamp": new_message["created_at"]
+        }
+        background_tasks.add_task(deliver_federated_message, receiver_community_url, remote_payload)
+    
+    return {**ws_payload, "status": "sent"}
+
+# Receive a remote message from another instance
+@router.post("/api/messages/remote")
+async def receive_remote_message(req: RemoteMessageRequest):
+    print(f"📡 receive_remote_message called from {req.sender_community_url} for receiver {req.receiver_id}")
+    # 1. Ensure local receiver exists
+    receiver = await users_collection.find_one({"_id": req.receiver_id})
+    if not receiver:
+        # In a real federated system, you might handle this differently (e.g., store for later)
+        raise HTTPException(404, "Receiver not found on this instance")
+
+    # 2. Get or create conversation for these participants
+    participants = sorted([req.sender_id, req.receiver_id])
+    conv = await conversations_collection.find_one({"participants": participants})
+    
+    if not conv:
+        new_conv = {
+            "participants": participants,
+            "participant_instances": {
+                req.sender_id: req.sender_community_url
+            },
+            "last_message": req.content[:100],
+            "last_message_at": req.timestamp,
+            "unread_count": {req.sender_id: 0, req.receiver_id: 1},
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        res = await conversations_collection.insert_one(new_conv)
+        conversation_id = str(res.inserted_id)
+    else:
+        conversation_id = str(conv["_id"])
+        await conversations_collection.update_one(
+            {"_id": conv["_id"]},
+            {
+                "$set": {
+                    "last_message": req.content[:100],
+                    "last_message_at": req.timestamp
+                },
+                "$inc": {
+                    f"unread_count.{req.receiver_id}": 1
+                }
+            }
+        )
+
+    # 3. Save message
+    new_message = {
+        "conversation_id": conversation_id,
+        "sender_id": req.sender_id,
+        "content": req.content,
+        "type": req.type,
+        "media_url": req.media_url,
+        "created_at": req.timestamp,
+        "is_read": False,
+        "is_deleted": False,
+        "is_remote": True,
+        "sender_community_url": req.sender_community_url
+    }
+    result = await messages_collection.insert_one(new_message)
+
+    # 4. Broadcast via WebSocket if recipient is online
+    ws_payload = {
         "id": str(result.inserted_id),
         "conversation_id": conversation_id,
         "sender_id": req.sender_id,
-        "sender_name": sender.get("display_name") if sender else "User",
-        "sender_pic": sender.get("photoURL") if sender else None,
+        "sender_name": req.sender_name,
+        "sender_pic": req.sender_pic,
         "content": req.content,
-        "created_at": new_message["created_at"],
+        "type": req.type,
+        "media_url": req.media_url,
+        "created_at": req.timestamp,
         "is_read": False,
-        "status": "sent"
+        "is_remote": True
     }
+    
+    ws_message = {
+        "type": "new_message",
+        "message": ws_payload
+    }
+    
+    await manager.send_personal_message(req.receiver_id, ws_message)
+    
+    # 5. Create local notification
+    try:
+        from database import notifications_collection
+        notification = {
+            "type": "message",
+            "user_id": req.receiver_id,
+            "actor_id": req.sender_id,
+            "actor_name": req.sender_name,
+            "actor_pic": req.sender_pic,
+            "resource_id": conversation_id,
+            "message": f"New message from {req.sender_name}",
+            "is_read": False,
+            "created_at": datetime.utcnow().isoformat()
+        }
+        await notifications_collection.insert_one(notification)
+    except Exception as e:
+        print(f"Warning: Failed to create notification: {e}")
+
+    return {"status": "received", "message_id": str(result.inserted_id)}
 
 # Mark messages as read
 @router.put("/conversations/{conversation_id}/read")

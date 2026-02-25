@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000',
+    withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
     },
@@ -21,11 +22,28 @@ api.interceptors.request.use((config) => {
 
 export const getAbsUrl = (path?: string | null) => {
     if (!path) return "/assets/default_avatar.png";
+
+    // 1. Full URLs or data URIs
     if (path.startsWith("http") || path.startsWith("https") || path.startsWith("data:")) return path;
+
+    // 2. Local frontend assets (stay relative)
+    if (path.startsWith("/assets/") || path.startsWith("assets/")) {
+        return path.startsWith("/") ? path : `/${path}`;
+    }
+
+    // 3. Backend uploads
+    const base = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, "");
+
+    if (path.startsWith("/uploads/") || path.startsWith("uploads/")) {
+        const cleanPath = path.startsWith("/") ? path : `/${path}`;
+        return `${base}${cleanPath}`;
+    }
+
+    // 4. Fallback for other absolute paths (assume backend unless confirmed otherwise)
     if (path.startsWith("/")) {
-        const base = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, "");
         return `${base}${path}`;
     }
+
     return path;
 };
 

@@ -20,7 +20,8 @@ import {
   Settings,
   ChevronDown,
   Menu,
-  X
+  X,
+  Home
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -52,9 +53,10 @@ function Navbar() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      const scrolled = window.scrollY > 20;
+      setIsScrolled(prev => prev === scrolled ? prev : scrolled);
     };
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -68,39 +70,7 @@ function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Hide navbar on landing, login, and signup pages
-  const hiddenPaths = ['/', '/landing', '/login', '/signup'];
-  if (hiddenPaths.includes(pathname)) {
-    return null;
-  }
-
-  const handleAddAccount = async () => {
-    if (authUser) {
-      saveAccount(authUser, localStorage.getItem('token'));
-    }
-    await logout();
-    setShowDropdown(false);
-    router.push("/login");
-  };
-
-  const handleSwitchAccount = async (account: any) => {
-    if (authUser) {
-      saveAccount(authUser, localStorage.getItem('token'));
-    }
-
-    if (account.token) {
-      localStorage.setItem('token', account.token);
-    }
-
-    await refreshSession();
-    setShowDropdown(false);
-  };
-
-  const handleRemoveAccount = (uid: string) => {
-    removeAccount(uid);
-    setStoredAccounts(getStoredAccounts());
-  };
-
+  // Move hooks here to satisfy Rules of Hooks
   const { data: profile } = useQuery({
     queryKey: ["userProfile", authUser?.uid],
     queryFn: async () => {
@@ -122,14 +92,77 @@ function Navbar() {
     refetchInterval: 5000,
   });
 
+  // Real-time notification badge via WebSocket
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const wsRef = useRef<WebSocket | null>(null);
+  const WSURL = process.env.NEXT_PUBLIC_WS_URL || (typeof window !== 'undefined' ? `ws://${window.location.hostname}:8000` : '');
+
+  useEffect(() => {
+    if (!authUser) return;
+    const ws = new WebSocket(`${WSURL}/ws/${authUser.uid}`);
+    wsRef.current = ws;
+    ws.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        // Any notification event increments the badge
+        if (data.type && !['message', 'typing'].includes(data.type)) {
+          setUnreadNotifs(prev => prev + 1);
+        }
+      } catch { }
+    };
+    ws.onerror = () => { }; // silent fail — WS is enhancement only
+    return () => { ws.readyState === WebSocket.OPEN && ws.close(); };
+  }, [authUser?.uid]);
+
   const handleCreatePost = useCallback(() => {
     if (!authUser) router.push("/login");
     else router.push("/create-post");
   }, [authUser, router]);
 
+  // Hide navbar on landing, login, and signup pages
+  const hiddenPaths = ['/', '/landing', '/login', '/signup'];
+  if (hiddenPaths.includes(pathname)) {
+    return null;
+  }
+
+  const handleAddAccount = async () => {
+    if (authUser) {
+      const currentToken = localStorage.getItem('token');
+      saveAccount(authUser, currentToken === "null" || currentToken === "undefined" ? null : currentToken);
+    }
+    await logout();
+    setShowDropdown(false);
+    router.push("/login");
+  };
+
+  const handleSwitchAccount = async (account: any) => {
+    if (authUser) {
+      const currentToken = localStorage.getItem('token');
+      saveAccount(authUser, currentToken === "null" || currentToken === "undefined" ? null : currentToken);
+    }
+
+    if (account.token && account.token !== "null" && account.token !== "undefined") {
+      localStorage.setItem('token', account.token);
+    } else {
+      localStorage.removeItem('token');
+    }
+
+    await refreshSession();
+    setShowDropdown(false);
+  };
+
+  const handleRemoveAccount = (uid: string) => {
+    removeAccount(uid);
+    setStoredAccounts(getStoredAccounts());
+  };
+
+
   const handleLogout = async () => {
     try {
-      if (authUser) saveAccount(authUser, localStorage.getItem('token'));
+      if (authUser) {
+        const currentToken = localStorage.getItem('token');
+        saveAccount(authUser, currentToken === "null" || currentToken === "undefined" ? null : currentToken);
+      }
       await logout();
       localStorage.removeItem('token');
       await refreshSession();
@@ -188,6 +221,10 @@ function Navbar() {
 
             {/* Icons (Desktop) */}
             <div className="hidden sm:flex items-center gap-1">
+              <Link href="/feed" className="btn-icon" title="Home">
+                <Home className="w-5 h-5" />
+              </Link>
+
               <Link href="/messages" className="btn-icon relative">
                 <MessageCircle className="w-5 h-5" />
                 {unreadCount && unreadCount.unread_count > 0 && (
@@ -197,8 +234,13 @@ function Navbar() {
                 )}
               </Link>
 
-              <Link href="/notifications" className="btn-icon">
+              <Link href="/notifications" className="btn-icon relative" onClick={() => setUnreadNotifs(0)}>
                 <Bell className="w-5 h-5" />
+                {unreadNotifs > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold animate-pulse">
+                    {unreadNotifs > 9 ? '9+' : unreadNotifs}
+                  </span>
+                )}
               </Link>
 
               {/* Theme Toggle */}
@@ -219,12 +261,11 @@ function Navbar() {
                     {profile?.user_info?.display_name || authUser.displayName || 'User'}
                   </span>
                   <div className="relative w-8 h-8 rounded-lg overflow-hidden ring-2 ring-border">
-                    <Image
-                      src={getAbsUrl(profile?.user_info?.photoURL || authUser.photoURL) || '/assets/default-user.png'}
-                      fill
-                      className="object-cover"
+                    <img
+                      src={getAbsUrl(profile?.user_info?.photoURL || authUser.photoURL)}
+                      className="object-cover w-8 h-8"
+                      onError={(e) => { if (!e.currentTarget.src.includes('default_avatar')) e.currentTarget.src = '/assets/default_avatar.png'; }}
                       alt="Profile"
-                      sizes="32px"
                     />
                   </div>
                   <ChevronDown className={`hidden sm:block w-4 h-4 text-muted-foreground transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
@@ -277,7 +318,7 @@ function Navbar() {
                             <div key={acc.uid} className="flex items-center justify-between px-4 py-2 hover:bg-muted/50 group transition-colors cursor-pointer" onClick={() => handleSwitchAccount(acc)}>
                               <div className="flex items-center gap-2">
                                 <div className="w-6 h-6 rounded-full overflow-hidden relative border border-border">
-                                  <Image src={getAbsUrl(acc.photoURL) || '/assets/default-user.png'} fill alt={acc.displayName || 'User'} className="object-cover" />
+                                  <img src={getAbsUrl(acc.photoURL)} className="object-cover w-6 h-6" onError={(e) => { if (!e.currentTarget.src.includes('default_avatar')) e.currentTarget.src = '/assets/default_avatar.png'; }} alt={acc.displayName || 'User'} />
                                 </div>
                                 <div className="max-w-[120px]">
                                   <p className="text-sm font-medium text-foreground truncate">{acc.displayName || 'User'}</p>

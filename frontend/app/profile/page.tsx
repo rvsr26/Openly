@@ -116,28 +116,9 @@ export default function ProfilePage() {
           isOwner={true}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* LEFT SIDEBAR (Stats & About for Desktop) */}
-          <div className="lg:col-span-1 space-y-8">
-            <div className="glass-card p-6 hidden lg:block sticky top-28">
-              <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground mb-4">About Me</h3>
-              <p className="text-sm font-medium leading-relaxed text-foreground/80">
-                Turning failures into features. Every stumble is a step forward.
-              </p>
-              <div className="mt-6 pt-6 border-t border-border">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[10px] font-black uppercase text-primary">Resilience</span>
-                  <span className="text-xs font-bold text-primary">98%</span>
-                </div>
-                <div className="h-2 w-full bg-primary/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary w-[98%]"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 gap-8">
           {/* MAIN CONTENT */}
-          <div className="lg:col-span-3">
+          <div className="w-full">
             <ProfileStats stats={profileData.stats} />
 
             <ProfileTabs activeTab={activeTab} setActiveTab={setActiveTab} />

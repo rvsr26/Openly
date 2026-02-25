@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "../app/firebase";
 import { useQueryClient } from "@tanstack/react-query";
@@ -18,9 +18,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [loading, setLoading] = useState(true);
     const queryClient = useQueryClient();
 
+    // Stable reference to latest user state for closures
+    const userRef = useRef<any | null>(null);
+
+    // Update ref whenever user state changes
+    useEffect(() => {
+        userRef.current = user;
+    }, [user]);
+
     const refreshSession = async () => {
         const token = localStorage.getItem('token');
-        if (!token) {
+        if (!token || token === "undefined" || token === "null") {
+            localStorage.removeItem('token');
             setUser(null);
             setLoading(false);
             return;
@@ -36,7 +45,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
             if (response.ok) {
                 const userData = await response.json();
-                // Map backend user to expected format if needed
                 setUser({
                     uid: userData.id,
                     email: userData.email,
@@ -62,19 +70,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
         // Initial bootstrap from token if exists
         const token = localStorage.getItem('token');
-        if (token) {
+        if (token && token !== "undefined" && token !== "null") {
             refreshSession();
         }
 
         const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
             if (fbUser) {
                 const currentToken = localStorage.getItem('token');
+                const prev = userRef.current;
 
-                // If we already have a user from token, check if it matches fbUser
-                // If not, we might be in a "switched" state, so we don't automatically overwrite
-                // unless it's the SAME user (then we refresh token).
-                if (user && user.uid !== fbUser.uid && user.isFromToken) {
+                if (prev && prev.uid !== fbUser.uid && prev.isFromToken) {
                     console.log("Firebase user changed but we are in a switched session. Ignoring Firebase sync.");
+                    setLoading(false);
                     return;
                 }
 
@@ -96,16 +103,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
                         if (data['2fa_required']) {
                             console.log("🔐 MFA Required");
-                            // We need to redirect to MFA page
-                            // Since we can't use router here easily without extensive changes (it's a provider),
-                            // we can use window.location or expect the component using useAuth to handle it?
-                            // Actually, we can assume we are in a client component tree.
-                            // Let's use window.location for simplicity and reliability here
                             window.location.href = `/auth/mfa?uid=${data.user_id}`;
                             return;
                         }
 
-                        localStorage.setItem('token', data.access_token);
+                        if (data.access_token && data.access_token !== "undefined" && data.access_token !== "null") {
+                            localStorage.setItem('token', data.access_token);
+                        }
                         console.log("✅ Synced with backend");
                         setUser(fbUser);
                     } else {
@@ -117,9 +121,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             } else {
                 // No Firebase user. 
                 // We keep the current user if it was loaded from a token.
-                if (user && user.isFromToken) {
-                    // Keep token-based user
-                } else {
+                const prev = userRef.current;
+                if (!prev || !prev.isFromToken) {
                     setUser(null);
                 }
             }

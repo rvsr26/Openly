@@ -8,6 +8,9 @@ from typing import Optional, List
 from datetime import datetime, timezone
 import shutil
 from dotenv import load_dotenv
+load_dotenv()  # Load environment variables early
+import cloudinary
+import cloudinary.uploader
 from ai_utils import is_toxic, extract_keywords
 from database import (
     posts_collection, users_collection, comments_collection, reactions_collection, 
@@ -43,10 +46,10 @@ try:
         validate_password_strength
     )
     AUTH_ENABLED = True
-    print("✅ Authentication and security middleware loaded successfully")
+    print("[SUCCESS] Authentication and security middleware loaded successfully")
 except Exception as e:
-    print(f"⚠️ Authentication module not available: {e}")
-    print("⚠️ App will run without Phase 1 auth features")
+    print(f"[ERROR] Authentication module not available: {e}")
+    print("[WARNING] App will run without Phase 1 auth features")
     # Define dummy functions to prevent errors
     class EmailVerificationRequest(BaseModel):
         pass
@@ -124,9 +127,9 @@ if AUTH_ENABLED:
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
-    print("✅ Security middleware registered")
+    print("[SUCCESS] Security middleware registered")
 else:
-    print("⚠️ Running without security middleware")
+    print("[WARNING] Running without security middleware")
 
 # CORS configuration
 app.add_middleware(
@@ -147,6 +150,14 @@ app.add_middleware(
 )
 
 # --- STATIC FILES ---
+# Configure Cloudinary
+cloudinary_url = os.getenv("CLOUDINARY_URL")
+if cloudinary_url:
+    cloudinary.config(cloudinary_url=cloudinary_url)
+    print(f"[SUCCESS] Cloudinary configured with URL: {cloudinary_url[:20]}...")
+else:
+    print("[WARNING] CLOUDINARY_URL not found in environment")
+
 UPLOAD_DIR = "uploads"
 if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
@@ -154,29 +165,61 @@ if not os.path.exists(UPLOAD_DIR):
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 @app.post("/upload")
+@app.post("/upload/image")
 async def upload_file(file: UploadFile = File(...)):
     """
-    Upload a file to the server.
-    Returns the absolute URL of the uploaded file.
+    Upload a file to Cloudinary.
+    Returns the secure URL of the uploaded file.
     """
     try:
-        # Generate unique filename
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        filename = f"{timestamp}_{file.filename.replace(' ', '_')}"
-        file_path = os.path.join(UPLOAD_DIR, filename)
+        # Upload to Cloudinary
+        # We pass the file content directly for better reliability
+        file_content = await file.read()
+        result = cloudinary.uploader.upload(
+            file_content,
+            folder="openly_uploads",
+            resource_type="auto"
+        )
         
-        # Save file
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        # Get the secure URL
+        file_url = result.get("secure_url")
+        
+        if not file_url:
+            raise Exception("Failed to get secure URL from Cloudinary")
             
-        # Construct URL (Assuming server runs on port 8000)
-        # In production, use env var for base URL
-        base_url = os.getenv("BACKEND_URL", "http://localhost:8000")
-        file_url = f"{base_url}/uploads/{filename}"
-        
+        print(f"[SUCCESS] File uploaded to Cloudinary: {file_url}")
         return {"url": file_url}
     except Exception as e:
+        print(f"[ERROR] Cloudinary upload failed: {e}")
         raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
+
+@app.post("/admin/migrate/clear-stale-photos")
+async def migrate_clear_stale_photos():
+    """One-time migration: clears stale /uploads/ paths and replaces them with None."""
+    import re
+    stale_regex = re.compile(r"^/uploads/", re.IGNORECASE)
+    
+    users_fixed = 0
+    posts_fixed = 0
+    
+    # Fix users collection
+    async for user in users_collection.find({"photoURL": {"$regex": "^/uploads/", "$options": "i"}}):
+        uid = user["_id"]
+        await users_collection.update_one({"_id": uid}, {"$set": {"photoURL": None}})
+        users_fixed += 1
+    
+    # Fix posts collection
+    result = await posts_collection.update_many(
+        {"user_pic": {"$regex": "^/uploads/", "$options": "i"}},
+        {"$set": {"user_pic": None}}
+    )
+    posts_fixed = result.modified_count
+    
+    return {
+        "status": "done",
+        "users_fixed": users_fixed,
+        "posts_fixed": posts_fixed
+    }
 
 # --- STARTUP: DATABASE INDEXING ---
 @app.on_event("startup")
@@ -201,9 +244,9 @@ async def create_indexes():
         # Index for filtering rejected posts
         await posts_collection.create_index([("is_rejected", 1), ("category", 1)])
         
-        print("✅ Database indexes created successfully")
+        print("[SUCCESS] Database indexes created successfully")
     except Exception as e:
-        print(f"⚠️ Error creating indexes: {e}")
+        print(f"[ERROR] Error creating indexes: {e}")
 
 # --- 2. MODELS ---
 
@@ -305,6 +348,9 @@ async def get_user_by_any_id(user_id: str):
             user = await users_collection.find_one({"_id": ObjectId(user_id)})
         except:
             pass
+    if not user:
+        # 4. Try match on username as last resort
+        user = await users_collection.find_one({"username": user_id.lower()})
     return user
 
 # --- 4. CORE ROUTES ---
@@ -488,7 +534,17 @@ async def api_sync_user(req: UserSyncRequest):
         update_data = {"last_synced_at": now}
         if req.email: update_data["email"] = req.email
         if req.display_name: update_data["display_name"] = req.display_name
-        if req.photoURL: update_data["photoURL"] = req.photoURL
+        
+        # Only update photoURL if it's a valid external URL (not a local /uploads/ path)
+        if req.photoURL and (req.photoURL.startswith("http") or req.photoURL.startswith("https")):
+            old_photo = user.get("photoURL", "")
+            update_data["photoURL"] = req.photoURL
+            # Propagate to all this user's posts only if the URL actually changed
+            if old_photo != req.photoURL:
+                await posts_collection.update_many(
+                    {"user_id": req.uid, "is_anonymous": {"$ne": True}},
+                    {"$set": {"user_pic": req.photoURL}}
+                )
         
         await users_collection.update_one({"_id": req.uid}, {"$set": update_data})
     else:
@@ -520,7 +576,7 @@ async def api_sync_user(req: UserSyncRequest):
             from auth import create_access_token
             token = create_access_token({"sub": req.uid, "email": req.email})
         except ImportError:
-            print("⚠️ Auth module import failed in sync endpoint")
+            print("[WARNING] Auth module import failed in sync endpoint")
     
     return {
         "access_token": token,
@@ -1010,8 +1066,169 @@ async def delete_post(post_id: str, user_id: str):
         raise HTTPException(status_code=403, detail="Permission denied")
         
     await posts_collection.delete_one({"_id": oid})
-    # Optional: Delete comments and reactions? For now keeping it simple.
     return {"status": "deleted"}
+
+
+# ─── POST EDITING ───────────────────────────────────────────────────────────
+
+class PostEditRequest(BaseModel):
+    user_id: str
+    content: Optional[str] = None
+    title: Optional[str] = None
+
+@app.patch("/posts/{post_id}")
+async def edit_post(post_id: str, req: PostEditRequest):
+    try:
+        oid = ObjectId(post_id)
+    except:
+        raise HTTPException(400, "Invalid post ID")
+    post = await posts_collection.find_one({"_id": oid})
+    if not post:
+        raise HTTPException(404, "Post not found")
+    if post.get("user_id") != req.user_id:
+        raise HTTPException(403, "Permission denied")
+
+    updates: dict = {"edited_at": datetime.now(timezone.utc).isoformat()}
+    if req.content is not None:
+        updates["content"] = req.content
+    if req.title is not None:
+        updates["title"] = req.title
+
+    await posts_collection.update_one({"_id": oid}, {"$set": updates})
+    return {"status": "edited"}
+
+
+# ─── POST INSIGHTS ───────────────────────────────────────────────────────────
+
+@app.get("/posts/{post_id}/insights")
+async def get_post_insights(post_id: str, user_id: str):
+    try:
+        oid = ObjectId(post_id)
+    except:
+        raise HTTPException(400, "Invalid post ID")
+    post = await posts_collection.find_one({"_id": oid})
+    if not post:
+        raise HTTPException(404, "Post not found")
+    if post.get("user_id") != user_id:
+        raise HTTPException(403, "Not your post")
+
+    comments_count = await comments_collection.count_documents({"post_id": post_id})
+    reactions_count = await reactions_collection.count_documents({"post_id": post_id})
+    bookmarks_count = await bookmarks_collection.count_documents({"post_id": post_id})
+    downvotes_count = await downvotes_collection.count_documents({"post_id": post_id})
+
+    return {
+        "views": post.get("view_count", 0),
+        "reactions": reactions_count,
+        "downvotes": downvotes_count,
+        "comments": comments_count,
+        "bookmarks": bookmarks_count,
+        "created_at": post.get("created_at"),
+        "edited_at": post.get("edited_at"),
+    }
+
+
+# ─── HASHTAG FEED ────────────────────────────────────────────────────────────
+
+@app.get("/tags/{tag}/posts")
+async def get_posts_by_tag(tag: str, sort_by: str = "new", limit: int = 50):
+    tag_clean = tag.lstrip("#").lower()
+    query = {"tags": {"$elemMatch": {"$regex": f"^{tag_clean}$", "$options": "i"}},
+             "is_rejected": False, "is_archived": False}
+    if sort_by == "hot":
+        cursor = posts_collection.find(query).sort("reaction_count", -1).limit(limit)
+    elif sort_by == "top":
+        cursor = posts_collection.find(query).sort("view_count", -1).limit(limit)
+    else:
+        cursor = posts_collection.find(query).sort("created_at", -1).limit(limit)
+
+    posts = []
+    async for doc in cursor:
+        posts.append(serialize_doc(doc))
+    return posts
+
+
+# ─── CONTENT WARNINGS ────────────────────────────────────────────────────────
+
+class ContentWarningRequest(BaseModel):
+    user_id: str
+    content_warning: Optional[str] = None  # None to remove
+
+@app.patch("/posts/{post_id}/content-warning")
+async def set_content_warning(post_id: str, req: ContentWarningRequest):
+    try:
+        oid = ObjectId(post_id)
+    except:
+        raise HTTPException(400, "Invalid post ID")
+    post = await posts_collection.find_one({"_id": oid})
+    if not post:
+        raise HTTPException(404, "Post not found")
+    if post.get("user_id") != req.user_id:
+        raise HTTPException(403, "Permission denied")
+
+    await posts_collection.update_one(
+        {"_id": oid},
+        {"$set": {"content_warning": req.content_warning}}
+    )
+    return {"status": "updated", "content_warning": req.content_warning}
+
+
+# ─── BLOCK / MUTE SYSTEM ─────────────────────────────────────────────────────
+
+from database import blocks_collection, mutes_collection
+
+class BlockMuteRequest(BaseModel):
+    user_id: str  # the actor
+
+@app.post("/users/{target_id}/block")
+async def block_user(target_id: str, req: BlockMuteRequest):
+    if req.user_id == target_id:
+        raise HTTPException(400, "Cannot block self")
+    await blocks_collection.update_one(
+        {"blocker_id": req.user_id, "blocked_id": target_id},
+        {"$set": {"blocker_id": req.user_id, "blocked_id": target_id,
+                  "created_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True
+    )
+    return {"status": "blocked"}
+
+@app.delete("/users/{target_id}/block")
+async def unblock_user(target_id: str, user_id: str):
+    await blocks_collection.delete_one({"blocker_id": user_id, "blocked_id": target_id})
+    return {"status": "unblocked"}
+
+@app.post("/users/{target_id}/mute")
+async def mute_user(target_id: str, req: BlockMuteRequest):
+    if req.user_id == target_id:
+        raise HTTPException(400, "Cannot mute self")
+    await mutes_collection.update_one(
+        {"muter_id": req.user_id, "muted_id": target_id},
+        {"$set": {"muter_id": req.user_id, "muted_id": target_id,
+                  "created_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True
+    )
+    return {"status": "muted"}
+
+@app.delete("/users/{target_id}/mute")
+async def unmute_user(target_id: str, user_id: str):
+    await mutes_collection.delete_one({"muter_id": user_id, "muted_id": target_id})
+    return {"status": "unmuted"}
+
+@app.get("/users/{user_id}/blocked")
+async def get_blocked_users(user_id: str):
+    cursor = blocks_collection.find({"blocker_id": user_id})
+    results = []
+    async for doc in cursor:
+        target = await get_user_by_any_id(doc["blocked_id"])
+        if target:
+            results.append({
+                "user_id": doc["blocked_id"],
+                "username": target.get("username", ""),
+                "display_name": target.get("display_name") or target.get("username", "User"),
+                "photoURL": target.get("photoURL")
+            })
+    return results
+
 
 # --- REPORTS ---
 
@@ -1129,11 +1346,23 @@ async def search_mixed(q: str = Query(..., min_length=3), user_id: Optional[str]
 # --- PROFILE ---
 
 @app.get("/users/{user_id}/profile")
-async def get_user_profile_v2(user_id: str):
+async def get_user_profile_v2(user_id: str, requester_id: Optional[str] = None):
     # Fetch user data (user_id is _id or uid)
     user_data = await get_user_by_any_id(user_id)
     if not user_data:
         raise HTTPException(404, "User not found")
+
+    # Check if requester follows this user
+    is_following = False
+    follow_status = "not_following"
+    if requester_id:
+        follow_record = await follows_collection.find_one({
+            "follower_id": requester_id,
+            "following_id": user_id
+        })
+        if follow_record:
+            follow_status = follow_record.get("status", "accepted")  # backward compat
+            is_following = follow_status == "accepted"
 
     # Fetch posts
     cursor = posts_collection.find({"user_id": user_id}).sort("created_at", -1)
@@ -1141,6 +1370,9 @@ async def get_user_profile_v2(user_id: str):
     user_posts = []
     total_views = 0
     total_posts = 0
+    
+    # Determine the best photoURL
+    best_photo_url = user_data.get("photoURL")
     
     async for doc in cursor:
         data = serialize_doc(doc)
@@ -1150,17 +1382,29 @@ async def get_user_profile_v2(user_id: str):
             data["user_name"] = user_data.get("display_name") or user_data.get("username") or data["user_name"]
             data["user_pic"] = user_data.get("photoURL") or data["user_pic"]
             data["username"] = "@" + user_data.get("username", "user")
+            
+            # Legacy fallback: If the user has no photoURL but one of their posts does, use it
+            if not best_photo_url and data.get("user_pic") and "/assets/default" not in data.get("user_pic"):
+                best_photo_url = data["user_pic"]
 
         total_views += data.get("view_count", 0)
         total_posts += 1
         user_posts.append(data)
     
+    # Get follower/following counts — only accepted follows count
+    user_ids_list = [str(user_data["_id"])]
+    if user_data.get("uid"):
+        user_ids_list.append(user_data["uid"])
+
+    followers_count = await follows_collection.count_documents({"following_id": {"$in": user_ids_list}, "status": "accepted"})
+    following_count = await follows_collection.count_documents({"follower_id": {"$in": user_ids_list}, "status": "accepted"})
+
     return {
         "user_info": {
             "id": str(user_data.get("_id")),
             "username": user_data.get("username", None),
             "display_name": user_data.get("display_name", "Anonymous"),
-            "photoURL": user_data.get("photoURL", None),
+            "photoURL": best_photo_url,
             "headline": user_data.get("headline", None),
             "bio": user_data.get("bio", None),
             "website": user_data.get("website", None),
@@ -1169,17 +1413,21 @@ async def get_user_profile_v2(user_id: str):
             "education": user_data.get("education", []),
             "skills": user_data.get("skills", []),
             "phoenix_score": user_data.get("phoenix_score", 0),
-            "badges": user_data.get("badges", [])
+            "badges": user_data.get("badges", []),
+            "is_following": is_following,
+            "follow_status": follow_status
         },
         "stats": {
             "total_views": total_views,
-            "total_posts": total_posts
+            "total_posts": total_posts,
+            "followers": followers_count,
+            "following": following_count
         },
         "posts": user_posts
     }
 
 @app.post("/users/profile/photo")
-async def upload_profile_photo(user_id: str, request: Request, file: UploadFile = File(...)):
+async def upload_profile_photo(user_id: str, file: UploadFile = File(...)):
     # Validate file type
     if not file.content_type.startswith("image/"):
         raise HTTPException(400, "Only images allowed")
@@ -1189,46 +1437,37 @@ async def upload_profile_photo(user_id: str, request: Request, file: UploadFile 
     if not user:
         raise HTTPException(404, "User not found")
 
-    # Define path
-    ext = file.filename.split(".")[-1]
-    filename = f"{user_id}_{int(datetime.now(timezone.utc).timestamp())}.{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-
-    # Save file
-    with open(filepath, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    # Update DB - Use relative path for robustness across environments
-    photo_url = f"/uploads/{filename}"
-    await users_collection.update_one(
-        {"_id": user_id},
-        {"$set": {"photoURL": photo_url}}
-    )
-
-    # Propagate to all posts by this user
-    await posts_collection.update_many(
-        {"user_id": user_id},
-        {"$set": {"user_pic": photo_url}}
-    )
-
-    return {"status": "success", "photoURL": photo_url}
-
-@app.post("/upload/image")
-async def upload_image(file: UploadFile = File(...)):
-    # Validate file type
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(400, "Only images allowed")
-    
-    # Generate unique filename
-    ext = file.filename.split(".")[-1]
-    filename = f"img_{int(datetime.now(timezone.utc).timestamp())}_{os.urandom(4).hex()}.{ext}"
-    filepath = os.path.join(UPLOAD_DIR, filename)
-    
-    # Save file
-    with open(filepath, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    try:
+        # Upload to Cloudinary
+        file_content = await file.read()
+        result = cloudinary.uploader.upload(
+            file_content,
+            folder="profile_photos",
+            resource_type="auto"
+        )
+        photo_url = result.get("secure_url")
         
-    return {"url": f"/uploads/{filename}"}
+        if not photo_url:
+            raise Exception("Failed to get secure URL from Cloudinary")
+
+        # Update DB
+        await users_collection.update_one(
+            {"_id": user_id},
+            {"$set": {"photoURL": photo_url}}
+        )
+
+        # Propagate to all posts by this user
+        await posts_collection.update_many(
+            {"user_id": user_id},
+            {"$set": {"user_pic": photo_url}}
+        )
+
+        return {"status": "success", "photoURL": photo_url}
+    except Exception as e:
+        print(f"[ERROR] Profile photo upload failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+# Removed duplicate upload_image (using unified endpoint at line 169)
 
 @app.get("/users/username/{username}")
 async def public_profile(username: str):
@@ -1268,10 +1507,25 @@ class ProfileUpdateRequest(BaseModel):
     bio: Optional[str] = None
     website: Optional[str] = None
     location: Optional[str] = None
+    display_name: Optional[str] = None
+    username: Optional[str] = None
 
 @app.post("/users/profile/update")
 async def update_profile(req: ProfileUpdateRequest):
     update_data = {}
+    if req.display_name is not None: update_data["display_name"] = req.display_name
+    if req.username is not None: 
+        username = req.username.strip().lower()
+        if len(username) >= 3 and " " not in username:
+            # Check if username is taken
+            existing = await users_collection.find_one({"username": username})
+            if not existing or str(existing["_id"]) == req.user_id or existing.get("uid") == req.user_id:
+                update_data["username"] = username
+            else:
+                raise HTTPException(400, "Username is already taken")
+        else:
+            raise HTTPException(400, "Username must be at least 3 characters and contain no spaces")
+    
     if req.headline is not None: update_data["headline"] = req.headline
     if req.bio is not None: update_data["bio"] = req.bio
     if req.website is not None: update_data["website"] = req.website
@@ -1541,48 +1795,142 @@ async def mark_notification_read(id: str):
     except:
         return {"status": "error"}
 
-# --- FOLLOW SYSTEM ---
+# --- FOLLOW SYSTEM (Request → Approval) ---
 
 from database import follows_collection
 
+class FollowRequestModel(BaseModel):
+    user_id: str  # the requester
+
 @app.post("/users/{target_id}/follow")
-async def follow_user(target_id: str, req: ViewRequest):
-    # req.user_id is the FOLLOWER
+async def send_follow_request(target_id: str, req: FollowRequestModel):
+    """Send a follow request. Creates a pending request; target must accept."""
     if req.user_id == target_id:
         raise HTTPException(400, "Cannot follow self")
-        
-    # Check if target exists
+
     target = await get_user_by_any_id(target_id)
     if not target:
         raise HTTPException(404, "User not found")
-        
-    # Upsert follow record
-    await follows_collection.update_one(
-        {"follower_id": req.user_id, "following_id": target_id},
-        {"$set": {
-            "follower_id": req.user_id,
-            "following_id": target_id,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }},
-        upsert=True
-    )
-    
-    # Notify Target
-    await create_notification(target_id, "follow", req.user_id)
-    
-    return {"status": "following"}
+
+    # Check if already following (accepted)
+    existing_accepted = await follows_collection.find_one({
+        "follower_id": req.user_id,
+        "following_id": target_id,
+        "status": "accepted"
+    })
+    if existing_accepted:
+        return {"status": "already_following"}
+
+    # Check if pending request already sent
+    existing_pending = await follows_collection.find_one({
+        "follower_id": req.user_id,
+        "following_id": target_id,
+        "status": "pending"
+    })
+    if existing_pending:
+        return {"status": "pending"}
+
+    # Create pending follow request
+    await follows_collection.insert_one({
+        "follower_id": req.user_id,
+        "following_id": target_id,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
+    # Notify the target user
+    await create_notification(target_id, "follow_request", req.user_id,
+                              message="sent you a follow request")
+
+    return {"status": "pending"}
+
 
 @app.delete("/users/{target_id}/follow")
 async def unfollow_user(target_id: str, user_id: str):
+    """Unfollow or cancel a pending follow request."""
     result = await follows_collection.delete_one({
         "follower_id": user_id,
         "following_id": target_id
     })
-    
     if result.deleted_count == 0:
         return {"status": "not_following"}
-        
     return {"status": "unfollowed"}
+
+
+@app.get("/users/{user_id}/follow-requests")
+async def get_follow_requests(user_id: str):
+    """Get all pending follow requests for a user (i.e. people wanting to follow them)."""
+    cursor = follows_collection.find({
+        "following_id": user_id,
+        "status": "pending"
+    }).sort("created_at", -1)
+
+    requests = []
+    async for doc in cursor:
+        requester = await get_user_by_any_id(doc["follower_id"])
+        if requester:
+            requests.append({
+                "id": str(doc["_id"]),
+                "requester_id": doc["follower_id"],
+                "requester_name": requester.get("display_name") or requester.get("username", "User"),
+                "requester_username": requester.get("username", ""),
+                "requester_pic": requester.get("photoURL"),
+                "created_at": doc["created_at"]
+            })
+    return requests
+
+
+@app.post("/users/follow-requests/{request_id}/accept")
+async def accept_follow_request(request_id: str, user_id: str):
+    """Accept a follow request. The user_id must be the target (receiver)."""
+    try:
+        oid = ObjectId(request_id)
+    except:
+        raise HTTPException(400, "Invalid request ID")
+
+    doc = await follows_collection.find_one({"_id": oid, "following_id": user_id, "status": "pending"})
+    if not doc:
+        raise HTTPException(404, "Follow request not found")
+
+    await follows_collection.update_one(
+        {"_id": oid},
+        {"$set": {"status": "accepted", "accepted_at": datetime.now(timezone.utc).isoformat()}}
+    )
+
+    # Notify the requester their request was accepted
+    await create_notification(doc["follower_id"], "follow_accepted", user_id,
+                              message="accepted your follow request")
+
+    return {"status": "accepted"}
+
+
+@app.post("/users/follow-requests/{request_id}/reject")
+async def reject_follow_request(request_id: str, user_id: str):
+    """Reject (delete) a follow request."""
+    try:
+        oid = ObjectId(request_id)
+    except:
+        raise HTTPException(400, "Invalid request ID")
+
+    result = await follows_collection.delete_one({"_id": oid, "following_id": user_id, "status": "pending"})
+    if result.deleted_count == 0:
+        raise HTTPException(404, "Follow request not found")
+
+    return {"status": "rejected"}
+
+
+@app.get("/users/{user_id}/follow-status/{target_id}")
+async def get_follow_status(user_id: str, target_id: str):
+    """Returns the follow status between user_id and target_id."""
+    doc = await follows_collection.find_one({
+        "follower_id": user_id,
+        "following_id": target_id
+    })
+    if not doc:
+        return {"status": "not_following"}
+    return {"status": doc.get("status", "unknown")}
+
+
 
 @app.get("/users/suggested")
 async def get_suggested_users(user_id: Optional[str] = None):
@@ -1639,7 +1987,7 @@ async def get_user_profile(user_id: str):
     posts_count = await posts_collection.count_documents({"user_id": user_id, "is_deleted": False}) # Assuming soft delete or just check existence
     
     user_info = {
-        "uid": user["uid"],
+        "uid": user.get("uid") or str(user["_id"]),
         "username": user.get("username"),
         "display_name": user.get("display_name"),
         "email": user.get("email"),
@@ -1687,32 +2035,70 @@ async def update_user_profile(user_id: str, profile: UpdateProfileRequest):
     return {"status": "updated"}
 
 @app.get("/users/{user_id}/followers")
-async def get_followers(user_id: str):
-    cursor = follows_collection.find({"following_id": user_id})
+async def get_followers(user_id: str, requester_id: Optional[str] = None):
+    user = await get_user_by_any_id(user_id)
+    if not user:
+        return []
+    
+    user_ids = [str(user["_id"])]
+    if user.get("uid"):
+        user_ids.append(user["uid"])
+        
+    cursor = follows_collection.find({"following_id": {"$in": user_ids}})
     followers = []
     async for doc in cursor:
-        user = await get_user_by_any_id(doc["follower_id"])
-        if user:
+        f_user = await get_user_by_any_id(doc["follower_id"])
+        if f_user:
+            is_following = False
+            if requester_id:
+                f_ids = [str(f_user["_id"])]
+                if f_user.get("uid"): f_ids.append(f_user["uid"])
+                req_follow = await follows_collection.find_one({
+                    "follower_id": requester_id,
+                    "following_id": {"$in": f_ids}
+                })
+                is_following = bool(req_follow)
+                
             followers.append({
-                "user_id": doc["follower_id"],
-                "username": user.get("username"),
-                "display_name": user.get("display_name"),
-                "user_pic": user.get("photoURL")
+                "user_id": str(f_user["_id"]),
+                "username": f_user.get("username"),
+                "display_name": f_user.get("display_name"),
+                "user_pic": f_user.get("photoURL"),
+                "is_following": is_following
             })
     return followers
 
 @app.get("/users/{user_id}/following")
-async def get_following(user_id: str):
-    cursor = follows_collection.find({"follower_id": user_id})
+async def get_following(user_id: str, requester_id: Optional[str] = None):
+    user = await get_user_by_any_id(user_id)
+    if not user:
+        return []
+    
+    user_ids = [str(user["_id"])]
+    if user.get("uid"):
+        user_ids.append(user["uid"])
+        
+    cursor = follows_collection.find({"follower_id": {"$in": user_ids}})
     following = []
     async for doc in cursor:
-        user = await get_user_by_any_id(doc["following_id"])
-        if user:
+        f_user = await get_user_by_any_id(doc["following_id"])
+        if f_user:
+            is_following = False
+            if requester_id:
+                f_ids = [str(f_user["_id"])]
+                if f_user.get("uid"): f_ids.append(f_user["uid"])
+                req_follow = await follows_collection.find_one({
+                    "follower_id": requester_id,
+                    "following_id": {"$in": f_ids}
+                })
+                is_following = bool(req_follow)
+                
             following.append({
-                "user_id": doc["following_id"],
-                "username": user.get("username"),
-                "display_name": user.get("display_name"),
-                "user_pic": user.get("photoURL")
+                "user_id": str(f_user["_id"]),
+                "username": f_user.get("username"),
+                "display_name": f_user.get("display_name"),
+                "user_pic": f_user.get("photoURL"),
+                "is_following": is_following
             })
     return following
 
@@ -1913,28 +2299,24 @@ async def delete_draft(draft_id: str, user_id: str):
     return {"status": "deleted"}
 
 # --- MESSAGING SYSTEM ---
-
 from websocket_manager import manager
-
-class ConversationRequest(BaseModel):
-    user_id: str
-    target_user_id: str
-
-class MessageRequest(BaseModel):
-    sender_id: str
-    content: str
-
-class ReadRequest(BaseModel):
-    user_id: str
 
 # WebSocket endpoint for real-time messaging
 @app.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: str):
-    await manager.connect(user_id, websocket)
+    print(f"📥 [WS] Attempting to connect user {user_id}")
+    try:
+        await manager.connect(user_id, websocket)
+        print(f"✅ [WS] User {user_id} connected successfully")
+    except Exception as e:
+        print(f"❌ [WS] Connection failed for {user_id}: {e}")
+        return
+        
     try:
         while True:
             # Keep connection alive and listen for messages
             data = await websocket.receive_text()
+            print(f"📩 [WS] Received data from {user_id}: {data}")
             # Handle incoming WebSocket messages (typing indicators, etc.)
             try:
                 message_data = json.loads(data)
@@ -1946,285 +2328,14 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                         if conv:
                             other_user = [p for p in conv["participants"] if p != user_id][0]
                             await manager.send_typing_indicator(other_user, conversation_id, message_data.get("is_typing", False))
-            except:
-                pass
+            except Exception as e:
+                print(f"⚠️ [WS] Error processing message: {e}")
     except WebSocketDisconnect:
+        print(f"🔌 [WS] User {user_id} disconnected normally")
         manager.disconnect(user_id)
-
-# Create or get existing conversation
-@app.post("/conversations/")
-async def create_or_get_conversation(req: ConversationRequest):
-    # Sort participant IDs for consistency
-    participants = sorted([req.user_id, req.target_user_id])
-    
-    # Check if conversation already exists
-    existing = await conversations_collection.find_one({
-        "participants": participants
-    })
-    
-    if existing:
-        # Return existing conversation with participant info
-        conv_data = serialize_doc(existing)
-        
-        # Fetch participant info
-        participant_info = []
-        for p_id in participants:
-            user = await get_user_by_any_id(p_id)
-            if user:
-                participant_info.append({
-                    "id": p_id,
-                    "username": user.get("username"),
-                    "display_name": user.get("display_name"),
-                    "photoURL": user.get("photoURL")
-                })
-        
-        conv_data["participant_info"] = participant_info
-        # Get unread count for current user
-        conv_data["unread_count"] = existing.get("unread_count", {}).get(req.user_id, 0)
-        
-        return conv_data
-    
-    # Create new conversation
-    new_conversation = {
-        "participants": participants,
-        "last_message": "",
-        "last_message_at": datetime.now(timezone.utc).isoformat(),
-        "unread_count": {req.user_id: 0, req.target_user_id: 0},
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    
-    result = await conversations_collection.insert_one(new_conversation)
-    
-    # Fetch participant info
-    participant_info = []
-    for p_id in participants:
-        user = await get_user_by_any_id(p_id)
-        if user:
-            participant_info.append({
-                "id": p_id,
-                "username": user.get("username"),
-                "display_name": user.get("display_name"),
-                "photoURL": user.get("photoURL")
-            })
-    
-    return {
-        "id": str(result.inserted_id),
-        "participants": participants,
-        "participant_info": participant_info,
-        "last_message": "",
-        "last_message_at": new_conversation["last_message_at"],
-        "unread_count": 0,
-        "created_at": new_conversation["created_at"]
-    }
-
-# Get all conversations for a user
-@app.get("/conversations/")
-async def get_conversations(user_id: str):
-    # Find all conversations where user is a participant
-    cursor = conversations_collection.find({
-        "participants": user_id
-    }).sort("last_message_at", -1)
-    
-    conversations = []
-    async for conv in cursor:
-        conv_data = serialize_doc(conv)
-        
-        # Get the other participant's info
-        other_user_id = [p for p in conv["participants"] if p != user_id][0]
-        other_user = await get_user_by_any_id(other_user_id)
-        
-        if other_user:
-            participant_info = [{
-                "id": other_user_id,
-                "username": other_user.get("username"),
-                "display_name": other_user.get("display_name"),
-                "photoURL": other_user.get("photoURL")
-            }]
-            
-            conv_data["participant_info"] = participant_info
-            conv_data["unread_count"] = conv.get("unread_count", {}).get(user_id, 0)
-            conversations.append(conv_data)
-    
-    return conversations
-
-# Get messages in a conversation
-@app.get("/conversations/{conversation_id}/messages")
-async def get_messages(conversation_id: str, limit: int = 50, before: Optional[str] = None):
-    try:
-        conv_oid = ObjectId(conversation_id)
-    except:
-        raise HTTPException(404, "Conversation not found")
-    
-    # Verify conversation exists
-    conv = await conversations_collection.find_one({"_id": conv_oid})
-    if not conv:
-        raise HTTPException(404, "Conversation not found")
-    
-    # Build query
-    query = {"conversation_id": conversation_id, "is_deleted": False}
-    
-    if before:
-        # Pagination: get messages before this timestamp
-        query["created_at"] = {"$lt": before}
-    
-    # Fetch messages
-    cursor = messages_collection.find(query).sort("created_at", -1).limit(limit)
-    
-    messages = []
-    async for msg in cursor:
-        msg_data = serialize_doc(msg)
-        
-        # Fetch sender info
-        sender = await get_user_by_any_id(msg["sender_id"])
-        if sender:
-            msg_data["sender_name"] = sender.get("display_name") or sender.get("username")
-            msg_data["sender_pic"] = sender.get("photoURL")
-        
-        messages.append(msg_data)
-    
-    # Reverse to get chronological order
-    messages.reverse()
-    
-    return messages
-
-# Send a message
-@app.post("/conversations/{conversation_id}/messages")
-async def send_message(conversation_id: str, req: MessageRequest):
-    try:
-        conv_oid = ObjectId(conversation_id)
-    except:
-        raise HTTPException(404, "Conversation not found")
-    
-    # Verify conversation exists and sender is a participant
-    conv = await conversations_collection.find_one({"_id": conv_oid})
-    if not conv:
-        raise HTTPException(404, "Conversation not found")
-    
-    if req.sender_id not in conv["participants"]:
-        raise HTTPException(403, "Not a participant in this conversation")
-    
-    # Create message
-    new_message = {
-        "conversation_id": conversation_id,
-        "sender_id": req.sender_id,
-        "content": req.content,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "is_read": False,
-        "is_deleted": False
-    }
-    
-    result = await messages_collection.insert_one(new_message)
-    
-    # Update conversation metadata
-    other_user_id = [p for p in conv["participants"] if p != req.sender_id][0]
-    
-    await conversations_collection.update_one(
-        {"_id": conv_oid},
-        {
-            "$set": {
-                "last_message": req.content[:100],  # Store preview
-                "last_message_at": new_message["created_at"]
-            },
-            "$inc": {
-                f"unread_count.{other_user_id}": 1
-            }
-        }
-    )
-    
-    # Fetch sender info for WebSocket broadcast
-    sender = await users_collection.find_one({"_id": req.sender_id})
-    
-    # Broadcast via WebSocket if recipient is online
-    ws_message = {
-        "type": "new_message",
-        "message": {
-            "id": str(result.inserted_id),
-            "conversation_id": conversation_id,
-            "sender_id": req.sender_id,
-            "sender_name": sender.get("display_name") if sender else "User",
-            "sender_pic": sender.get("photoURL") if sender else None,
-            "content": req.content,
-            "created_at": new_message["created_at"],
-            "is_read": False
-        }
-    }
-    
-    await manager.send_personal_message(other_user_id, ws_message)
-    
-    # Return the created message
-    return {
-        "id": str(result.inserted_id),
-        "conversation_id": conversation_id,
-        "sender_id": req.sender_id,
-        "sender_name": sender.get("display_name") if sender else "User",
-        "sender_pic": sender.get("photoURL") if sender else None,
-        "content": req.content,
-        "created_at": new_message["created_at"],
-        "is_read": False,
-        "status": "sent"
-    }
-
-# Mark messages as read
-@app.put("/conversations/{conversation_id}/read")
-async def mark_as_read(conversation_id: str, req: ReadRequest):
-    try:
-        conv_oid = ObjectId(conversation_id)
-    except:
-        raise HTTPException(404, "Conversation not found")
-    
-    # Mark all unread messages in this conversation as read
-    await messages_collection.update_many(
-        {
-            "conversation_id": conversation_id,
-            "sender_id": {"$ne": req.user_id},  # Not sent by current user
-            "is_read": False
-        },
-        {"$set": {"is_read": True}}
-    )
-    
-    # Reset unread count for this user
-    await conversations_collection.update_one(
-        {"_id": conv_oid},
-        {"$set": {f"unread_count.{req.user_id}": 0}}
-    )
-    
-    return {"status": "marked_read"}
-
-# Delete a message
-@app.delete("/messages/{message_id}")
-async def delete_message(message_id: str, user_id: str):
-    try:
-        msg_oid = ObjectId(message_id)
-    except:
-        raise HTTPException(404, "Message not found")
-    
-    # Verify message exists and user is the sender
-    message = await messages_collection.find_one({"_id": msg_oid})
-    if not message:
-        raise HTTPException(404, "Message not found")
-    
-    if message["sender_id"] != user_id:
-        raise HTTPException(403, "Can only delete your own messages")
-    
-    # Soft delete
-    await messages_collection.update_one(
-        {"_id": msg_oid},
-        {"$set": {"is_deleted": True}}
-    )
-    
-    return {"status": "deleted"}
-
-# Get total unread message count for a user
-@app.get("/users/{user_id}/unread-count")
-async def get_unread_count(user_id: str):
-    # Sum up unread counts across all conversations
-    cursor = conversations_collection.find({"participants": user_id})
-    
-    total_unread = 0
-    async for conv in cursor:
-        total_unread += conv.get("unread_count", {}).get(user_id, 0)
-    
-    return {"unread_count": total_unread}
+    except Exception as e:
+        print(f"❌ [WS] Unexpected error for user {user_id}: {e}")
+        manager.disconnect(user_id)
 
 @app.patch("/posts/{post_id}")
 async def update_post(post_id: str, req: PostUpdate, user_id: str):

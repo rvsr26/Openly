@@ -12,3 +12,4 @@ pyjwt
 email-validator
 pyotp
 qrcode
+cloudinary

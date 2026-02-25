@@ -16,6 +16,7 @@ export function useWebSocket(userId: string | null) {
     const wsRef = useRef<WebSocket | null>(null);
     const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const reconnectAttempts = useRef(0);
+    const intentionalDisconnectRef = useRef(false);
 
     const connectRef = useRef<() => void>(() => { });
 
@@ -34,6 +35,7 @@ export function useWebSocket(userId: string | null) {
                 console.log('✅ WebSocket connected');
                 setIsConnected(true);
                 reconnectAttempts.current = 0;
+                intentionalDisconnectRef.current = false;
             };
 
             ws.onmessage = (event) => {
@@ -46,14 +48,20 @@ export function useWebSocket(userId: string | null) {
             };
 
             ws.onerror = (error) => {
+                if (intentionalDisconnectRef.current) return;
                 console.error('WebSocket error:', error);
             };
 
             ws.onclose = () => {
-                console.log('❌ WebSocket disconnected');
                 setIsConnected(false);
                 wsRef.current = null;
 
+                if (intentionalDisconnectRef.current) {
+                    console.log('🔌 WebSocket disconnected intentionally (unmount)');
+                    return;
+                }
+
+                console.log('❌ WebSocket disconnected unexpectedly');
                 // Attempt to reconnect with exponential backoff
                 if (reconnectAttempts.current < 5) {
                     const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
@@ -75,6 +83,8 @@ export function useWebSocket(userId: string | null) {
     }, [connect]);
 
     const disconnect = useCallback(() => {
+        intentionalDisconnectRef.current = true;
+
         if (reconnectTimeoutRef.current) {
             clearTimeout(reconnectTimeoutRef.current);
         }
@@ -102,11 +112,20 @@ export function useWebSocket(userId: string | null) {
     }, [sendMessage]);
 
     useEffect(() => {
+        let mountTimeout: NodeJS.Timeout;
+
         if (userId) {
-            connect();
+            // Debounce connection to bypass Strict Mode double-invoke 
+            // which causes unsuppressible browser "closed before established" console warnings
+            mountTimeout = setTimeout(() => {
+                connect();
+            }, 100);
         }
 
         return () => {
+            if (mountTimeout) {
+                clearTimeout(mountTimeout);
+            }
             disconnect();
         };
     }, [userId, connect, disconnect]);
