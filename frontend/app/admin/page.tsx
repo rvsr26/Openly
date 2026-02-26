@@ -209,12 +209,31 @@ export default function AdminPage() {
             <>
               {/* DASHBOARD TAB */}
               {activeTab === "dashboard" && stats && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-5 duration-500">
-                  <StatCard title="Total Users" icon={<Users className="w-6 h-6" />} value={stats.total_users} color="text-blue-500" bg="bg-blue-500/10" />
-                  <StatCard title="Total Posts" icon={<LayoutDashboard className="w-6 h-6" />} value={stats.total_posts} color="text-emerald-500" bg="bg-emerald-500/10" />
-                  <StatCard title="Flagged Posts" icon={<ShieldAlert className="w-6 h-6" />} value={stats.flagged_posts} color="text-red-500" bg="bg-red-500/10" />
-                  <StatCard title="User Reports" icon={<Ban className="w-6 h-6" />} value={stats.total_reports} color="text-amber-500" bg="bg-amber-500/10" />
-                </div>
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-in fade-in slide-in-from-bottom-5 duration-500">
+                    <StatCard title="Total Users" icon={<Users className="w-6 h-6" />} value={stats.total_users} color="text-blue-500" bg="bg-blue-500/10" />
+                    <StatCard title="Total Posts" icon={<LayoutDashboard className="w-6 h-6" />} value={stats.total_posts} color="text-emerald-500" bg="bg-emerald-500/10" />
+                    <StatCard title="Flagged Posts" icon={<ShieldAlert className="w-6 h-6" />} value={stats.flagged_posts} color="text-red-500" bg="bg-red-500/10" />
+                    <StatCard title="User Reports" icon={<Ban className="w-6 h-6" />} value={stats.total_reports} color="text-amber-500" bg="bg-amber-500/10" />
+                  </div>
+                  <div className="mt-8 animate-in fade-in slide-in-from-bottom-5 duration-500">
+                    <h2 className="text-xl font-bold mb-4 text-foreground">Advanced Management Modules</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <a href="/admin/communities" className="p-6 bg-card border border-border/50 rounded-2xl hover:border-primary transition-colors block">
+                        <h3 className="text-lg font-bold text-primary mb-2">Community Management</h3>
+                        <p className="text-sm text-muted-foreground">Advanced CRUD operations for platform communities.</p>
+                      </a>
+                      <a href="/admin/hubs" className="p-6 bg-card border border-border/50 rounded-2xl hover:border-primary transition-colors block">
+                        <h3 className="text-lg font-bold text-primary mb-2">Industry Hubs</h3>
+                        <p className="text-sm text-muted-foreground">Manage and configure top-level industry hubs.</p>
+                      </a>
+                      <a href="/admin/reports" className="p-6 bg-card border border-border/50 rounded-2xl hover:border-primary transition-colors block">
+                        <h3 className="text-lg font-bold text-primary mb-2">Reported Content Cases</h3>
+                        <p className="text-sm text-muted-foreground">Track and resolve moderation incidents manually.</p>
+                      </a>
+                    </div>
+                  </div>
+                </>
               )}
 
               {/* USERS TAB */}
