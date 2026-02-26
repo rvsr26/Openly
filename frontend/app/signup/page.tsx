@@ -11,7 +11,7 @@ import {
 } from "firebase/auth";
 import { motion } from "framer-motion";
 import { Mail, Lock, CheckCircle, AlertCircle, ArrowRight, UserPlus, Shield, Sparkles, Ban } from "lucide-react";
-import { useSystem } from "../context/SystemContext";
+import { useSystem } from "@/context/SystemContext";
 
 export default function SignupPage() {
   const router = useRouter();

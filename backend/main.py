@@ -25,6 +25,7 @@ from cache_utils import get_cached_feed, set_cached_feed, generate_cache_key, in
 from messaging_endpoints import router as messaging_router
 from activity_endpoints import router as activity_router
 from timelines import router as timelines_router
+from admin_api import router as admin_router
 from alias_manager import (
     create_alias, get_user_aliases, get_alias_by_id, update_alias, 
     delete_alias, activate_alias, deactivate_all_aliases, get_active_alias,
@@ -138,6 +139,7 @@ app = FastAPI(title="Openly API", version="1.0.0")
 app.include_router(messaging_router)
 app.include_router(activity_router)
 app.include_router(timelines_router)
+app.include_router(admin_router)
 
 # Add security middleware (if available)
 if AUTH_ENABLED:

@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle, X } from "lucide-react";
-import { useSystem } from "../context/SystemContext";
+import { useSystem } from "@/context/SystemContext";
 import { useState, useEffect } from "react";
 
 export default function BroadcastBanner() {

@@ -42,8 +42,9 @@ stories_collection = db.get_collection("stories")
 blocks_collection = db.get_collection("blocks")
 mutes_collection = db.get_collection("mutes")
 
-# Communities / Groups collections
+# Communities / Groups / Hubs collections
 communities_collection = db.get_collection("communities")
+hubs_collection = db.get_collection("hubs")
 community_members_collection = db.get_collection("community_members")
 
 # Global system settings
