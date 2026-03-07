@@ -13,9 +13,11 @@ import {
 } from "firebase/auth";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight, CheckCircle, AlertCircle, Heart, Sparkles } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { user: authUser, loading: authLoading } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,11 +27,14 @@ export default function LoginPage() {
 
   /* 🔐 Redirect if already logged in */
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) router.push("/feed");
-    });
-    return () => unsubscribe();
-  }, [router]);
+    if (!authLoading && authUser) {
+      if (authUser.role === "admin") {
+        router.push("/admin");
+      } else {
+        router.push("/feed");
+      }
+    }
+  }, [authUser, authLoading, router]);
 
   /* ---------------- EMAIL LOGIN ---------------- */
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -40,7 +45,7 @@ export default function LoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/feed");
+      // Let useEffect handle redirect based on role once synced
     } catch (err: unknown) {
       if (axios.isAxiosError(err) && (err as any).code === "auth/invalid-credential") {
         setError("Invalid email or password.");
@@ -61,7 +66,7 @@ export default function LoginPage() {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      router.push("/feed");
+      // Let useEffect handle redirect based on role once synced
     } catch (err: unknown) {
       setError("Google login failed.");
     } finally {

@@ -54,18 +54,18 @@ export default function TagInsights() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {themeNames.map((theme, idx) => {
                     const postCount = groupedPosts?.[theme]?.length || 0;
-                    const tags = themes[theme];
+                    const tags = themes[theme] || [];
 
                     return (
                         <motion.div
-                            key={theme}
+                            key={theme || `theme-${idx}`}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: idx * 0.1 }}
                             onClick={() => setSelectedTheme(theme === selectedTheme ? null : theme)}
                             className={`p-6 rounded-3xl border transition-all cursor-pointer group ${selectedTheme === theme
-                                    ? 'bg-primary/5 border-primary/30 shadow-xl shadow-primary/5'
-                                    : 'bg-white/3 border-white/5 hover:border-white/10'
+                                ? 'bg-primary/5 border-primary/30 shadow-xl shadow-primary/5'
+                                : 'bg-white/3 border-white/5 hover:border-white/10'
                                 }`}
                         >
                             <div className="flex items-center justify-between mb-4">
@@ -81,8 +81,8 @@ export default function TagInsights() {
                             <h3 className="text-md font-black text-foreground mb-3">{theme}</h3>
 
                             <div className="flex flex-wrap gap-1.5 mb-4">
-                                {tags.slice(0, 5).map((tag: string) => (
-                                    <span key={tag} className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-muted-foreground">
+                                {tags.slice(0, 5).map((tag: string, tidx: number) => (
+                                    <span key={`${theme}-${tag}-${tidx}`} className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-muted-foreground">
                                         #{tag}
                                     </span>
                                 ))}
@@ -123,8 +123,8 @@ export default function TagInsights() {
                                 <Tag size={12} /> Key Tags in This Cluster
                             </h4>
                             <div className="flex flex-wrap gap-2">
-                                {themes[selectedTheme].map((tag: string) => (
-                                    <div key={tag} className="px-4 py-2 rounded-xl bg-white/5 border border-white/5 hover:border-primary/30 transition-all cursor-default group/tag">
+                                {themes[selectedTheme].map((tag: string, tidx: number) => (
+                                    <div key={`${selectedTheme}-${tag}-${tidx}`} className="px-4 py-2 rounded-xl bg-white/5 border border-white/5 hover:border-primary/30 transition-all cursor-default group/tag">
                                         <span className="text-xs font-bold text-foreground group-hover/tag:text-primary">#{tag}</span>
                                     </div>
                                 ))}
