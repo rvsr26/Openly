@@ -102,7 +102,7 @@ function Navbar() {
   // Real-time notification badge via WebSocket
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
-  const WSURL = process.env.NEXT_PUBLIC_WS_URL || (typeof window !== 'undefined' ? `ws://${window.location.hostname}:8000` : '');
+  const WSURL = process.env.NEXT_PUBLIC_WS_URL || (typeof window !== 'undefined' ? `ws://${window.location.hostname}:8001` : '');
 
   useEffect(() => {
     if (!authUser) return;

@@ -6,7 +6,7 @@ import { auth } from "../app/firebase";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface AuthContextType {
-    user: any | null; // Support both Firebase User and DB User
+    user: any | null;
     loading: boolean;
     refreshSession: () => Promise<void>;
 }
@@ -51,6 +51,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     displayName: userData.display_name,
                     photoURL: userData.photoURL,
                     twoFactorEnabled: userData.two_factor_enabled,
+                    role: userData.role,
                     isFromToken: true
                 });
 
@@ -126,7 +127,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         console.log("✅ Synced with backend");
                         setUser({
                             ...fbUser,
-                            twoFactorEnabled: data.two_factor_enabled
+                            twoFactorEnabled: data.two_factor_enabled,
+                            role: data.role
                         });
                     } else {
                         console.error("Failed to sync with backend");

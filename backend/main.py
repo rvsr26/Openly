@@ -62,22 +62,41 @@ except Exception as e:
     print("[WARNING] App will run without Phase 1 auth features")
     # Define dummy functions to prevent errors
     class EmailVerificationRequest(BaseModel):
-        pass
+        email: str
+        user_id: str
     class VerifyEmailRequest(BaseModel):
-        pass
+        token: str
     class PasswordResetRequest(BaseModel):
-        pass
+        email: str
     class PasswordResetConfirm(BaseModel):
-        pass
+        token: str
+        new_password: str
     class OAuthLoginRequest(BaseModel):
-        pass
+        provider: str
+        access_token: str
+        user_info: dict
     class LoginRequest(BaseModel):
-        pass
+        email: str
+        password: str
     class TwoFactorEnableRequest(BaseModel):
-        pass
+        code: str
     class TwoFactorVerifyLoginRequest(BaseModel):
-        pass
+        user_id: str
+        code: str
     
+    # Dummy function placeholders
+    async def send_verification_email(*args, **kwargs): pass
+    async def verify_email_token(*args, **kwargs): return {"status": "error", "message": "Auth disabled"}
+    async def send_password_reset_email(*args, **kwargs): return {"status": "error", "message": "Auth disabled"}
+    async def reset_password(*args, **kwargs): return {"status": "error", "message": "Auth disabled"}
+    async def handle_oauth_login(*args, **kwargs): return {"status": "error", "message": "Auth disabled"}
+    def create_access_token(*args, **kwargs): return "dummy-token"
+    async def get_current_user(request: Request): return {"_id": "dummy", "email": "dummy@example.com"}
+    def generate_2fa_secret(*args, **kwargs): return "secret"
+    def get_2fa_qr_code(*args, **kwargs): return "qr"
+    async def verify_2fa_code(*args, **kwargs): return False
+    async def authenticate_user(*args, **kwargs): return None
+    def validate_password_strength(*args, **kwargs): return {"valid": True, "errors": []}
     async def authenticate_user(*args, **kwargs):
         return None
     
@@ -136,16 +155,13 @@ class ProfessionalInfoUpdate(BaseModel):
 app = FastAPI(title="Openly API", version="1.0.0")
 
 # Include Routers
-app.include_router(messaging_router)
-app.include_router(activity_router)
-app.include_router(timelines_router)
-app.include_router(admin_router)
+# (Routers will be included after CORS)
 
 # Add security middleware (if available)
 if AUTH_ENABLED:
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(RateLimitMiddleware)
+    # app.add_middleware(RateLimitMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
     print("[SUCCESS] Security middleware registered")
 else:
@@ -168,6 +184,12 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-Request-ID"],
 )
+
+# Include Routers
+app.include_router(messaging_router)
+app.include_router(activity_router)
+app.include_router(timelines_router)
+app.include_router(admin_router)
 
 # --- STATIC FILES ---
 # Configure Cloudinary
@@ -474,7 +496,8 @@ async def api_login(req: LoginRequest):
             "email": result.get("email"),
             "username": result.get("username"),
             "display_name": result.get("display_name"),
-            "photoURL": result.get("photoURL")
+            "photoURL": result.get("photoURL"),
+            "role": result.get("role", "user")
         }
     }
 
@@ -638,7 +661,8 @@ async def api_sync_user(req: UserSyncRequest):
         "access_token": token,
         "token_type": "bearer",
         "user_id": req.uid,
-        "two_factor_enabled": updated_user.get("two_factor_enabled", False) if updated_user else False
+        "two_factor_enabled": updated_user.get("two_factor_enabled", False) if updated_user else False,
+        "role": updated_user.get("role", "user") if updated_user else "user"
     }
 
 @app.get("/api/v1/auth/me")
@@ -651,7 +675,8 @@ async def api_get_current_user(user = Depends(get_current_user)):
         "display_name": user.get("display_name"),
         "photoURL": user.get("photoURL"),
         "email_verified": user.get("email_verified", False),
-        "two_factor_enabled": user.get("two_factor_enabled", False)
+        "two_factor_enabled": user.get("two_factor_enabled", False),
+        "role": user.get("role", "user")
     }
 
 @app.post("/api/v1/auth/validate-username")
@@ -2155,6 +2180,8 @@ async def get_user_profile_v2(user_id: str, requester_id: Optional[str] = None):
             "username": user_data.get("username", None),
             "display_name": user_data.get("display_name", "Anonymous"),
             "photoURL": best_photo_url,
+            "role": user_data.get("role", "user"),
+            "is_banned": user_data.get("is_banned", False),
             "headline": user_data.get("headline", None),
             "bio": user_data.get("bio", None),
             "website": user_data.get("website", None),
@@ -2824,6 +2851,8 @@ async def get_user_profile(user_id: str):
         "display_name": user.get("display_name"),
         "email": user.get("email"),
         "photoURL": user.get("photoURL"),
+        "role": user.get("role", "user"),
+        "is_banned": user.get("is_banned", False),
         "bio": user.get("bio", ""),
         "createdAt": user.get("createdAt"),
         "followed_hubs": user.get("followed_hubs", [])
@@ -3488,7 +3517,7 @@ async def endorse_skill(user_id: str, skill_name: str, endorser_id: str = Query(
     if user_id == endorser_id:
         raise HTTPException(status_code=400, detail="Cannot endorse your own skill")
     
-    user = await users_collection.find_one({"id": user_id})
+    user = await users_collection.find_one({"_id": user_id})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
@@ -3513,7 +3542,7 @@ async def endorse_skill(user_id: str, skill_name: str, endorser_id: str = Query(
         raise HTTPException(status_code=404, detail="Skill not found for this user")
         
     await users_collection.update_one(
-        {"id": user_id},
+        {"_id": user_id},
         {"$set": {"skills": skills}}
     )
     
@@ -3539,7 +3568,7 @@ async def create_story(story_data: StoryCreate):
     story["created_at"] = datetime.utcnow().isoformat()
     story["viewers"] = []
     
-    user = await users_collection.find_one({"id": story_data.user_id})
+    user = await users_collection.find_one({"_id": story_data.user_id})
     if user:
         story["user_name"] = user.get("display_name", user.get("username", "Unknown"))
         story["user_pic"] = user.get("photoURL", "")
@@ -3555,7 +3584,7 @@ async def get_stories_feed(user_id: str = Query(...)):
     
     following_cursor = follows_collection.find({"follower_id": user_id})
     following_docs = await following_cursor.to_list(length=1000)
-    followed_ids = [doc["followed_id"] for doc in following_docs]
+    followed_ids = [doc["following_id"] for doc in following_docs]
     followed_ids.append(user_id)
     
     time_threshold = (datetime.utcnow() - timedelta(hours=24)).isoformat()

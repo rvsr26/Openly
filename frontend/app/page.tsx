@@ -10,9 +10,12 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    // If user is authenticated, redirect to feed
     if (!loading && user) {
-      router.push('/feed');
+      if (user.role === 'admin') {
+        router.push('/admin');
+      } else {
+        router.push('/feed');
+      }
     }
   }, [user, loading, router]);
 

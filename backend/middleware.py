@@ -21,25 +21,10 @@ class RateLimiter:
     
     def is_allowed(self, identifier: str) -> bool:
         """Check if request is allowed based on rate limit"""
-        now = time.time()
-        minute_ago = now - 60
-        
-        # Clean old requests
-        self.requests[identifier] = [
-            req_time for req_time in self.requests[identifier]
-            if req_time > minute_ago
-        ]
-        
-        # Check limit
-        if len(self.requests[identifier]) >= self.requests_per_minute:
-            return False
-        
-        # Add current request
-        self.requests[identifier].append(now)
-        return True
+        return True # Disabled for debugging
 
-# Global rate limiter
-rate_limiter = RateLimiter(requests_per_minute=100)
+# Global rate limiter (increased for development)
+rate_limiter = RateLimiter(requests_per_minute=10000)
 
 # CSRF Protection
 class CSRFProtection:
@@ -83,8 +68,10 @@ class RateLimitMiddleware:
             
         request = Request(scope, receive)
         client_ip = request.client.host if request.client else "unknown"
+        print(f"DEBUG RATE LIMIT: Checking {client_ip} for {request.url.path}")
         
         if not rate_limiter.is_allowed(client_ip):
+            print(f"DEBUG RATE LIMIT: BLOCKED {client_ip} for {request.url.path}")
             response = JSONResponse(
                 status_code=429,
                 content={"detail": "Too many requests. Please try again later."}

@@ -1,0 +1,134 @@
+[
+  {
+    "path": "/admin/migrate/clear-stale-photos",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/admin/posts/{post_id}/unflag",
+    "methods": [
+      "PATCH"
+    ]
+  },
+  {
+    "path": "/admin/stats",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/admin/system/settings",
+    "methods": [
+      "PATCH"
+    ]
+  },
+  {
+    "path": "/admin/users",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/admin/users/{target_id}/ban",
+    "methods": [
+      "PATCH"
+    ]
+  },
+  {
+    "path": "/admin/users/{target_id}/role",
+    "methods": [
+      "PATCH"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/communities",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/communities",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/communities/search/{item_id}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/communities/{item_id}",
+    "methods": [
+      "PUT"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/communities/{item_id}",
+    "methods": [
+      "DELETE"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/hubs",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/hubs",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/hubs/search/{item_id}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/hubs/{item_id}",
+    "methods": [
+      "PUT"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/hubs/{item_id}",
+    "methods": [
+      "DELETE"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/reports",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/reports",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/reports/search/{item_id}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/reports/{item_id}",
+    "methods": [
+      "PUT"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/reports/{item_id}",
+    "methods": [
+      "DELETE"
+    ]
+  }
+]
