@@ -1,0 +1,11 @@
+User Found:
+ID: WLWMdQ7ipIdk4kSj9KjVoEmHvpX2
+UID: None
+Email: admin@openly.com
+Role: admin
+Username: admin
+
+All Admins:
+ID: tmwmro0JGpUfC6US838IzqfHxc53, Email: test@gmail.com, UID: None
+ID: 2069da8e29f6f3dd474c6597e38f0639, Email: admin@openly.com, UID: None
+ID: WLWMdQ7ipIdk4kSj9KjVoEmHvpX2, Email: admin@openly.com, UID: None
