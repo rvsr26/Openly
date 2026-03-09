@@ -5,11 +5,11 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     envVars:
-      - key: MONGO_URI
+      - key: MONGODB_URL
         sync: false
       - key: CLOUDINARY_URL
         sync: false
-      - key: JWT_SECRET
+      - key: JWT_SECRET_KEY
         generateValue: true
       - key: FRONTEND_URL
         sync: false
