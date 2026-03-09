@@ -11,7 +11,7 @@ const COLORS = ["#7c3aed", "#a855f7", "#c084fc", "#e879f9", "#38bdf8", "#34d399"
 const SENTIMENT_COLORS: Record<string, string> = {
     POSITIVE: "#34d399",
     NEGATIVE: "#f87171",
-    NEUTRAL:  "#94a3b8",
+    NEUTRAL: "#94a3b8",
 };
 
 // ── CUSTOM TOOLTIP ────────────────────────────────────────────
@@ -42,7 +42,7 @@ export function DonutChart({ data }: { data: PieDataItem[] }) {
                     paddingAngle={3}
                     dataKey="value"
                     nameKey="name"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                     labelLine={false}
                 >
                     {data.map((_, i) => (
@@ -93,7 +93,7 @@ export function PostTrendArea({ data }: { data: TrendItem[] }) {
             <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                     <linearGradient id="postGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#7c3aed" stopOpacity={0.4} />
+                        <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.4} />
                         <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
                     </linearGradient>
                 </defs>
