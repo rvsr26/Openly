@@ -895,7 +895,7 @@ async def api_ai_chat(req: ChatRequest):
         # Gemini expects a specific history format
         # We'll simplify for now and just send the message or use provided history
         chat = model.start_chat(history=req.history)
-        response = chat.send_message(req.message)
+        response = await chat.send_message_async(req.message)
         return {
             "response": response.text,
             "history": [
@@ -1084,6 +1084,7 @@ async def create_post(post: PostRequest):
         "title": post.title,
         "category": post.category if post.category and post.category != "All" else classify_category(post.content),
         "tags": post.tags,
+        "sentiment": get_sentiment(post.content),
         "image_url": post.image_url,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "is_anonymous": post.is_anonymous,
@@ -3130,7 +3131,7 @@ async def get_trending_topics():
     async for doc in cursor:
         if doc["_id"]: # Ignore None categories
             trending.append({"topic": doc["_id"], "posts_count": doc["count"]})
-    
+    return trending
 
 # --- DRAFTS ---
 
@@ -3697,6 +3698,99 @@ async def toggle_post_reaction(post_id: str, reaction: ReactionCreate):
         "specific_reactions": reactions,
         "user_reaction": user_reactions.get(user_id)
     }
+
+
+# ==================== ANALYTICS ENDPOINTS ====================
+
+@app.get("/stats/categories")
+async def get_category_stats():
+    """Returns post count per category for pie/donut chart."""
+    try:
+        pipeline = [
+            {"$match": {"is_rejected": {"$ne": True}}},
+            {"$group": {"_id": "$category", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}}
+        ]
+        results = await posts_collection.aggregate(pipeline).to_list(length=50)
+        return [
+            {"category": r["_id"] or "Uncategorized", "count": r["count"]}
+            for r in results
+            if r["_id"]
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/stats/post-trend")
+async def get_post_trend():
+    """Returns daily post counts for last 30 days for area/line chart."""
+    try:
+        from datetime import datetime, timezone, timedelta
+        cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+        cutoff_iso = cutoff.isoformat()
+
+        pipeline = [
+            {"$match": {"created_at": {"$gte": cutoff_iso}, "is_rejected": {"$ne": True}}},
+            {
+                "$group": {
+                    "_id": {"$substr": ["$created_at", 0, 10]},
+                    "count": {"$sum": 1}
+                }
+            },
+            {"$sort": {"_id": 1}}
+        ]
+        results = await posts_collection.aggregate(pipeline).to_list(length=31)
+        return [{"date": r["_id"], "posts": r["count"]} for r in results]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/stats/sentiment-summary")
+async def get_sentiment_summary():
+    """Returns aggregated sentiment distribution across recent posts."""
+    try:
+        pipeline = [
+            {"$match": {"sentiment": {"$exists": True}, "is_rejected": {"$ne": True}}},
+            {"$group": {"_id": "$sentiment", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}}
+        ]
+        results = await posts_collection.aggregate(pipeline).to_list(length=10)
+        sentiment_data = [{"sentiment": r["_id"] or "NEUTRAL", "count": r["count"]} for r in results]
+        
+        # Ensure all 3 sentiments are present
+        existing = {s["sentiment"] for s in sentiment_data}
+        for s in ["POSITIVE", "NEGATIVE", "NEUTRAL"]:
+            if s not in existing:
+                sentiment_data.append({"sentiment": s, "count": 0})
+        
+        return sentiment_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/stats/top-posts")
+async def get_top_posts():
+    """Returns top 10 posts by reaction count for bar chart."""
+    try:
+        pipeline = [
+            {"$match": {"is_rejected": {"$ne": True}, "reaction_count": {"$gt": 0}}},
+            {"$sort": {"reaction_count": -1}},
+            {"$limit": 10},
+            {"$project": {"_id": 0, "id": 1, "content": 1, "reaction_count": 1, "category": 1, "user_name": 1}}
+        ]
+        results = await posts_collection.aggregate(pipeline).to_list(length=10)
+        return [
+            {
+                "label": (r.get("content", "")[:30] + "...") if len(r.get("content", "")) > 30 else r.get("content", ""),
+                "reactions": r.get("reaction_count", 0),
+                "category": r.get("category", "All"),
+                "author": r.get("user_name", "Anonymous")
+            }
+            for r in results
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn

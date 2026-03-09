@@ -13,10 +13,10 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    # Using gemini-1.5-flash for speed and multi-modal support
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    # Using gemini-2.5-flash
+    model = genai.GenerativeModel('gemini-2.5-flash')
 else:
-    print("⚠️ Warning: GEMINI_API_KEY not found. Falling back to basic AI logic.")
+    print("[WARNING] GEMINI_API_KEY not found. Falling back to basic AI logic.")
     model = None
 
 def is_toxic(text: str) -> bool:
