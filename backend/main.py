@@ -270,6 +270,8 @@ async def startup_event():
     import asyncio
     # Run index creation in background so it doesn't block startup
     asyncio.create_task(create_indexes())
+    # Keep-alive task for Render inactivity (15 seconds)
+    asyncio.create_task(keep_alive_task())
 
 async def create_indexes():
     """Create database indexes for optimized query performance."""
@@ -304,6 +306,29 @@ async def create_indexes():
 
     except Exception as e:
         print(f"[ERROR] Error creating indexes: {e}")
+
+async def keep_alive_task():
+    """Background task to ping the root endpoint every 15 seconds to prevent Render inactivity."""
+    import httpx
+    import asyncio
+    
+    url = "http://localhost:8000/"  # Ping itself via localhost
+    # Alternatively, use a configuration for the public URL if needed
+    
+    print("[INFO] Starting keep-alive background task...")
+    
+    while True:
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, timeout=10.0)
+                if response.status_code == 200:
+                    pass # Quiet success
+                else:
+                    print(f"[WARNING] Keep-alive ping returned status: {response.status_code}")
+        except Exception as e:
+            print(f"[ERROR] Keep-alive ping failed: {e}")
+        
+        await asyncio.sleep(15) # Ping every 15 seconds
 
 # --- 2. MODELS ---
 
