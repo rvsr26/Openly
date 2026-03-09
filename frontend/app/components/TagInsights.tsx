@@ -1,14 +1,30 @@
 "use client";
 
 import { useQuery } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Layers, Tag, BarChart3, ChevronRight, Sparkles, Loader2, Database, Info } from 'lucide-react';
 import api from '../lib/api';
 import { useState, useMemo } from 'react';
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    PieChart, Pie, Cell, Legend
+    BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell,
+    PieChart, Pie, Legend
 } from 'recharts';
+
+const COLORS = ["#7c3aed", "#ec4899", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#f43f5e", "#0ea5e9"];
+
+const GlassTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null;
+    return (
+        <div className="px-4 py-3 rounded-2xl bg-black/80 backdrop-blur-xl border border-white/10 text-xs font-bold shadow-xl">
+            {label && <p className="text-muted-foreground mb-1">{label}</p>}
+            {payload.map((p: any, i: number) => (
+                <p key={i} style={{ color: p.color || p.fill }}>
+                    {p.name}: <span className="text-white">{p.value}</span>
+                </p>
+            ))}
+        </div>
+    );
+};
 
 export default function TagInsights() {
     const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
@@ -37,8 +53,9 @@ export default function TagInsights() {
         if (!themeNames.length || !groupedPosts) return [];
         return themeNames.map(theme => ({
             name: theme,
+            theme, // For compatibility with different chart components
             posts: groupedPosts[theme]?.length || 0
-        })).sort((a, b) => b.posts - a.posts); // Sort by highest count
+        })).sort((a, b) => b.posts - a.posts);
     }, [themeNames, groupedPosts]);
 
     if (loadingClusters || loadingPosts) {
@@ -50,65 +67,88 @@ export default function TagInsights() {
         );
     }
 
-    const COLORS = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+    // Calculate total posts for percentage
+    const totalPosts = themeNames.reduce((acc, t) => acc + (groupedPosts?.[t]?.length || 0), 0);
 
     return (
         <div className="space-y-8">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-xl font-black text-foreground">AI Data Separation</h2>
-                    <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider font-bold">Posts grouped by AI-generated themes</p>
+                    <h2 className="text-xl font-black text-foreground">AI Theme Clusters</h2>
+                    <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider font-bold">Posts grouped semantically by Gemini</p>
                 </div>
                 <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-2xl border border-primary/20">
                     <Sparkles size={14} className="text-primary" />
-                    <span className="text-[10px] font-black text-primary uppercase">Gemini powered</span>
+                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">Powered by AI Analytics</span>
                 </div>
             </div>
+
+            {/* Overall Bar Chart Overview */}
+            {chartData.length > 0 && (
+                <div className="glass-card p-6 md:p-8 rounded-[2.5rem] border border-white/5 shadow-2xl bg-black/20">
+                    <h3 className="text-sm font-black uppercase text-muted-foreground tracking-widest mb-6 border-b border-white/5 pb-2">Platform Content Distribution</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                            <XAxis dataKey="theme" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} tickLine={false} axisLine={false} interval={0} angle={-30} textAnchor="end" height={60} />
+                            <YAxis tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} axisLine={false} />
+                            <Tooltip content={<GlassTooltip />} cursor={{ fill: '#ffffff05' }} />
+                            <Bar dataKey="posts" name="Total Posts" radius={[6, 6, 0, 0]} maxBarSize={50}>
+                                {chartData.map((_, i) => (
+                                    <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {themeNames.map((theme, idx) => {
                     const postCount = groupedPosts?.[theme]?.length || 0;
                     const tags = themes[theme] || [];
+                    const isSelected = selectedTheme === theme;
 
                     return (
                         <motion.div
                             key={theme || `theme-${idx}`}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.1 }}
-                            onClick={() => setSelectedTheme(theme === selectedTheme ? null : theme)}
-                            className={`p-6 rounded-3xl border transition-all cursor-pointer group ${selectedTheme === theme
-                                ? 'bg-primary/5 border-primary/30 shadow-xl shadow-primary/5'
-                                : 'bg-white/3 border-white/5 hover:border-white/10'
+                            transition={{ delay: idx * 0.05 }}
+                            onClick={() => setSelectedTheme(isSelected ? null : theme)}
+                            className={`p-6 rounded-[2rem] transition-all cursor-pointer group relative overflow-hidden ${isSelected
+                                ? 'bg-primary/10 border border-primary/40 shadow-xl shadow-primary/20 scale-[1.02]'
+                                : 'bg-white/5 border border-white/5 hover:border-white/10 hover:bg-white/10'
                                 }`}
                         >
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="p-3 rounded-2xl bg-white/5 group-hover:bg-primary/10 transition-colors">
-                                    <Layers size={20} className={selectedTheme === theme ? 'text-primary' : 'text-muted-foreground'} />
+                            {isSelected && <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent pointer-events-none" />}
+
+                            <div className="flex items-center justify-between mb-4 relative z-10">
+                                <div className={`p-3 rounded-2xl transition-colors ${isSelected ? 'bg-primary/20 text-primary' : 'bg-black/20 text-muted-foreground group-hover:text-primary'}`}>
+                                    <Layers size={20} />
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter">Post Count</p>
-                                    <p className="text-lg font-black text-foreground">{postCount}</p>
+                                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter">Posts</p>
+                                    <p className={`text-2xl font-black ${isSelected ? 'text-primary' : 'text-foreground'}`}>{postCount}</p>
                                 </div>
                             </div>
 
-                            <h3 className="text-md font-black text-foreground mb-3">{theme}</h3>
+                            <h3 className="text-lg font-black text-foreground mb-3 relative z-10">{theme}</h3>
 
-                            <div className="flex flex-wrap gap-1.5 mb-4">
-                                {tags.slice(0, 5).map((tag: string, tidx: number) => (
-                                    <span key={`${theme}-${tag}-${tidx}`} className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-white/5 border border-white/5 text-muted-foreground">
+                            <div className="flex flex-wrap gap-1.5 mb-6 relative z-10">
+                                {tags.slice(0, 4).map((tag: string, tidx: number) => (
+                                    <span key={`${theme}-${tag}-${tidx}`} className={`text-[10px] font-bold px-2 py-1 rounded-md ${isSelected ? 'bg-black/40 text-white border border-primary/30' : 'bg-black/20 border border-white/5 text-muted-foreground'}`}>
                                         #{tag}
                                     </span>
                                 ))}
-                                {tags.length > 5 && (
-                                    <span className="text-[9px] font-bold text-muted-foreground/50">+{tags.length - 5} more</span>
+                                {tags.length > 4 && (
+                                    <span className="text-[10px] font-bold text-muted-foreground px-2 py-1 rounded-md bg-black/10">+{tags.length - 4}</span>
                                 )}
                             </div>
 
-                            <button className="w-full py-2 rounded-xl bg-white/5 text-[10px] font-black uppercase tracking-widest text-muted-foreground group-hover:bg-primary group-hover:text-white transition-all flex items-center justify-center gap-2">
-                                {selectedTheme === theme ? 'Collapse Data' : 'View Separation Details'}
-                                <ChevronRight size={12} className={selectedTheme === theme ? 'rotate-90' : ''} />
-                            </button>
+                            <div className={`w-full h-1 mt-auto rounded-full overflow-hidden bg-black/20 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 transition-opacity'}`}>
+                                <div className="h-full bg-primary rounded-full" style={{ width: `${Math.max(5, (postCount / Math.max(1, totalPosts)) * 100)}%` }} />
+                            </div>
                         </motion.div>
                     );
                 })}
@@ -184,57 +224,89 @@ export default function TagInsights() {
             )}
 
             {/* Detailed View for Selected Theme */}
-            {selectedTheme && (
-                <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="p-8 rounded-[2.5rem] bg-black/40 border border-white/10 backdrop-blur-2xl"
-                >
-                    <div className="flex items-center gap-4 mb-8">
-                        <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-white">
-                            <Database size={24} />
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-black text-foreground uppercase tracking-tight">{selectedTheme} Cluster</h3>
-                            <p className="text-sm text-muted-foreground">Separated data insights for this theme</p>
-                        </div>
-                    </div>
+            <AnimatePresence>
+                {selectedTheme && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0, y: 20 }}
+                        animate={{ opacity: 1, height: 'auto', y: 0 }}
+                        exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                        className="p-8 rounded-[2.5rem] bg-card border border-primary/20 shadow-2xl shadow-primary/10 overflow-hidden relative"
+                    >
+                        {/* Background glow */}
+                        <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/20 blur-[100px] rounded-full pointer-events-none" />
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <div>
-                            <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
-                                <Tag size={12} /> Key Tags in This Cluster
-                            </h4>
-                            <div className="flex flex-wrap gap-2">
-                                {themes[selectedTheme].map((tag: string, tidx: number) => (
-                                    <div key={`${selectedTheme}-${tag}-${tidx}`} className="px-4 py-2 rounded-xl bg-white/5 border border-white/5 hover:border-primary/30 transition-all cursor-default group/tag">
-                                        <span className="text-xs font-bold text-foreground group-hover/tag:text-primary">#{tag}</span>
+                        <div className="flex items-center gap-4 mb-8 relative z-10">
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white shadow-lg">
+                                <Database size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-black text-foreground tracking-tight">{selectedTheme} Overview</h3>
+                                <p className="text-xs uppercase tracking-widest text-muted-foreground font-bold mt-1">AI Analytical Deep Dive</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 relative z-10">
+                            <div className="space-y-6">
+                                <div>
+                                    <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-white/5 pb-2">
+                                        <Tag size={14} className="text-primary" /> Associated Tags
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {themes[selectedTheme].map((tag: string, tidx: number) => (
+                                            <div key={`${selectedTheme}-${tag}-${tidx}`} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:border-primary hover:bg-primary/5 transition-all cursor-default text-sm font-bold text-foreground">
+                                                <span className="text-primary/50 mr-1">#</span>{tag}
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
-                            </div>
-                        </div>
+                                </div>
 
-                        <div className="space-y-6">
-                            <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
-                                <BarChart3 size={12} /> Cluster Composition
-                            </h4>
-                            <div className="p-6 rounded-3xl bg-white/3 border border-white/5">
-                                <p className="text-sm text-muted-foreground leading-relaxed">
-                                    AI has identified these posts as being highly relevant to <span className="text-white font-bold">{selectedTheme}</span>.
-                                    This cluster represents {Math.round(((groupedPosts?.[selectedTheme]?.length || 0) / themeNames.reduce((acc, t) => acc + (groupedPosts?.[t]?.length || 0), 0)) * 100)}%
-                                    of categorized platform content.
-                                </p>
+                                <div className="p-6 rounded-[2rem] bg-black/20 border border-white/5">
+                                    <div className="flex gap-4">
+                                        <Info size={24} className="text-primary shrink-0" />
+                                        <div>
+                                            <h5 className="font-bold text-sm mb-2 text-foreground">Semantic Grouping</h5>
+                                            <p className="text-xs text-muted-foreground leading-relaxed font-medium">
+                                                Our AI pipeline groups these specific tags into <strong className="text-white">{selectedTheme}</strong> based on contextual similarity and linguistic patterns observed across the network.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex items-start gap-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
-                                <Info size={16} className="text-amber-500 shrink-0 mt-0.5" />
-                                <p className="text-[10px] font-bold text-amber-500/80 leading-normal">
-                                    Separation is based on semantic proximity of tags and post content mapped by Gemini AI.
-                                </p>
+
+                            <div className="space-y-6">
+                                <h4 className="text-xs font-black text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-2 border-b border-white/5 pb-2">
+                                    <BarChart3 size={14} className="text-pink-500" /> Theme Dominance
+                                </h4>
+
+                                <div className="flex items-center justify-center bg-black/10 rounded-[2rem] border border-white/5 p-4 h-[250px]">
+                                    {totalPosts > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={[
+                                                        { name: selectedTheme, value: groupedPosts?.[selectedTheme]?.length || 0 },
+                                                        { name: 'Other Themes', value: totalPosts - (groupedPosts?.[selectedTheme]?.length || 0) }
+                                                    ]}
+                                                    cx="50%" cy="50%"
+                                                    innerRadius={60} outerRadius={90}
+                                                    paddingAngle={5}
+                                                    dataKey="value"
+                                                    stroke="none"
+                                                >
+                                                    <Cell fill="#7c3aed" />
+                                                    <Cell fill="#334155" />
+                                                </Pie>
+                                                <Tooltip content={<GlassTooltip />} />
+                                                <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    ) : null}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </motion.div>
-            )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

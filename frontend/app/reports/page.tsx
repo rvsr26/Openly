@@ -5,6 +5,7 @@ import api from '../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { Clock, MessageCircle, Heart, UserPlus, Users, FileText, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { InteractionsRadar, DetailedInteractionsBar, OverviewDonut } from '../components/ReportsCharts';
 
 export default function ReportsPage() {
     const { user, loading } = useAuth();
@@ -81,85 +82,59 @@ export default function ReportsPage() {
                         </section>
 
                         {/* Interactions Section */}
-                        <section>
+                        <section className="space-y-6">
                             <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                                 <Users className="text-purple-500" />
                                 Community Interactions
                             </h2>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                {/* RECEIVED */}
-                                <div className="glass-card p-6 rounded-2xl space-y-4">
-                                    <h3 className="font-bold text-lg border-b border-white/5 pb-2">Recieved (Impact)</h3>
-
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <Heart className="text-pink-500" size={20} />
-                                            <span className="font-medium">Likes Received</span>
-                                        </div>
-                                        <span className="text-xl font-black">{stats?.interactions?.received?.likes}</span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <MessageCircle className="text-blue-500" size={20} />
-                                            <span className="font-medium">Comments Received</span>
-                                        </div>
-                                        <span className="text-xl font-black">{stats?.interactions?.received?.comments}</span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <UserPlus className="text-green-500" size={20} />
-                                            <span className="font-medium">New Followers</span>
-                                        </div>
-                                        <span className="text-xl font-black">{stats?.interactions?.received?.followers}</span>
-                                    </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="glass-card p-6 rounded-2xl flex flex-col justify-center min-h-[350px]">
+                                    <h3 className="font-bold text-center text-sm uppercase tracking-widest text-muted-foreground border-b border-white/5 pb-2 mb-4">Engagement Balance</h3>
+                                    {stats?.interactions ? (
+                                        <InteractionsRadar received={stats.interactions.received} made={stats.interactions.made} />
+                                    ) : null}
                                 </div>
-
-                                {/* MADE */}
-                                <div className="glass-card p-6 rounded-2xl space-y-4">
-                                    <h3 className="font-bold text-lg border-b border-white/5 pb-2">Made (Engagement)</h3>
-
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <Heart className="text-muted-foreground" size={20} />
-                                            <span className="font-medium">Likes Given</span>
-                                        </div>
-                                        <span className="text-xl font-black">{stats?.interactions?.made?.likes}</span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <MessageCircle className="text-muted-foreground" size={20} />
-                                            <span className="font-medium">Comments Posted</span>
-                                        </div>
-                                        <span className="text-xl font-black">{stats?.interactions?.made?.comments}</span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <UserPlus className="text-muted-foreground" size={20} />
-                                            <span className="font-medium">People Followed</span>
-                                        </div>
-                                        <span className="text-xl font-black">{stats?.interactions?.made?.following}</span>
-                                    </div>
+                                
+                                <div className="glass-card p-6 rounded-2xl flex flex-col justify-center min-h-[350px]">
+                                    <h3 className="font-bold text-center text-sm uppercase tracking-widest text-muted-foreground border-b border-white/5 pb-2 mb-4">Impact Breakdown</h3>
+                                    {stats?.interactions ? (
+                                        <DetailedInteractionsBar received={stats.interactions.received} made={stats.interactions.made} />
+                                    ) : null}
                                 </div>
                             </div>
                         </section>
 
-                        {/* Posts Section */}
-                        <section>
-                            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                                <FileText className="text-orange-500" />
-                                Content Creation
-                            </h2>
-                            <div className="glass-card p-6 rounded-2xl premium-shadow flex items-center justify-between">
-                                <div>
-                                    <p className="text-muted-foreground font-medium text-sm uppercase tracking-widest">Total Posts Created</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Your contributions to the community.</p>
+                        {/* Content & Activity Overview */}
+                        <section className="grid grid-cols-1 md:grid-cols-[1fr_2fr] gap-6">
+                            <div className="glass-card p-6 rounded-2xl flex flex-col justify-center items-center">
+                                <h2 className="text-xl font-bold mb-6 flex items-center gap-2 self-start w-full border-b border-white/5 pb-2">
+                                    <FileText className="text-orange-500" />
+                                    Content Strategy
+                                </h2>
+                                <OverviewDonut stats={stats} />
+                            </div>
+
+                            <div className="glass-card p-6 rounded-2xl flex flex-col justify-center">
+                                <h3 className="font-bold text-lg border-b border-white/5 pb-2 mb-6">Total Impact Summary</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center text-center">
+                                        <p className="text-muted-foreground font-medium text-xs uppercase tracking-widest mb-1">Total Posts Created</p>
+                                        <span className="text-4xl font-black text-orange-500">{stats?.posts?.total || 0}</span>
+                                    </div>
+                                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center text-center">
+                                        <p className="text-muted-foreground font-medium text-xs uppercase tracking-widest mb-1">Total Likes Given</p>
+                                        <span className="text-4xl font-black text-blue-500">{stats?.interactions?.made?.likes || 0}</span>
+                                    </div>
+                                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center text-center">
+                                        <p className="text-muted-foreground font-medium text-xs uppercase tracking-widest mb-1">Total Likes Received</p>
+                                        <span className="text-4xl font-black text-pink-500">{stats?.interactions?.received?.likes || 0}</span>
+                                    </div>
+                                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center text-center">
+                                        <p className="text-muted-foreground font-medium text-xs uppercase tracking-widest mb-1">Followers Gained</p>
+                                        <span className="text-4xl font-black text-green-500">{stats?.interactions?.received?.followers || 0}</span>
+                                    </div>
                                 </div>
-                                <span className="text-5xl font-black text-foreground">{stats?.posts?.total}</span>
                             </div>
                         </section>
                     </div>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
     LayoutGrid, Bookmark,
     PenTool, MessageCircle, Users, Settings,
-    HelpCircle, UserPlus, Cpu, Plus, ChevronRight, Globe, Lock
+    HelpCircle, UserPlus, Cpu, Plus, ChevronRight, Globe, Lock, BarChart3
 } from "lucide-react";
 import { getAbsUrl } from "../lib/api";
 import { memo } from "react";
@@ -159,6 +159,7 @@ function LeftSidebar({ user, username, userPhoto }: LeftSidebarProps) {
 
             {/* ── FOOTER LINKS ──────────────────────────────── */}
             <div className="flex flex-col gap-1 mt-auto pt-4 border-t border-white/5">
+                <NavItem href="/analytics" icon={BarChart3} label="Analytics" active={pathname === "/analytics"} />
                 <NavItem href="/settings" icon={Settings} label="Settings" active={pathname === "/settings"} />
                 <NavItem href="/help" icon={HelpCircle} label="Help Center" active={pathname === "/help"} />
             </div>
