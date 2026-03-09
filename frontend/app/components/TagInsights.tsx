@@ -4,7 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Layers, Tag, BarChart3, ChevronRight, Sparkles, Loader2, Database, Info } from 'lucide-react';
 import api from '../lib/api';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    PieChart, Pie, Cell, Legend
+} from 'recharts';
 
 export default function TagInsights() {
     const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
@@ -25,6 +29,18 @@ export default function TagInsights() {
         }
     });
 
+    const themes = clusters?.Themes || {};
+    const uncategorized = clusters?.Uncategorized || [];
+    const themeNames = Object.keys(themes);
+
+    const chartData = useMemo(() => {
+        if (!themeNames.length || !groupedPosts) return [];
+        return themeNames.map(theme => ({
+            name: theme,
+            posts: groupedPosts[theme]?.length || 0
+        })).sort((a, b) => b.posts - a.posts); // Sort by highest count
+    }, [themeNames, groupedPosts]);
+
     if (loadingClusters || loadingPosts) {
         return (
             <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -34,9 +50,7 @@ export default function TagInsights() {
         );
     }
 
-    const themes = clusters?.Themes || {};
-    const uncategorized = clusters?.Uncategorized || [];
-    const themeNames = Object.keys(themes);
+    const COLORS = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
     return (
         <div className="space-y-8">
@@ -99,6 +113,75 @@ export default function TagInsights() {
                     );
                 })}
             </div>
+
+            {/* --- DATA VISUALIZATIONS --- */}
+            {chartData.length > 0 && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                    {/* Bar Chart */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                        className="p-6 rounded-[2.5rem] bg-black/40 border border-white/10 backdrop-blur-2xl shadow-2xl"
+                    >
+                        <h3 className="text-lg font-black text-foreground mb-6 flex items-center gap-2">
+                            <BarChart3 size={18} className="text-primary" /> Cluster Volume Overview
+                        </h3>
+                        <div className="h-72 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData} margin={{ top: 5, right: 30, left: -20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                    <XAxis dataKey="name" stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="#888" fontSize={12} tickLine={false} axisLine={false} />
+                                    <Tooltip
+                                        cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                                        contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '12px' }}
+                                        itemStyle={{ color: '#fff', fontWeight: 'bold' }}
+                                    />
+                                    <Bar dataKey="posts" fill="#ef4444" radius={[4, 4, 0, 0]}>
+                                        {chartData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </motion.div>
+
+                    {/* Pie Chart */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+                        className="p-6 rounded-[2.5rem] bg-black/40 border border-white/10 backdrop-blur-2xl shadow-2xl"
+                    >
+                        <h3 className="text-lg font-black text-foreground mb-6 flex items-center gap-2">
+                            <Database size={18} className="text-primary" /> Data Distribution
+                        </h3>
+                        <div className="h-72 w-full flex items-center justify-center">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={chartData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={60}
+                                        outerRadius={100}
+                                        paddingAngle={5}
+                                        dataKey="posts"
+                                        stroke="none"
+                                    >
+                                        {chartData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '12px' }}
+                                        itemStyle={{ color: '#fff', fontWeight: 'bold' }}
+                                    />
+                                    <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '12px', color: '#888' }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
 
             {/* Detailed View for Selected Theme */}
             {selectedTheme && (

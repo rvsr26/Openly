@@ -127,8 +127,8 @@ export default function AdminCommunities() {
         {
             field: "actions", headerName: "Actions", type: "actions", width: 120,
             getActions: (params) => [
-                <GridActionsCellItem icon={<Edit2 size={18} />} label="Edit" onClick={() => handleOpenForm(params.row)} />,
-                <GridActionsCellItem icon={<Trash2 size={18} color="red" />} label="Delete" onClick={() => { setSelectedId(params.row.id); setDeleteConfirmOpen(true); }} />
+                <GridActionsCellItem key="edit" icon={<Edit2 size={18} />} label="Edit" onClick={() => handleOpenForm(params.row)} />,
+                <GridActionsCellItem key="delete" icon={<Trash2 size={18} color="red" />} label="Delete" onClick={() => { setSelectedId(params.row.id); setDeleteConfirmOpen(true); }} />
             ]
         }
     ];
