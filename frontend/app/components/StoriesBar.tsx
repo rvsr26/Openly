@@ -211,10 +211,7 @@ function StoryViewer({ groups, initialGroupIndex, onClose, onStoryViewed }: Stor
     const [paused, setPaused] = useState(false);
 
     const currentGroup = groups[groupIndex];
-    if (!currentGroup) {
-        onClose();
-        return null; // Don't render if index is bad
-    }
+    // Moved conditional return after hooks to follow React rules
 
     const currentStory = currentGroup.stories[storyIndex];
 
@@ -264,9 +261,12 @@ function StoryViewer({ groups, initialGroupIndex, onClose, onStoryViewed }: Stor
         }, interval);
 
         return () => clearInterval(timer);
-    }, [currentStory, paused, groupIndex, storyIndex]);
+    }, [currentStory, paused, groupIndex, storyIndex, onStoryViewed, nextStory]);
 
-    if (!currentStory) return null; // Avoid render errors during transitions
+    if (!currentGroup || !currentStory) {
+        if (!currentGroup && typeof window !== 'undefined') onClose();
+        return null; // Don't render if index is bad
+    }
 
     return (
         <motion.div

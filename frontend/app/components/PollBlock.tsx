@@ -19,7 +19,7 @@ export default function PollBlock({ poll: initialPoll, postId }: PollBlockProps)
     const { user } = useAuth();
 
     // Check if poll has ended
-    const isExpired = poll.ends_at && new Date(poll.ends_at) < new Date();
+    const isExpired = !!(poll.ends_at && new Date(poll.ends_at) < new Date());
 
     const handleVote = async (optionId: string) => {
         if (!user && !poll.allow_anonymous) {

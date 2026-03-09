@@ -102,7 +102,7 @@ function Navbar() {
   // Real-time notification badge via WebSocket
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
-  const WSURL = process.env.NEXT_PUBLIC_WS_URL || (typeof window !== 'undefined' ? `ws://${window.location.hostname}:8001` : '');
+  const WSURL = process.env.NEXT_PUBLIC_WS_URL || (typeof window !== 'undefined' ? `ws://${window.location.hostname}:8000` : '');
 
   useEffect(() => {
     if (!authUser) return;
@@ -118,7 +118,7 @@ function Navbar() {
       } catch { }
     };
     ws.onerror = () => { }; // silent fail — WS is enhancement only
-    return () => { ws.readyState === WebSocket.OPEN && ws.close(); };
+    return () => { if (ws.readyState === WebSocket.OPEN) ws.close(); };
   }, [authUser?.uid]);
 
   const handleCreatePost = useCallback(() => {

@@ -27,25 +27,26 @@ const SORT_OPTIONS = [
 
 export default function FeedPreferences() {
     const [isOpen, setIsOpen] = useState(false);
-    const [preferences, setPreferences] = useState<FeedPreference>({
-        contentTypes: ['posts', 'images', 'polls', 'links'],
-        topics: [],
-        sortBy: 'hot',
+    const [preferences, setPreferences] = useState<FeedPreference>(() => {
+        const defaults: FeedPreference = {
+            contentTypes: ['posts', 'images', 'polls', 'links'],
+            topics: [],
+            sortBy: 'hot',
+        };
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('feed_preferences');
+            if (saved) return JSON.parse(saved);
+        }
+        return defaults;
     });
-    const [availableTopics, setAvailableTopics] = useState<string[]>([
+
+    const availableTopics = [
         'Career', 'Startup', 'Technology', 'Life Lessons', 'Failure Stories', 'Growth'
-    ]);
+    ];
 
     useEffect(() => {
-        loadPreferences();
+        // Initial state loading handled by useState initializer
     }, []);
-
-    const loadPreferences = () => {
-        const saved = localStorage.getItem('feed_preferences');
-        if (saved) {
-            setPreferences(JSON.parse(saved));
-        }
-    };
 
     const savePreferences = async (newPrefs: FeedPreference) => {
         setPreferences(newPrefs);
@@ -139,8 +140,8 @@ export default function FeedPreferences() {
                                                 key={option.id}
                                                 onClick={() => changeSortBy(option.id as any)}
                                                 className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${preferences.sortBy === option.id
-                                                        ? 'bg-primary/10 border-primary'
-                                                        : 'bg-muted/30 border-border hover:bg-muted/50'
+                                                    ? 'bg-primary/10 border-primary'
+                                                    : 'bg-muted/30 border-border hover:bg-muted/50'
                                                     }`}
                                             >
                                                 <div className="text-left">
@@ -164,8 +165,8 @@ export default function FeedPreferences() {
                                                 key={type.id}
                                                 onClick={() => toggleContentType(type.id)}
                                                 className={`flex items-center gap-2 p-3 rounded-lg border transition-all ${preferences.contentTypes.includes(type.id)
-                                                        ? 'bg-primary/10 border-primary'
-                                                        : 'bg-muted/30 border-border hover:bg-muted/50'
+                                                    ? 'bg-primary/10 border-primary'
+                                                    : 'bg-muted/30 border-border hover:bg-muted/50'
                                                     }`}
                                             >
                                                 <span className="text-xl">{type.icon}</span>
@@ -192,8 +193,8 @@ export default function FeedPreferences() {
                                                 key={topic}
                                                 onClick={() => toggleTopic(topic)}
                                                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${preferences.topics.includes(topic)
-                                                        ? 'bg-primary text-primary-foreground'
-                                                        : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
                                                     }`}
                                             >
                                                 {topic}

@@ -18,42 +18,41 @@ interface Notification {
 
 export default function NotificationCenter() {
     const [isOpen, setIsOpen] = useState(false);
-    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [notifications, setNotifications] = useState<Notification[]>(() => [
+        {
+            id: '1',
+            type: 'like',
+            title: 'New likes',
+            message: '5 people liked your post',
+            timestamp: new Date(Date.now() - 1000 * 60 * 5),
+            read: false,
+            priority: 'normal',
+            groupId: 'likes-1',
+        },
+        {
+            id: '2',
+            type: 'comment',
+            title: 'New comment',
+            message: 'John commented on your post',
+            timestamp: new Date(Date.now() - 1000 * 60 * 30),
+            read: false,
+            priority: 'high',
+        },
+        {
+            id: '3',
+            type: 'follow',
+            title: 'New follower',
+            message: 'Sarah started following you',
+            timestamp: new Date(Date.now() - 1000 * 60 * 60),
+            read: true,
+            priority: 'normal',
+        },
+    ]);
     const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
     useEffect(() => {
-        // TODO: Fetch notifications from API
-        const mockNotifications: Notification[] = [
-            {
-                id: '1',
-                type: 'like',
-                title: 'New likes',
-                message: '5 people liked your post',
-                timestamp: new Date(Date.now() - 1000 * 60 * 5),
-                read: false,
-                priority: 'normal',
-                groupId: 'likes-1',
-            },
-            {
-                id: '2',
-                type: 'comment',
-                title: 'New comment',
-                message: 'John commented on your post',
-                timestamp: new Date(Date.now() - 1000 * 60 * 30),
-                read: false,
-                priority: 'high',
-            },
-            {
-                id: '3',
-                type: 'follow',
-                title: 'New follower',
-                message: 'Sarah started following you',
-                timestamp: new Date(Date.now() - 1000 * 60 * 60),
-                read: true,
-                priority: 'normal',
-            },
-        ];
-        setNotifications(mockNotifications);
+        // TODO: Fetch real notifications from API
+        // api.get('/notifications').then(res => setNotifications(res.data));
     }, []);
 
     const markAsRead = (id: string) => {
@@ -133,8 +132,8 @@ export default function NotificationCenter() {
                                     <button
                                         onClick={() => setFilter('all')}
                                         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'all'
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
                                             }`}
                                     >
                                         All
@@ -142,8 +141,8 @@ export default function NotificationCenter() {
                                     <button
                                         onClick={() => setFilter('unread')}
                                         className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${filter === 'unread'
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'bg-muted text-muted-foreground hover:bg-muted/80'
                                             }`}
                                     >
                                         Unread ({unreadCount})
@@ -165,9 +164,9 @@ export default function NotificationCenter() {
                                                 >
                                                     <div className="flex gap-3">
                                                         <div className={`p-2 rounded-lg ${notification.type === 'like' ? 'bg-red-500/10 text-red-500' :
-                                                                notification.type === 'comment' ? 'bg-blue-500/10 text-blue-500' :
-                                                                    notification.type === 'follow' ? 'bg-green-500/10 text-green-500' :
-                                                                        'bg-yellow-500/10 text-yellow-500'
+                                                            notification.type === 'comment' ? 'bg-blue-500/10 text-blue-500' :
+                                                                notification.type === 'follow' ? 'bg-green-500/10 text-green-500' :
+                                                                    'bg-yellow-500/10 text-yellow-500'
                                                             }`}>
                                                             <Icon className="w-4 h-4" />
                                                         </div>

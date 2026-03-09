@@ -937,9 +937,9 @@ function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: strin
                       }
                     </p>
                     {isRestrictedByEmail && !readOnlyMode && (
-                      <a href="/profile" className="ml-auto text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
+                      <Link href="/profile" className="ml-auto text-[10px] font-black uppercase tracking-widest text-primary hover:underline">
                         Verify
-                      </a>
+                      </Link>
                     )}
                   </div>
                 )}

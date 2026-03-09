@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import Image from "next/image";
 import { User } from "firebase/auth";
 import { motion } from "framer-motion";
@@ -224,12 +226,12 @@ function CreatePost({
                 <h3 className="heading-tertiary mb-2">Join the Community</h3>
                 <p className="text-body-sm mb-6 max-w-md mx-auto">Share your insights and experiences to help others.</p>
                 <div className="flex gap-3 justify-center">
-                    <a href="/login" className="btn-primary">
+                    <Link href="/login" className="btn-primary">
                         Log In
-                    </a>
-                    <a href="/signup" className="btn-secondary">
+                    </Link>
+                    <Link href="/signup" className="btn-secondary">
                         Sign Up
-                    </a>
+                    </Link>
                 </div>
             </motion.div>
         );
@@ -263,9 +265,9 @@ function CreatePost({
                         </p>
                     </div>
                     {isRestrictedByEmail && !readOnlyMode && (
-                        <a href="/profile" className="ml-auto btn-primary !py-2 !px-4 !text-xs whitespace-nowrap">
+                        <Link href="/profile" className="ml-auto btn-primary !py-2 !px-4 !text-xs whitespace-nowrap">
                             Verify Now
-                        </a>
+                        </Link>
                     )}
                 </div>
             )}

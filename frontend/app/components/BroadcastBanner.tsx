@@ -6,15 +6,9 @@ import { useState, useEffect } from "react";
 
 export default function BroadcastBanner() {
     const { broadcastMessage } = useSystem();
-    const [isVisible, setIsVisible] = useState(false);
+    const [dismissedMessage, setDismissedMessage] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (broadcastMessage && broadcastMessage.trim() !== "") {
-            setIsVisible(true);
-        } else {
-            setIsVisible(false);
-        }
-    }, [broadcastMessage]);
+    const isVisible = !!(broadcastMessage && broadcastMessage.trim() !== "" && broadcastMessage !== dismissedMessage);
 
     if (!isVisible) return null;
 
@@ -28,7 +22,7 @@ export default function BroadcastBanner() {
                 </p>
             </div>
             <button
-                onClick={() => setIsVisible(false)}
+                onClick={() => setDismissedMessage(broadcastMessage)}
                 className="p-1 hover:bg-black/10 rounded-full transition-colors flex-shrink-0 ml-4"
                 aria-label="Dismiss banner"
             >

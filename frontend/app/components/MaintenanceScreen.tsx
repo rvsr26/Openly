@@ -3,16 +3,16 @@
 import { Wrench, ShieldAlert } from "lucide-react";
 import { useSystem } from "@/context/SystemContext";
 import { useAuth } from "@/context/AuthContext";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore, useState, useEffect } from "react";
 
 export default function MaintenanceScreen({ children }: { children: React.ReactNode }) {
     const { maintenanceMode } = useSystem();
     const { user } = useAuth();
-    const [isClient, setIsClient] = useState(false);
-
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
+    const isClient = useSyncExternalStore(
+        () => () => { },
+        () => true,
+        () => false
+    );
 
     // Avoid hydration mismatch by waiting for client
     if (!isClient) {

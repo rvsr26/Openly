@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, Clock, TrendingUp, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -18,19 +18,16 @@ const MAX_RECENT = 5;
 export default function SearchAutocomplete() {
     const [query, setQuery] = useState('');
     const [isOpen, setIsOpen] = useState(false);
-    const [recentSearches, setRecentSearches] = useState<string[]>([]);
-    const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+    const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+        if (typeof window !== 'undefined') {
+            const recent = localStorage.getItem(RECENT_SEARCHES_KEY);
+            if (recent) return JSON.parse(recent);
+        }
+        return [];
+    });
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
-
-    // Load recent searches
-    useEffect(() => {
-        const recent = localStorage.getItem(RECENT_SEARCHES_KEY);
-        if (recent) {
-            setRecentSearches(JSON.parse(recent));
-        }
-    }, []);
 
     // Close on click outside
     useEffect(() => {
@@ -44,23 +41,21 @@ export default function SearchAutocomplete() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Generate suggestions based on query
-    useEffect(() => {
+    // Generate suggestions based on query using useMemo
+    const suggestions = useMemo<SearchSuggestion[]>(() => {
         if (!query.trim()) {
             // Show recent searches when empty
-            const recent: SearchSuggestion[] = recentSearches.map(text => ({
+            return recentSearches.map(text => ({
                 type: 'recent',
                 text
             }));
-            setSuggestions(recent);
         } else {
             // TODO: Fetch from API
             // For now, show mock suggestions
-            const mockSuggestions: SearchSuggestion[] = [
+            return [
                 { type: 'trending', text: query, count: 245 },
                 { type: 'topic', text: `#${query}` },
             ];
-            setSuggestions(mockSuggestions);
         }
     }, [query, recentSearches]);
 
