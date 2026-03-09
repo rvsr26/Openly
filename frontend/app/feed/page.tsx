@@ -92,7 +92,6 @@ export default function Home() {
       setSelectedTimelineId(draft.selectedTimelineId);
       setCollaborators(draft.collaborators);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

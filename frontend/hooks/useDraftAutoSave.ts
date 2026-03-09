@@ -87,7 +87,6 @@ export function useDraftAutoSave(
                 clearTimeout(timeoutRef.current);
             }
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [content, imageUrl, isAnonymous, selectedTimelineId, JSON.stringify(collaborators)]);
 
     return {

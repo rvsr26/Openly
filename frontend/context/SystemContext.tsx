@@ -38,7 +38,8 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
     };
 
     useEffect(() => {
-        refreshSettings();
+        // Initial fetch
+        setTimeout(refreshSettings, 0);
         // Refresh settings every 1 minute
         const interval = setInterval(refreshSettings, 60000);
         return () => clearInterval(interval);
