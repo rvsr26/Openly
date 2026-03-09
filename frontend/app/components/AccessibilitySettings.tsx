@@ -12,27 +12,22 @@ interface AccessibilitySettings {
 }
 
 export default function AccessibilitySettings() {
-    const [settings, setSettings] = useState<AccessibilitySettings>({
-        fontSize: 'medium',
-        highContrast: false,
-        reduceMotion: false,
-        screenReaderOptimized: false,
+    const [settings, setSettings] = useState<AccessibilitySettings>(() => {
+        const defaults: AccessibilitySettings = {
+            fontSize: 'medium',
+            highContrast: false,
+            reduceMotion: false,
+            screenReaderOptimized: false,
+        };
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('accessibility_settings');
+            if (saved) return JSON.parse(saved);
+        }
+        return defaults;
     });
 
-    useEffect(() => {
-        loadSettings();
-    }, []);
-
-    const loadSettings = () => {
-        const saved = localStorage.getItem('accessibility_settings');
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            setSettings(parsed);
-            applySettings(parsed);
-        }
-    };
-
     const applySettings = (newSettings: AccessibilitySettings) => {
+        if (typeof window === 'undefined') return;
         const root = document.documentElement;
 
         // Font size
@@ -59,6 +54,10 @@ export default function AccessibilitySettings() {
             root.removeAttribute('data-screen-reader');
         }
     };
+
+    useEffect(() => {
+        applySettings(settings);
+    }, [settings]);
 
     const updateSettings = (updates: Partial<AccessibilitySettings>) => {
         const newSettings = { ...settings, ...updates };
@@ -88,14 +87,14 @@ export default function AccessibilitySettings() {
                             key={size}
                             onClick={() => updateSettings({ fontSize: size })}
                             className={`p-3 rounded-lg border transition-all ${settings.fontSize === size
-                                    ? 'bg-primary/10 border-primary'
-                                    : 'bg-muted/30 border-border hover:bg-muted/50'
+                                ? 'bg-primary/10 border-primary'
+                                : 'bg-muted/30 border-border hover:bg-muted/50'
                                 }`}
                         >
                             <span className={`font-medium ${size === 'small' ? 'text-xs' :
-                                    size === 'medium' ? 'text-sm' :
-                                        size === 'large' ? 'text-base' :
-                                            'text-lg'
+                                size === 'medium' ? 'text-sm' :
+                                    size === 'large' ? 'text-base' :
+                                        'text-lg'
                                 }`}>
                                 {size === 'x-large' ? 'XL' : size.charAt(0).toUpperCase()}
                             </span>

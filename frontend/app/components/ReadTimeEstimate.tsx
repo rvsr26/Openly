@@ -10,14 +10,9 @@ interface ReadTimeEstimateProps {
 const WORDS_PER_MINUTE = 200; // Average reading speed
 
 export default function ReadTimeEstimate({ content, className = '' }: ReadTimeEstimateProps) {
-    const [readTime, setReadTime] = useState(0);
-
-    useEffect(() => {
-        // Count words
-        const words = content.trim().split(/\s+/).length;
-        const minutes = Math.ceil(words / WORDS_PER_MINUTE);
-        setReadTime(minutes);
-    }, [content]);
+    // Count words directly during render
+    const words = content.trim() ? content.trim().split(/\s+/).length : 0;
+    const readTime = Math.ceil(words / WORDS_PER_MINUTE);
 
     if (readTime === 0) return null;
 

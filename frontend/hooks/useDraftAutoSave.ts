@@ -21,7 +21,7 @@ export function useDraftAutoSave(
 ) {
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const timeoutRef = useRef<NodeJS.Timeout>();
+    const timeoutRef = useRef<NodeJS.Timeout>(undefined);
 
     // Save draft to localStorage
     const saveDraft = () => {
@@ -87,7 +87,6 @@ export function useDraftAutoSave(
                 clearTimeout(timeoutRef.current);
             }
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [content, imageUrl, isAnonymous, selectedTimelineId, JSON.stringify(collaborators)]);
 
     return {

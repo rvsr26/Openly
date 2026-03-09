@@ -5,7 +5,7 @@ interface OptimisticUpdateOptions<TData, TVariables> {
     mutationFn: (variables: TVariables) => Promise<TData>;
     queryKey: any[];
     updateFn: (oldData: any, variables: TVariables) => any;
-    successMessage?: string;
+    successMessage?: string | ((variables: TVariables) => string);
     errorMessage?: string;
     onSuccess?: (data: TData, variables: TVariables) => void;
     onError?: (error: any, variables: TVariables) => void;
@@ -48,7 +48,8 @@ export function useOptimisticMutation<TData = any, TVariables = any>({
         },
         onSuccess: (data, variables) => {
             if (successMessage) {
-                toast.success(successMessage);
+                const message = typeof successMessage === 'function' ? successMessage(variables) : successMessage;
+                toast.success(message);
             }
             onSuccess?.(data, variables);
         },

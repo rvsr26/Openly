@@ -10,19 +10,22 @@ interface ViewModeToggleProps {
 }
 
 export default function ViewModeToggle({ onViewModeChange }: ViewModeToggleProps) {
-    const [viewMode, setViewMode] = useState<ViewMode>('comfortable');
-
-    useEffect(() => {
-        const saved = localStorage.getItem('view_mode');
-        if (saved) {
-            setViewMode(saved as ViewMode);
-            applyViewMode(saved as ViewMode);
+    const [viewMode, setViewMode] = useState<ViewMode>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('view_mode');
+            if (saved) return saved as ViewMode;
         }
-    }, []);
+        return 'comfortable';
+    });
 
     const applyViewMode = (mode: ViewMode) => {
+        if (typeof window === 'undefined') return;
         document.documentElement.setAttribute('data-view-mode', mode);
     };
+
+    useEffect(() => {
+        applyViewMode(viewMode);
+    }, [viewMode]);
 
     const changeViewMode = (mode: ViewMode) => {
         setViewMode(mode);
@@ -47,8 +50,8 @@ export default function ViewModeToggle({ onViewModeChange }: ViewModeToggleProps
                         key={mode.id}
                         onClick={() => changeViewMode(mode.id)}
                         className={`p-2 rounded-md transition-all ${viewMode === mode.id
-                                ? 'bg-primary text-primary-foreground shadow-sm'
-                                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                            ? 'bg-primary text-primary-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                             }`}
                         title={`${mode.label} - ${mode.description}`}
                     >

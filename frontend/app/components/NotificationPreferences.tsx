@@ -3,6 +3,19 @@
 import { useState, useEffect } from 'react';
 import { Bell, Mail, Volume2, VolumeX, Clock, UserX } from 'lucide-react';
 import { toast } from 'sonner';
+
+const NotificationToggle = ({ enabled, onChange }: { enabled: boolean; onChange: () => void }) => (
+    <button
+        onClick={onChange}
+        className={`relative w-12 h-6 rounded-full transition-colors ${enabled ? 'bg-primary' : 'bg-muted'
+            }`}
+    >
+        <span
+            className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${enabled ? 'translate-x-6' : ''
+                }`}
+        />
+    </button>
+);
 import api from '../lib/api';
 
 interface NotificationPreferences {
@@ -29,47 +42,39 @@ interface NotificationPreferences {
 }
 
 export default function NotificationPreferences() {
-    const [preferences, setPreferences] = useState<NotificationPreferences>({
-        email: {
-            newFollower: true,
-            newComment: true,
-            newLike: false,
-            newMessage: true,
-            weeklyDigest: true,
-        },
-        push: {
-            newFollower: true,
-            newComment: true,
-            newLike: false,
-            newMessage: true,
-        },
-        quietHours: {
-            enabled: false,
-            start: '22:00',
-            end: '08:00',
-        },
-        mutedUsers: [],
-        mutedTopics: [],
+    const [preferences, setPreferences] = useState<NotificationPreferences>(() => {
+        const defaults: NotificationPreferences = {
+            email: {
+                newFollower: true,
+                newComment: true,
+                newLike: false,
+                newMessage: true,
+                weeklyDigest: true,
+            },
+            push: {
+                newFollower: true,
+                newComment: true,
+                newLike: false,
+                newMessage: true,
+            },
+            quietHours: {
+                enabled: false,
+                start: '22:00',
+                end: '08:00',
+            },
+            mutedUsers: [],
+            mutedTopics: [],
+        };
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('notification_preferences');
+            if (saved) return JSON.parse(saved);
+        }
+        return defaults;
     });
 
     useEffect(() => {
-        loadPreferences();
+        // Asynchronous loading from backend can still be initiated here
     }, []);
-
-    const loadPreferences = async () => {
-        const saved = localStorage.getItem('notification_preferences');
-        if (saved) {
-            setPreferences(JSON.parse(saved));
-        }
-
-        try {
-            // TODO: Load from backend
-            // const res = await api.get('/users/notification-preferences');
-            // setPreferences(res.data);
-        } catch (error) {
-            console.error('Failed to load preferences');
-        }
-    };
 
     const savePreferences = async (newPrefs: NotificationPreferences) => {
         setPreferences(newPrefs);
@@ -105,18 +110,6 @@ export default function NotificationPreferences() {
         });
     };
 
-    const NotificationToggle = ({ enabled, onChange }: { enabled: boolean; onChange: () => void }) => (
-        <button
-            onClick={onChange}
-            className={`relative w-12 h-6 rounded-full transition-colors ${enabled ? 'bg-primary' : 'bg-muted'
-                }`}
-        >
-            <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${enabled ? 'translate-x-6' : ''
-                    }`}
-            />
-        </button>
-    );
 
     return (
         <div className="space-y-6">

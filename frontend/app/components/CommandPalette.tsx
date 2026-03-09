@@ -32,7 +32,7 @@ export default function CommandPalette() {
         {
             id: 'new-post', label: 'Create New Post', icon: FileText, action: () => {
                 router.push('/');
-                setTimeout(() => document.querySelector('[data-create-post]')?.click(), 100);
+                setTimeout(() => (document.querySelector('[data-create-post]') as HTMLElement)?.click(), 100);
             }, category: 'actions', keywords: ['create', 'write', 'post']
         },
 
@@ -43,6 +43,13 @@ export default function CommandPalette() {
         cmd.label.toLowerCase().includes(query.toLowerCase()) ||
         cmd.keywords?.some(k => k.includes(query.toLowerCase()))
     );
+
+    const executeCommand = (command: CommandItem) => {
+        command.action();
+        setIsOpen(false);
+        setQuery('');
+        setSelectedIndex(0);
+    };
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -82,13 +89,6 @@ export default function CommandPalette() {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, selectedIndex, filteredCommands]);
-
-    const executeCommand = (command: CommandItem) => {
-        command.action();
-        setIsOpen(false);
-        setQuery('');
-        setSelectedIndex(0);
-    };
 
     return (
         <AnimatePresence>
@@ -141,8 +141,8 @@ export default function CommandPalette() {
                                                     key={command.id}
                                                     onClick={() => executeCommand(command)}
                                                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${index === selectedIndex
-                                                            ? 'bg-primary/10 text-primary'
-                                                            : 'hover:bg-muted text-foreground'
+                                                        ? 'bg-primary/10 text-primary'
+                                                        : 'hover:bg-muted text-foreground'
                                                         }`}
                                                 >
                                                     <Icon className="w-5 h-5" />
