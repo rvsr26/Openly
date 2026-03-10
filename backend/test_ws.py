@@ -1,16 +1,16 @@
 import asyncio
 import websockets
 
-async def test():
+async def test_ws():
+    uri = "wss://openly-backend.onrender.com/ws/TEST_USER_123"
+    print(f"Connecting to {uri}...")
     try:
-        async with websockets.connect('ws://127.0.0.1:8000/ws/testuser') as ws:
+        async with websockets.connect(uri) as websocket:
             print("Connected!")
-            await ws.send('{"type": "typing"}')
-            print("Sent typing indicator")
-            # Wait a bit
-            await asyncio.sleep(1)
-            print("Success")
+            await websocket.send('{"type": "ping"}')
+            response = await websocket.recv()
+            print(f"Received: {response}")
     except Exception as e:
         print(f"Error: {e}")
 
-asyncio.run(test())
+asyncio.run(test_ws())

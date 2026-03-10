@@ -102,7 +102,7 @@ function Navbar() {
   // Real-time notification badge via WebSocket
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
-  const WSURL = process.env.NEXT_PUBLIC_WS_URL || (typeof window !== 'undefined' ? `ws://${window.location.hostname}:8000` : '');
+  const WSURL = process.env.NEXT_PUBLIC_WS_URL || (process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? `http://${window.location.hostname}:8000` : '')).replace(/^http/, 'ws').replace('localhost', '127.0.0.1').replace(/\/$/, "");
 
   useEffect(() => {
     if (!authUser) return;
@@ -139,7 +139,7 @@ function Navbar() {
     }
     await logout();
     setShowDropdown(false);
-    router.push("/login");
+    window.location.href = "/login";
   };
 
   const handleSwitchAccount = async (account: any) => {
@@ -154,8 +154,10 @@ function Navbar() {
       localStorage.removeItem('token');
     }
 
-    await refreshSession();
     setShowDropdown(false);
+
+    // Force a full hardware navigation to clear any cached states/Query data from previous session
+    window.location.href = "/feed";
   };
 
   const handleRemoveAccount = (uid: string) => {

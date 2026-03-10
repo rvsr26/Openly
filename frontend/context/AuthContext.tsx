@@ -79,6 +79,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
             if (fbUser) {
                 const currentToken = localStorage.getItem('token');
+
+                // Prevent race condition on full page reload by checking the active JWT directly
+                if (currentToken && currentToken !== "undefined" && currentToken !== "null") {
+                    try {
+                        const base64Url = currentToken.split('.')[1];
+                        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+                            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                        }).join(''));
+                        const payload = JSON.parse(jsonPayload);
+
+                        // If the token belongs to a DIFFERENT user than Firebase, we are in a switched session!
+                        if (payload.sub && payload.sub !== fbUser.uid) {
+                            console.log("Firebase user differs from active JWT session. Ignoring Firebase sync.");
+                            setLoading(false);
+                            return;
+                        }
+                    } catch (e) {
+                        console.error("Error decoding JWT during auth state change", e);
+                    }
+                }
+
                 const prev = userRef.current;
 
                 if (prev && prev.uid !== fbUser.uid && prev.isFromToken) {

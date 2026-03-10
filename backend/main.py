@@ -177,8 +177,11 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
         "http://127.0.0.1:3002",
+        "https://openlytalk.netlify.app",
+        "https://openly-frontend.vercel.app",
         os.getenv("FRONTEND_URL", "http://localhost:3000")
     ],
+    allow_origin_regex=r"https://.*\.netlify\.app|https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -455,7 +458,7 @@ async def get_user_by_any_id(user_id: str):
 
 @app.get("/")
 def read_root():
-    return {"message": "Openly Backend is LIVE (MongoDB)", "version": "1.0.0"}
+    return {"message": "Openly Backend is LIVE (MongoDB)", "version": "1.0.1"}
 
 # ==================== AUTHENTICATION ENDPOINTS ====================
 

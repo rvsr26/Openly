@@ -1,16 +1,44 @@
-fastapi
-uvicorn
-python-dotenv
-pydantic
-motor
-dnspython
-requests
-python-multipart
+﻿# Core FastAPI and Server
+fastapi==0.115.6
+uvicorn==0.38.0
+websockets==12.0
+python-multipart==0.0.20
+
+# Database
+motor==3.7.0
+pymongo==4.11.0
+
+# Caching
 redis>=5.0.0
-aioredis>=2.0.1
-pyjwt
-email-validator
-pyotp
-qrcode
-cloudinary
+
+# Authentication & Security
+PyJWT~=2.9.0
+pydantic[email]==2.8.2
+python-dotenv==1.0.1
+pyotp==2.9.0
+qrcode==7.4.2
+
+# AI/ML for content moderation
+--extra-index-url https://download.pytorch.org/whl/cpu
+transformers==4.48.2
+torch==2.5.1+cpu
+scikit-learn==1.6.1
 google-generativeai
+
+# Utilities
+httpx==0.28.1
+requests==2.32.5
+urllib3==2.6.2
+cloudinary==1.42.0
+
+# Protocol Buffers (for Firebase)
+protobuf<5.0.0
+proto-plus==1.26.1
+
+# Other dependencies
+idna==3.11
+msgpack==1.1.2
+pyasn1==0.6.1
+pyasn1_modules==0.4.2
+pycparser==2.23
+hyperframe==6.1.0

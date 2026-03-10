@@ -28,7 +28,8 @@ export function useWebSocket(userId: string | null) {
         try {
             const wsUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
                 .replace(/^http/, 'ws')
-                .replace('localhost', '127.0.0.1');
+                .replace('localhost', '127.0.0.1')
+                .replace(/\/$/, "");
             const ws = new WebSocket(`${wsUrl}/ws/${userId}`);
 
             ws.onopen = () => {
