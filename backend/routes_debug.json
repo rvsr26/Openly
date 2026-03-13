@@ -1,0 +1,1040 @@
+﻿[WARNING] GEMINI_API_KEY not found. Falling back to basic AI logic.
+[SUCCESS] Authentication and security middleware loaded successfully
+[SUCCESS] Security middleware registered
+[SUCCESS] Cloudinary configured with URL: cloudinary://9966475...
+[
+  {
+    "path": "/openapi.json",
+    "methods": [
+      "GET",
+      "HEAD"
+    ]
+  },
+  {
+    "path": "/docs",
+    "methods": [
+      "GET",
+      "HEAD"
+    ]
+  },
+  {
+    "path": "/docs/oauth2-redirect",
+    "methods": [
+      "GET",
+      "HEAD"
+    ]
+  },
+  {
+    "path": "/redoc",
+    "methods": [
+      "GET",
+      "HEAD"
+    ]
+  },
+  {
+    "path": "/conversations/",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/conversations/",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/conversations/{conversation_id}/messages",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/conversations/{conversation_id}/messages",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/messages/remote",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/conversations/{conversation_id}/read",
+    "methods": [
+      "PUT"
+    ]
+  },
+  {
+    "path": "/messages/{message_id}",
+    "methods": [
+      "DELETE"
+    ]
+  },
+  {
+    "path": "/users/{user_id}/unread-count",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/reports/heartbeat",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/reports/stats",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/timelines/",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/timelines/user/{user_id}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/timelines/{timeline_id}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/timelines/{timeline_id}",
+    "methods": [
+      "PUT"
+    ]
+  },
+  {
+    "path": "/api/v1/timelines/{timeline_id}/posts",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/communities",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/communities",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/communities/search/{item_id}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/communities/{item_id}",
+    "methods": [
+      "PUT"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/communities/{item_id}",
+    "methods": [
+      "DELETE"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/hubs",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/hubs",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/hubs/search/{item_id}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/hubs/{item_id}",
+    "methods": [
+      "PUT"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/hubs/{item_id}",
+    "methods": [
+      "DELETE"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/reports",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/reports",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/reports/search/{item_id}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/reports/{item_id}",
+    "methods": [
+      "PUT"
+    ]
+  },
+  {
+    "path": "/api/v1/admin/reports/{item_id}",
+    "methods": [
+      "DELETE"
+    ]
+  },
+  {
+    "path": "/upload/image",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/upload",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/admin/migrate/clear-stale-photos",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/send-verification",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/verify-email",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/forgot-password",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/reset-password",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/oauth/login",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/login",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/2fa/setup",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/2fa/enable",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/2fa/verify-login",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/2fa/disable",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/sync",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/me",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/validate-username",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/validate-email",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/change-password",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/auth/2fa/toggle",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/user/deactivate",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/user",
+    "methods": [
+      "DELETE"
+    ]
+  },
+  {
+    "path": "/api/v1/user/activity",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/aliases/",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/aliases/",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/aliases/{alias_id}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/aliases/{alias_id}",
+    "methods": [
+      "PUT"
+    ]
+  },
+  {
+    "path": "/api/v1/aliases/{alias_id}",
+    "methods": [
+      "DELETE"
+    ]
+  },
+  {
+    "path": "/api/v1/aliases/{alias_id}/activate",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/aliases/deactivate",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/aliases/active",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/ai/enhance-post",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/ai/sentiment",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/ai/post-summary/{post_id}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/ai/chat",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/hubs/{hub_name}/sentiment",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/search/semantic",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/ai/data/clusters",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/ai/data/posts-by-theme",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/posts/",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/feed/",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/hubs/{industry}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}/related",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}",
+    "methods": [
+      "DELETE"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}",
+    "methods": [
+      "PATCH"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}/insights",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/admin/stats",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/admin/users",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/admin/users/{target_id}/role",
+    "methods": [
+      "PATCH"
+    ]
+  },
+  {
+    "path": "/admin/users/{target_id}/ban",
+    "methods": [
+      "PATCH"
+    ]
+  },
+  {
+    "path": "/admin/posts/{post_id}/unflag",
+    "methods": [
+      "PATCH"
+    ]
+  },
+  {
+    "path": "/api/v1/system/settings",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/admin/system/settings",
+    "methods": [
+      "PATCH"
+    ]
+  },
+  {
+    "path": "/tags/{tag}/posts",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/users/suggested",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/trending/posts",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/trending/tags",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/posts/{post_id}/summarize",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/posts/suggest-tags",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/posts/{post_id}/helped",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/hubs/{industry}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}/content-warning",
+    "methods": [
+      "PATCH"
+    ]
+  },
+  {
+    "path": "/users/{target_id}/block",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/users/{target_id}/block",
+    "methods": [
+      "DELETE"
+    ]
+  },
+  {
+    "path": "/users/{target_id}/mute",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/users/{target_id}/mute",
+    "methods": [
+      "DELETE"
+    ]
+  },
+  {
+    "path": "/users/{user_id}/blocked",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/reports/",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/search/",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/users/{user_id}/profile",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/users/{user_id}/insights/send",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/users/{user_id}/hubs/{hub_name}/join",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/users/{user_id}/hubs/{hub_name}/leave",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/users/profile/photo",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/users/username/{username}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/users/set-username",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/users/profile/update",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}/view",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}/react",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}/downvote",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}/poll/vote",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}/bookmark",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}/bookmark-status",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/users/{user_id}/bookmarks",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}/comments",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}/comments",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/notifications",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/notifications/{id}/read",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/users/{target_id}/follow",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/users/{target_id}/follow",
+    "methods": [
+      "DELETE"
+    ]
+  },
+  {
+    "path": "/users/{user_id}/follow-requests",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/users/follow-requests/{request_id}/accept",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/users/follow-requests/{request_id}/reject",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/users/{user_id}/follow-status/{target_id}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/users/suggested",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/users/{user_id}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/users/{user_id}",
+    "methods": [
+      "PUT"
+    ]
+  },
+  {
+    "path": "/users/{user_id}/followers",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/users/{user_id}/following",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/connect/{target_id}",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/connect/{target_id}/accept",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/network/{user_id}/status/{target_id}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/network/{user_id}/requests",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/network/{user_id}/connections",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/stats/trending",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/drafts/",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/drafts/",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/drafts/{draft_id}",
+    "methods": [
+      "DELETE"
+    ]
+  },
+  {
+    "path": "/ws/{user_id}",
+    "methods": []
+  },
+  {
+    "path": "/posts/{post_id}",
+    "methods": [
+      "PATCH"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}/archive",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}/unarchive",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/users/{user_id}/score",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/posts/{post_id}/collaborators",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/communities/",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/communities/",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/communities/{slug}",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/communities/{slug}",
+    "methods": [
+      "PATCH"
+    ]
+  },
+  {
+    "path": "/api/v1/communities/{slug}",
+    "methods": [
+      "DELETE"
+    ]
+  },
+  {
+    "path": "/api/v1/communities/{slug}/join",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/communities/{slug}/leave",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/communities/{slug}/members",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/communities/{slug}/approve/{target_uid}",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/communities/{slug}/kick/{target_uid}",
+    "methods": [
+      "DELETE"
+    ]
+  },
+  {
+    "path": "/api/v1/communities/{slug}/promote/{target_uid}",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/communities/{slug}/demote/{target_uid}",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/api/v1/communities/{slug}/posts",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/api/v1/users/{user_id}/communities",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/users/{user_id}/skills/{skill_name}/endorse",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/stories",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/stories/feed",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/stories/{story_id}/view",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/posts/{post_id}/reactions",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "path": "/stats/categories",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/stats/post-trend",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/stats/sentiment-summary",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "path": "/stats/top-posts",
+    "methods": [
+      "GET"
+    ]
+  }
+]
