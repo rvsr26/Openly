@@ -963,22 +963,30 @@ async def api_get_post_summary(post_id: str):
 @app.post("/api/v1/ai/chat")
 async def api_ai_chat(req: ChatRequest):
     """Interactive chat with Openly AI Assistant."""
-    from ai_utils import model
+    from ai_utils import _call_gemini_async, GEMINI_API_KEY
     
-    if not model:
+    if not GEMINI_API_KEY:
         return {"response": "I'm currently offline. Please check your Gemini API key."}
     
     try:
-        # Gemini expects a specific history format
-        # We'll simplify for now and just send the message or use provided history
-        chat = model.start_chat(history=req.history)
-        response = await chat.send_message_async(req.message)
+        # Build prompt from history
+        history_text = ""
+        for msg in req.history:
+            role = msg.get("role", "user")
+            parts = msg.get("parts", [])
+            text = parts[0] if parts else ""
+            history_text += f"{role.capitalize()}: {text}\n"
+            
+        prompt = f"You are the Openly AI Assistant. You help users with professional networking, resume review, and platform questions.\n\nContinuation of conversation:\n{history_text}\nUser: {req.message}\nAssistant:"
+        
+        response_text = await _call_gemini_async(prompt)
+        
         return {
-            "response": response.text,
+            "response": response_text,
             "history": [
                 *req.history,
                 {"role": "user", "parts": [req.message]},
-                {"role": "model", "parts": [response.text]}
+                {"role": "model", "parts": [response_text]}
             ]
         }
     except Exception as e:
