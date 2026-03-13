@@ -36,7 +36,7 @@ export default function PollBlock({ poll: initialPoll, postId }: PollBlockProps)
             // Use guest ID if allowed and not logged in
             const voterId = user?.uid || "guest_" + Math.random().toString(36).substring(7);
 
-            const res = await api.post(`/api/v1/posts/${postId}/poll/vote`, {
+            const res = await api.post(`/posts/${postId}/poll/vote`, {
                 user_id: voterId,
                 option_id: optionId
             });

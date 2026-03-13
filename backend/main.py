@@ -981,6 +981,12 @@ async def api_ai_chat(req: ChatRequest):
         
         response_text = await _call_gemini_async(prompt)
         
+        if response_text == "QUOTA_EXCEEDED":
+            return {"response": "I'm currently on a mandatory break (API Quota Exceeded). Please try again in 1 minute or check your Gemini API key! ☕", "history": req.history}
+            
+        if not response_text:
+            return {"response": "I'm sorry, I'm having trouble connecting to my brain right now. Please try again in a moment.", "history": req.history}
+        
         return {
             "response": response_text,
             "history": [
@@ -991,7 +997,7 @@ async def api_ai_chat(req: ChatRequest):
         }
     except Exception as e:
         print(f"Gemini Chat Error: {e}")
-        return {"response": "Oops! I encountered an error. Try again shortly."}
+        return {"response": "Oops! I encountered an unexpected error. My engineers have been notified.", "history": req.history}
 
 @app.get("/api/v1/hubs/{hub_name}/sentiment")
 async def api_get_hub_sentiment(hub_name: str):
@@ -1021,7 +1027,9 @@ async def api_semantic_search(q: str = Query(...), category: Optional[str] = Non
     
     if not model:
         # Fallback to basic text search
+        base_filters = {"is_rejected": False, "is_archived": False}
         query = {"$text": {"$search": q}} if category is None else {"$text": {"$search": q}, "category": category}
+        query.update(base_filters)
         cursor = posts_collection.find(query).limit(20)
         return [serialize_doc(doc) for doc in await cursor.to_list(20)]
         
@@ -1040,8 +1048,10 @@ async def api_semantic_search(q: str = Query(...), category: Optional[str] = Non
             {"tags": {"$in": [q]}}
         ]}
         
-        if category and category != "All":
-            mongo_query = {"$and": [mongo_query, {"category": category}]}
+        mongo_query = {"$and": [
+            mongo_query,
+            {"is_rejected": False, "is_archived": False}
+        ]}
             
         cursor = posts_collection.find(mongo_query).sort("created_at", -1).limit(20)
         results = [serialize_doc(doc) for doc in await cursor.to_list(20)]
@@ -1054,7 +1064,7 @@ async def api_semantic_search(q: str = Query(...), category: Optional[str] = Non
     except Exception as e:
         print(f"Semantic Search Error: {e}")
         # Final fallback
-        cursor = posts_collection.find({"content": {"$regex": q, "$options": "i"}}).limit(10)
+        cursor = posts_collection.find({"content": {"$regex": q, "$options": "i"}, "is_rejected": False}).limit(10)
         return {"results": [serialize_doc(doc) for doc in await cursor.to_list(10)]}
 
 @app.get("/api/v1/ai/data/clusters")
@@ -1428,7 +1438,7 @@ async def get_post(post_id: str, user_id: Optional[str] = None):
     except:
         raise HTTPException(404, "Post not found")
 
-    doc = await posts_collection.find_one({"_id": oid, "is_archived": False})
+    doc = await posts_collection.find_one({"_id": oid, "is_archived": False, "is_rejected": False})
     if not doc:
         raise HTTPException(404, "Post not found")
     data = serialize_doc(doc, requester_id=user_id)
@@ -2232,7 +2242,7 @@ async def get_user_profile_v2(user_id: str, requester_id: Optional[str] = None):
                 is_following = follow_status == "accepted"
 
         # Fetch posts
-        cursor = posts_collection.find({"user_id": user_id}).sort("created_at", -1)
+        cursor = posts_collection.find({"user_id": user_id, "is_rejected": False}).sort("created_at", -1)
         
         user_posts = []
         total_views = 0
@@ -2950,7 +2960,7 @@ async def get_user_profile(user_id: str):
     following_count = await follows_collection.count_documents({"follower_id": user_id})
     
     # Get posts count
-    posts_count = await posts_collection.count_documents({"user_id": user_id, "is_deleted": False}) # Assuming soft delete or just check existence
+    posts_count = await posts_collection.count_documents({"user_id": user_id, "is_deleted": False, "is_rejected": False}) # Assuming soft delete or just check existence
     
     user_info = {
         "uid": user.get("uid") or str(user["_id"]),

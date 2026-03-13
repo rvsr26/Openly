@@ -11,8 +11,8 @@ load_dotenv()
 
 # 2. Configure Gemini REST
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-# Using the discovered working model name
-MODEL_FULL_NAME = "models/gemini-2.5-flash"
+# Using Gemini 2.0 Flash for stability and better quota
+MODEL_FULL_NAME = "models/gemini-2.0-flash"
 BASE_URL = f"https://generativelanguage.googleapis.com/v1beta/{MODEL_FULL_NAME}:generateContent"
 
 if not GEMINI_API_KEY:
@@ -35,6 +35,9 @@ def _call_gemini_sync(prompt: str) -> str:
             ]
         }
         response = requests.post(url, json=payload, timeout=10)
+        if response.status_code == 429:
+            print("[ERROR] Gemini Quota Exceeded (429)")
+            return "QUOTA_EXCEEDED"
         response.raise_for_status()
         data = response.json()
         
@@ -67,6 +70,9 @@ async def _call_gemini_async(prompt: str) -> str:
         }
         async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, timeout=15)
+            if response.status_code == 429:
+                print("[ERROR] Gemini Quota Exceeded (429)")
+                return "QUOTA_EXCEEDED"
             response.raise_for_status()
             data = response.json()
             
@@ -81,21 +87,41 @@ async def _call_gemini_async(prompt: str) -> str:
         return ""
 
 def is_toxic(text: str) -> bool:
-    """Advanced toxicity detection using Gemini REST API."""
-    if not GEMINI_API_KEY:
-        bad_words = ["hate", "kill", "stupid", "fuck", "bitch"]
-        return any(word in text.lower() for word in bad_words)
+    """Advanced toxicity detection using Gemini REST API with local profanity fallback."""
+    # 1. Local Profanity Check (Instant fallback & safety)
+    # This catches common slurs and words that might not trigger high-level toxicity but are still "bad words".
+    bad_words = [
+        "fuck", "bitch", "shit", "asshole", "pussy", "dick", "cunt", "nigger", 
+        "faggot", "motherfucker", "whore", "bastard"
+    ]
+    lowercase_text = text.lower()
+    if any(word in lowercase_text for word in bad_words):
+        print(f"[MODERATION] Local check flagged toxic content.")
+        return True
 
+    if not GEMINI_API_KEY:
+        return False
+
+    # 2. Gemini AI Check (Contextual & Nuanced)
     prompt = f"""
-    Analyze the following text for toxicity. 
+    Analyze the following text for toxicity, profanity, and community guideline violations.
+    
+    CRITERA:
+    - Profanity or vulgar language (e.g. swear words).
+    - Hate speech or discrimination.
+    - Harassment or personal attacks.
+    - Sexually explicit content.
+    - Threats or inciting violence.
+    
     Respond with ONLY a JSON object: {{"is_toxic": true/false, "reason": "short reason"}}.
-    Criteria: hate speech, harassment, threats, or severe insults.
     
     Text: "{text}"
     """
     
     response_text = _call_gemini_sync(prompt)
-    if not response_text:
+    if not response_text or response_text == "QUOTA_EXCEEDED":
+        # If API is down or quota hit, rely on Local Profanity Check (already done)
+        # We don't block everything just because the API is busy.
         return False
         
     try:
@@ -103,10 +129,15 @@ def is_toxic(text: str) -> bool:
         clean_text = response_text.strip().replace('```json', '').replace('```', '')
         # Handle cases where the text might contain other characters
         if '{' in clean_text:
-            clean_text = clean_text[clean_text.find('{'):clean_text.rfind('}')+1]
+            start = clean_text.find('{')
+            end = clean_text.rfind('}') + 1
+            clean_text = clean_text[start:end]
+            
         data = json.loads(clean_text)
-        return data.get("is_toxic", False)
-    except:
+        return bool(data.get("is_toxic", False))
+    except Exception as e:
+        print(f"[DEBUG] Prompt result: {response_text}")
+        # If parsing fails but "true" is in the response (e.g. block reason)
         return "true" in response_text.lower()
 
 def extract_keywords(text: str) -> list:

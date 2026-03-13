@@ -104,7 +104,7 @@ async def get_timeline_posts(timeline_id: str):
         raise HTTPException(status_code=400, detail="Invalid ID format")
 
     # Find posts with this timeline_id
-    cursor = posts_collection.find({"timeline_id": timeline_id}).sort("created_at", 1) # Oldest first for journey
+    cursor = posts_collection.find({"timeline_id": timeline_id, "is_rejected": False}).sort("created_at", 1) # Oldest first for journey
     posts = await cursor.to_list(length=100)
     
     # helper from main.py or redefine here?
