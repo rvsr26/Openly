@@ -19,7 +19,7 @@ from database import (
     bookmarks_collection, reports_collection, drafts_collection, downvotes_collection, 
     views_collection, messages_collection, conversations_collection,
     verification_tokens_collection, password_reset_tokens_collection,
-    connections_collection, settings_collection
+    connections_collection, settings_collection, follows_collection
 )
 from bson import ObjectId
 from cache_utils import get_cached_feed, set_cached_feed, generate_cache_key, invalidate_category_cache
