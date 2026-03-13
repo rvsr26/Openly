@@ -74,7 +74,7 @@ function CreatePostContent() {
     setLoading(true);
 
     try {
-      await api.post("/posts/", {
+      const res = await api.post("/posts/", {
         user_id: user.uid,
         user_name: userName,
         user_pic: user.photoURL || null,
@@ -89,6 +89,11 @@ function CreatePostContent() {
         // Community targeting
         ...(communityId ? { community_id: communityId } : {}),
       });
+
+      if (res.data?.status === "flagged_for_review") {
+        alert("⚠️ Post Flagged for Review.\n\nYour post was flagged for admin review and is pending approval.");
+        return;
+      }
 
       // Redirect back to community if posting from one
       if (communityId) {

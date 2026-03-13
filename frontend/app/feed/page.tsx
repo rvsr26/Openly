@@ -123,8 +123,8 @@ export default function Home() {
         ...(communityId ? { community_id: communityId } : {}),
       });
 
-      if (res.data.status === "rejected_for_toxicity") {
-        alert("⚠️ Post Submitted but Flagged.\\n\\nYour post was detected as toxic by AI and will be hidden from the public feed.");
+      if (res.data.status === "flagged_for_review") {
+        alert("⚠️ Post Flagged for Review.\n\nYour post was flagged for admin review and is pending approval.");
       }
 
       setContent('');

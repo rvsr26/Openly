@@ -1138,14 +1138,17 @@ async def create_post(post: PostRequest):
     await check_global_settings(post.user_id)
     
     if is_toxic(post.content):
-        # Log rejected post
+        # Log rejected post for admin review
         await posts_collection.insert_one({
             "user_id": post.user_id,
             "content": post.content,
+            "title": post.title,
             "is_rejected": True,
-            "created_at": get_now_iso()
+            "is_flagged_for_review": True,
+            "created_at": get_now_iso(),
+            "reason": "Flagged by AI moderation"
         })
-        return {"status": "rejected_for_toxicity"}
+        return {"status": "flagged_for_review", "message": "Your post has been flagged for admin review."}
 
     # Fetch Username for handle (User docs use user_id as _id)
     user_doc = await users_collection.find_one({"_id": post.user_id})
