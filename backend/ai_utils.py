@@ -26,16 +26,25 @@ def _call_gemini_sync(prompt: str) -> str:
     try:
         url = f"{BASE_URL}?key={GEMINI_API_KEY}"
         payload = {
-            "contents": [{
-                "parts": [{"text": prompt}]
-            }]
+            "contents": [{"parts": [{"text": prompt}]}],
+            "safetySettings": [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+            ]
         }
         response = requests.post(url, json=payload, timeout=10)
         response.raise_for_status()
         data = response.json()
         
-        # Extract text from response structure
-        return data['candidates'][0]['content']['parts'][0]['text']
+        # Check if it was blocked by safety settings despite BLOCK_NONE
+        if "candidates" in data and len(data["candidates"]) > 0:
+            candidate = data["candidates"][0]
+            if candidate.get("finishReason") == "SAFETY":
+                return '{"is_toxic": true, "reason": "Blocked by Gemini Safety Filters"}'
+            return candidate['content']['parts'][0]['text']
+        return ""
     except Exception as e:
         print(f"[ERROR] Gemini REST Sync Error: {e}")
         return ""
@@ -48,15 +57,25 @@ async def _call_gemini_async(prompt: str) -> str:
     try:
         url = f"{BASE_URL}?key={GEMINI_API_KEY}"
         payload = {
-            "contents": [{
-                "parts": [{"text": prompt}]
-            }]
+            "contents": [{"parts": [{"text": prompt}]}],
+            "safetySettings": [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+            ]
         }
         async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, timeout=15)
             response.raise_for_status()
             data = response.json()
-            return data['candidates'][0]['content']['parts'][0]['text']
+            
+            if "candidates" in data and len(data["candidates"]) > 0:
+                candidate = data["candidates"][0]
+                if candidate.get("finishReason") == "SAFETY":
+                    return '{"is_toxic": true, "reason": "Blocked by Gemini Safety Filters"}'
+                return candidate['content']['parts'][0]['text']
+            return ""
     except Exception as e:
         print(f"[ERROR] Gemini REST Async Error: {e}")
         return ""

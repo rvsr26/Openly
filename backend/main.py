@@ -1194,9 +1194,11 @@ async def create_post(post: PostRequest):
 
     if post.poll:
         try:
-            new_post["poll"] = build_poll_doc(post.poll)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            # Handle case whether it's parsed as dict or PollCreate object
+            poll_obj = post.poll if hasattr(post.poll, 'type') else PollCreate(**post.poll)
+            new_post["poll"] = build_poll_doc(poll_obj)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Poll creation failed: {str(e)}")
             
     if post.community_id:
         new_post["community_id"] = post.community_id
