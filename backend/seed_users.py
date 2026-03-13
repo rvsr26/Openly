@@ -2,6 +2,7 @@ import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 from datetime import datetime, timezone
+from time_utils import get_now_iso
 import secrets
 
 # Copy of database connection logic
@@ -21,7 +22,7 @@ async def seed():
             "headline": "Failed at 3 Startups | Now VC",
             "bio": "Sharing learnings from the trenches. Failure is just data.",
             "email": "sarah@example.com",
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": get_now_iso()
         },
         {
             "username": "pivot_master",
@@ -30,7 +31,7 @@ async def seed():
             "headline": "Ex-Founder @ FailedAI",
             "bio": "Learning how to pivot before the cliff.",
             "email": "marcus@example.com",
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": get_now_iso()
         },
         {
             "username": "growth_hacker_fail",
@@ -39,7 +40,7 @@ async def seed():
             "headline": "Growth Lead | Mistakes are Lessons",
             "bio": "Documenting the $1M ad spend mistake.",
             "email": "elena@example.com",
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": get_now_iso()
         },
         {
             "username": "tech_lead_failure",
@@ -48,7 +49,7 @@ async def seed():
             "headline": "Senior Engineer | Burnout Survivor",
             "bio": "Building better systems after breaking them.",
             "email": "david@example.com",
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": get_now_iso()
         }
     ]
 

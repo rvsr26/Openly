@@ -1,10 +1,18 @@
 "use client";
 
 import { useRef } from 'react';
-import { ArrowRight, Users, TrendingUp, Shield, Zap, Heart, Star, Flame, Lock, Globe, ChevronDown } from 'lucide-react';
+import { ArrowRight, Users, TrendingUp, Shield, Zap, Heart, Star, Flame, Lock, Globe, ChevronDown, Activity, PieChart, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import { useQuery } from "@tanstack/react-query";
+import api from "../lib/api";
+import {
+    DonutChart,
+    PostTrendArea,
+    TrendingBar,
+    SentimentPie
+} from "../components/AnalyticsCharts";
 
 const features = [
     { icon: Lock, title: 'Share Anonymously', description: 'Use ghost aliases to share your real story without fear of judgment.', color: 'from-violet-500 to-purple-600' },
@@ -32,12 +40,52 @@ const steps = [
     { step: '03', title: 'Learn & Connect', desc: 'Read others\' stories, offer support, and grow together.' },
 ];
 
+function LoadingState() {
+    return (
+        <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest animate-pulse">Syncing Pulse...</p>
+        </div>
+    );
+}
+
 export default function LandingPage() {
     const router = useRouter();
     const heroRef = useRef<HTMLDivElement>(null);
     const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
     const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
     const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+
+    // ── DATA FETCHES ────────────────────────────────────────────
+    const { data: categories = [], isLoading: loadCats } = useQuery({
+        queryKey: ["landingCategories"],
+        queryFn: async () => { const r = await api.get("/stats/categories"); return r.data; },
+        staleTime: 1000 * 60 * 10,
+    });
+
+    const { data: trend = [], isLoading: loadTrend } = useQuery({
+        queryKey: ["landingTrend"],
+        queryFn: async () => { const r = await api.get("/stats/post-trend"); return r.data; },
+        staleTime: 1000 * 60 * 10,
+    });
+
+    const { data: sentiment = [], isLoading: loadSent } = useQuery({
+        queryKey: ["landingSentiment"],
+        queryFn: async () => { const r = await api.get("/stats/sentiment-summary"); return r.data; },
+        staleTime: 1000 * 60 * 10,
+    });
+
+    const { data: trending = [], isLoading: loadTrending } = useQuery({
+        queryKey: ["landingTrending"],
+        queryFn: async () => { const r = await api.get("/stats/trending"); return r.data ?? []; },
+        staleTime: 1000 * 60 * 10,
+    });
+
+    const totalPosts = categories.reduce((s: number, c: any) => s + c.count, 0);
+    const positiveSent = sentiment.find((s: any) => s.sentiment === "POSITIVE")?.count ?? 0;
+    const totalSent = sentiment.reduce((s: number, c: any) => s + c.count, 0);
+    const positiveRate = totalSent > 0 ? Math.round((positiveSent / totalSent) * 100) : 0;
+    const categoryPie = categories.map((c: any) => ({ name: c.category, value: c.count }));
 
     return (
         <div className="min-h-screen bg-background overflow-x-hidden">
@@ -113,15 +161,25 @@ export default function LandingPage() {
                         </button>
                     </motion.div>
 
-                    {/* Stats row */}
+                    {/* Stats/Analytics Preview */}
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8, delay: 0.5 }}
-                        className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto">
-                        {stats.map((s, i) => (
-                            <div key={i} className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                                <div className="text-3xl font-black text-primary mb-1">{s.number}</div>
-                                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{s.label}</div>
-                            </div>
-                        ))}
+                        className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+                            <div className="text-3xl font-black text-primary mb-1">{totalPosts > 0 ? `${(totalPosts / 1000).toFixed(1)}K+` : '10K+'}</div>
+                            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Stories Shared</div>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+                            <div className="text-3xl font-black text-violet-400 mb-1">{loadTrending ? '...' : `${trending.length}`}</div>
+                            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Active Hubs</div>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+                            <div className="text-3xl font-black text-emerald-400 mb-1">{positiveRate > 0 ? `${positiveRate}%` : '95%'}</div>
+                            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Positive Support</div>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">
+                            <div className="text-3xl font-black text-amber-400 mb-1">4.9</div>
+                            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">User Safety</div>
+                        </div>
                     </motion.div>
 
                     {/* Scroll hint */}
@@ -131,6 +189,78 @@ export default function LandingPage() {
                         <ChevronDown className="w-4 h-4 animate-bounce" />
                     </motion.div>
                 </motion.div>
+            </section>
+
+            {/* ── PLATFORM ANALYTICS ─────────────────────────── */}
+            <section className="py-32 px-6 relative bg-white/[0.02]">
+                <div className="max-w-7xl mx-auto">
+                    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                        className="text-center mb-16">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest mb-4">
+                            <Activity className="w-3 h-3" /> Platform Pulse
+                        </div>
+                        <h2 className="text-4xl md:text-5xl font-black text-foreground tracking-tight mb-4">Real-Time Impact</h2>
+                        <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+                            We believe in radical transparency. See how our community grows and supports each other in real-time.
+                        </p>
+                    </motion.div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Post Trend Area */}
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}
+                            className="p-8 rounded-[2rem] bg-white/3 border border-white/10 backdrop-blur-xl">
+                            <div className="flex items-center gap-3 mb-8">
+                                <div className="w-10 h-10 rounded-2xl bg-primary/20 flex items-center justify-center">
+                                    <TrendingUp className="text-primary w-5 h-5" />
+                                </div>
+                                <h3 className="font-black text-lg tracking-tight">Post Activity — 30 Days</h3>
+                            </div>
+                            <div className="h-[300px] w-full">
+                                {loadTrend ? <LoadingState /> : <PostTrendArea data={trend} />}
+                            </div>
+                        </motion.div>
+
+                        {/* Category Distribution */}
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}
+                            className="p-8 rounded-[2rem] bg-white/3 border border-white/10 backdrop-blur-xl">
+                            <div className="flex items-center gap-3 mb-8">
+                                <div className="w-10 h-10 rounded-2xl bg-violet-500/20 flex items-center justify-center">
+                                    <PieChart className="text-violet-400 w-5 h-5" />
+                                </div>
+                                <h3 className="font-black text-lg tracking-tight">Category Distribution</h3>
+                            </div>
+                            <div className="h-[300px] w-full">
+                                {loadCats ? <LoadingState /> : <DonutChart data={categoryPie} />}
+                            </div>
+                        </motion.div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+                        {/* Sentiment Highlights */}
+                        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                            className="p-8 rounded-[2rem] bg-white/3 border border-white/10">
+                            <div className="flex items-center gap-3 mb-6">
+                                <Sparkles className="text-emerald-400 w-5 h-5" />
+                                <h3 className="font-bold text-base">Supportive Sentiment</h3>
+                            </div>
+                            <div className="h-[240px]">
+                                {loadSent ? <LoadingState /> : <SentimentPie data={sentiment} />}
+                            </div>
+                        </motion.div>
+
+                        {/* Trending Bar */}
+                        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                            className="p-8 rounded-[2rem] bg-white/3 border border-white/10">
+                            <div className="flex items-center gap-3 mb-6">
+                                <Flame className="text-orange-500 w-5 h-5" />
+                                <h3 className="font-bold text-base">Top Trending Topics</h3>
+                            </div>
+                            <div className="h-[240px] overflow-hidden">
+                                {loadTrending ? <LoadingState /> : <TrendingBar data={trending.slice(0, 5)} />}
+                            </div>
+                        </motion.div>
+                    </div>
+                </div>
             </section>
 
             {/* ── FEATURES ───────────────────────────────────── */}
@@ -154,7 +284,7 @@ export default function LandingPage() {
                             return (
                                 <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.1 }} viewport={{ once: true }}
-                                    className="group p-6 rounded-3xl bg-white/3 border border-white/8 hover:border-white/15 hover:bg-white/6 transition-all duration-300 hover:-translate-y-1">
+                                    className="group p-6 rounded-3xl bg-white/3 border border-white/10 hover:border-white/15 hover:bg-white/6 transition-all duration-300 hover:-translate-y-1">
                                     <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${f.color} flex items-center justify-center mb-5 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                                         <Icon className="w-6 h-6 text-white" />
                                     </div>

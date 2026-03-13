@@ -23,7 +23,8 @@ import {
   X,
   Home,
   Bookmark,
-  PenTool
+  PenTool,
+  Shield
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -133,13 +134,19 @@ function Navbar() {
   }
 
   const handleAddAccount = async () => {
-    if (authUser) {
-      const currentToken = localStorage.getItem('token');
-      saveAccount(authUser, currentToken === "null" || currentToken === "undefined" ? null : currentToken);
+    try {
+      if (authUser) {
+        const currentToken = localStorage.getItem('token');
+        saveAccount(authUser, currentToken === "null" || currentToken === "undefined" ? null : currentToken);
+      }
+      await logout();
+      localStorage.removeItem('token');
+      // No need to await refreshSession here because we are doing a hard reload
+      setShowDropdown(false);
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Add account error:", error);
     }
-    await logout();
-    setShowDropdown(false);
-    window.location.href = "/login";
   };
 
   const handleSwitchAccount = async (account: any) => {
@@ -208,22 +215,40 @@ function Navbar() {
           {/* ACTIONS */}
           <div className="flex items-center gap-2 sm:gap-3">
 
-            {/* Create Post Button */}
-            <button
-              onClick={handleCreatePost}
-              className="hidden sm:flex items-center gap-2 btn-primary text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden lg:inline">Create</span>
-            </button>
-
-            {/* Mobile Create Button */}
-            <button
-              onClick={handleCreatePost}
-              className="sm:hidden btn-icon"
-            >
-              <Plus className="w-5 h-5" />
-            </button>
+            {/* Create Post or Admin Button */}
+            {(profile?.user_info?.role === 'admin' || profile?.user_info?.username === 'admin') ? (
+              <>
+                <Link
+                  href="/admin"
+                  className="hidden sm:flex items-center gap-2 btn-primary text-sm border-primary/50"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span className="hidden lg:inline">Admin Panel</span>
+                </Link>
+                <Link
+                  href="/admin"
+                  className="sm:hidden btn-icon text-primary border-primary/20"
+                >
+                  <Shield className="w-5 h-5" />
+                </Link>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={handleCreatePost}
+                  className="hidden sm:flex items-center gap-2 btn-primary text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden lg:inline">Create</span>
+                </button>
+                <button
+                  onClick={handleCreatePost}
+                  className="sm:hidden btn-icon"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </>
+            )}
 
             {/* Divider */}
             <div className="hidden sm:block h-6 divider-vertical"></div>
@@ -361,6 +386,17 @@ function Navbar() {
                           <Settings className="w-4 h-4 text-muted-foreground" />
                           <span>Settings</span>
                         </Link>
+
+                        {(profile?.user_info?.role === 'admin' || profile?.user_info?.username === 'admin') && (
+                          <Link
+                            href="/admin"
+                            onClick={() => setShowDropdown(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm font-black text-primary hover:bg-primary/5 transition-colors border-t border-border/50"
+                          >
+                            <Shield className="w-4 h-4" />
+                            <span>Admin Command</span>
+                          </Link>
+                        )}
                       </div>
 
                       {/* SWITCH ACCOUNTS SECTION */}

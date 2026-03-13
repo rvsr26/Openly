@@ -35,7 +35,7 @@ export default function CreateCommunityPage() {
         try {
             const fd = new FormData();
             fd.append("file", file);
-            const res = await api.post("/upload/image", fd, { headers: { "Content-Type": "multipart/form-data" } });
+            const res = await api.post("/upload/image?folder=communities", fd, { headers: { "Content-Type": "multipart/form-data" } });
             setBannerUrl(res.data.url);
             toast.success("Banner uploaded!");
         } catch {
@@ -52,7 +52,7 @@ export default function CreateCommunityPage() {
         try {
             const fd = new FormData();
             fd.append("file", file);
-            const res = await api.post("/upload/image", fd, { headers: { "Content-Type": "multipart/form-data" } });
+            const res = await api.post("/upload/image?folder=communities", fd, { headers: { "Content-Type": "multipart/form-data" } });
             setIconUrl(res.data.url);
             toast.success("Icon uploaded!");
         } catch {

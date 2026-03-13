@@ -37,14 +37,26 @@ export default function AdminPage() {
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+
+  useEffect(() => {
+    const tab = searchParams?.get('tab');
+    if (tab && ["dashboard", "users", "content", "settings", "data"].includes(tab)) {
+      setActiveTab(tab as any);
+    }
+  }, [searchParams]);
 
   const fetchData = useCallback(async () => {
     if (!currentUser) return;
     setLoading(true);
     try {
       if (activeTab === "dashboard") {
-        const res = await api.get(`/admin/stats?user_id=${currentUser.uid}`);
-        setStats(res.data);
+        const [statsRes, postsRes] = await Promise.all([
+          api.get(`/admin/stats?user_id=${currentUser.uid}`),
+          api.get("/feed?flagged=true")
+        ]);
+        setStats(statsRes.data);
+        setPosts(postsRes.data);
       } else if (activeTab === "users") {
         const res = await api.get(`/admin/users?user_id=${currentUser.uid}`);
         setUsers(res.data.users);
@@ -168,13 +180,10 @@ export default function AdminPage() {
             className="flex items-center gap-3"
           >
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => fetchData()}
               className="p-2.5 rounded-xl bg-muted/30 border border-border hover:bg-muted/50 transition-all"
             >
               <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
-            </button>
-            <button className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-all">
-              <Lock size={18} /> Exit Admin
             </button>
           </motion.div>
         </header>
@@ -203,25 +212,24 @@ export default function AdminPage() {
               glow="shadow-emerald-500/20"
             />
             <StatCard
-              key="stat-moderation"
-              index={2}
-              title="Moderation Requests"
-              value={stats?.flagged_posts}
-              icon={<ShieldAlert className="w-6 h-6" />}
-              trend="24 pending review"
-              color="text-red-500"
-              glow="shadow-red-500/20"
-              isAlert={stats?.flagged_posts > 0}
-            />
-            <StatCard
               key="stat-incidents"
-              index={3}
-              title="Reported Incidents"
-              value={stats?.total_reports}
+              index={2}
+              title="Reports Raised"
+              value={stats?.reports_raised}
               icon={<Ban className="w-6 h-6" />}
               trend="Check cases tab"
               color="text-amber-500"
               glow="shadow-amber-500/20"
+            />
+            <StatCard
+              key="stat-solved"
+              index={3}
+              title="Reports Solved"
+              value={stats?.reports_solved}
+              icon={<CheckCircle2 className="w-6 h-6" />}
+              trend="Moderation progress"
+              color="text-emerald-500"
+              glow="shadow-emerald-500/20"
             />
           </AnimatePresence>
         </div>

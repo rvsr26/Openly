@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronRight, ChevronLeft, Sparkles, User, FileText, Command, Zap } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { getScopedKey } from "@/app/lib/accountUtils";
 
 const steps = [
     {
@@ -38,19 +40,23 @@ const steps = [
 ];
 
 export default function OnboardingGuide() {
+    const { user } = useAuth();
     const [isVisible, setIsVisible] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
 
     useEffect(() => {
-        const hasCompleted = localStorage.getItem("openly_onboarding_completed");
+        if (!user) return;
+        const hasCompleted = localStorage.getItem(getScopedKey("openly_onboarding_completed", user?.uid));
         if (!hasCompleted) {
             const timer = setTimeout(() => setIsVisible(true), 1500);
             return () => clearTimeout(timer);
+        } else {
+            setIsVisible(false);
         }
-    }, []);
+    }, [user?.uid]);
 
     const handleComplete = () => {
-        localStorage.setItem("openly_onboarding_completed", "true");
+        localStorage.setItem(getScopedKey("openly_onboarding_completed", user?.uid), "true");
         setIsVisible(false);
     };
 

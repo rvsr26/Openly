@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+from time_utils import get_now_iso
 from database import timelines_collection, posts_collection
 from bson import ObjectId
 from auth import get_current_user
@@ -44,7 +45,7 @@ async def create_timeline(timeline: TimelineCreate, user = Depends(get_current_u
         "title": timeline.title,
         "description": timeline.description,
         "status": timeline.status,
-        "created_at": datetime.utcnow().isoformat()
+        "created_at": get_now_iso()
     }
     
     result = await timelines_collection.insert_one(new_timeline)

@@ -35,7 +35,8 @@ export default function AdminReports() {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         title: "", type: "Spam", severity: 3,
-        assigned_to: "", notes: "", action: "Pending Review", is_urgent: false
+        assigned_to: "", notes: "", action: "Pending Review", is_urgent: false,
+        target_id: "", target_type: "post"
     });
 
     const fetchData = async () => {
@@ -76,13 +77,16 @@ export default function AdminReports() {
             setFormData({
                 title: doc.title, type: doc.type, severity: doc.severity,
                 assigned_to: doc.assigned_to, notes: doc.notes,
-                action: doc.action, is_urgent: doc.is_urgent
+                action: doc.action, is_urgent: doc.is_urgent,
+                target_id: doc.target_id || "", 
+                target_type: doc.target_type || "post"
             });
         } else {
             setSelectedId(null);
             setFormData({
                 title: "", type: "Spam", severity: 3,
-                assigned_to: "", notes: "", action: "Pending Review", is_urgent: false
+                assigned_to: "", notes: "", action: "Pending Review", is_urgent: false,
+                target_id: "", target_type: "post"
             });
         }
         setFormOpen(true);
@@ -178,6 +182,7 @@ export default function AdminReports() {
                                 <MenuItem value="Harassment">Harassment</MenuItem>
                                 <MenuItem value="Misinformation">Misinformation</MenuItem>
                                 <MenuItem value="Inappropriate">Inappropriate Content</MenuItem>
+                                <MenuItem value="General">General / Others</MenuItem>
                             </Select>
                         </FormControl>
 
@@ -206,6 +211,28 @@ export default function AdminReports() {
                             control={<Switch checked={formData.is_urgent} onChange={e => setFormData({ ...formData, is_urgent: e.target.checked })} />}
                             label="7. Mark as Urgent Escalation"
                         />
+
+                        <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.05)', borderRadius: 1, border: '1px dashed rgba(255,255,255,0.2)' }}>
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>CONTENT LINKING (ADVANCED)</Typography>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                <TextField 
+                                    label="Target ID (Slug or GUID)" 
+                                    size="small" 
+                                    fullWidth 
+                                    value={formData.target_id} 
+                                    onChange={e => setFormData({ ...formData, target_id: e.target.value })} 
+                                />
+                                <Select 
+                                    size="small" 
+                                    sx={{ minWidth: 100 }} 
+                                    value={formData.target_type} 
+                                    onChange={e => setFormData({ ...formData, target_type: e.target.value })}
+                                >
+                                    <MenuItem value="post">Post</MenuItem>
+                                    <MenuItem value="user">User</MenuItem>
+                                </Select>
+                            </Box>
+                        </Box>
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => setFormOpen(false)} color="inherit">Cancel</Button>

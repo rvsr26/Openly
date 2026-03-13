@@ -63,7 +63,7 @@ export default function HubPage() {
     });
 
     return (
-        <div className="min-h-screen pt-24 pb-20 max-w-2xl mx-auto px-4">
+        <div className="min-h-screen pt-24 pb-20 max-w-5xl mx-auto px-4">
             {/* Header */}
             <div className="flex items-center gap-6 mb-8 group">
                 <Link href="/feed">

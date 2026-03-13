@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Bell, Mail, Volume2, VolumeX, Clock, UserX } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { getScopedKey } from '@/app/lib/accountUtils';
 
 const NotificationToggle = ({ enabled, onChange }: { enabled: boolean; onChange: () => void }) => (
     <button
@@ -42,35 +44,36 @@ interface NotificationPreferences {
 }
 
 export default function NotificationPreferences() {
-    const [preferences, setPreferences] = useState<NotificationPreferences>(() => {
-        const defaults: NotificationPreferences = {
-            email: {
-                newFollower: true,
-                newComment: true,
-                newLike: false,
-                newMessage: true,
-                weeklyDigest: true,
-            },
-            push: {
-                newFollower: true,
-                newComment: true,
-                newLike: false,
-                newMessage: true,
-            },
-            quietHours: {
-                enabled: false,
-                start: '22:00',
-                end: '08:00',
-            },
-            mutedUsers: [],
-            mutedTopics: [],
-        };
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('notification_preferences');
-            if (saved) return JSON.parse(saved);
-        }
-        return defaults;
+    const { user } = useAuth();
+    const [preferences, setPreferences] = useState<NotificationPreferences>({
+        email: {
+            newFollower: true,
+            newComment: true,
+            newLike: false,
+            newMessage: true,
+            weeklyDigest: true,
+        },
+        push: {
+            newFollower: true,
+            newComment: true,
+            newLike: false,
+            newMessage: true,
+        },
+        quietHours: {
+            enabled: false,
+            start: '22:00',
+            end: '08:00',
+        },
+        mutedUsers: [],
+        mutedTopics: [],
     });
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem(getScopedKey('notification_preferences', user?.uid));
+            if (saved) setPreferences(JSON.parse(saved));
+        }
+    }, [user?.uid]);
 
     useEffect(() => {
         // Asynchronous loading from backend can still be initiated here
@@ -78,7 +81,7 @@ export default function NotificationPreferences() {
 
     const savePreferences = async (newPrefs: NotificationPreferences) => {
         setPreferences(newPrefs);
-        localStorage.setItem('notification_preferences', JSON.stringify(newPrefs));
+        localStorage.setItem(getScopedKey('notification_preferences', user?.uid), JSON.stringify(newPrefs));
 
         try {
             // TODO: Save to backend

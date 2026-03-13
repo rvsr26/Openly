@@ -63,6 +63,10 @@ export default function LoginPage() {
     setResetMsg("");
     setLoading(true);
 
+    // Clear any stale JWT so AuthContext doesn't block the new Firebase user from syncing
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);

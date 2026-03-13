@@ -30,18 +30,12 @@ async def get_redis_client() -> redis.Redis:
     return _redis_client
 
 
-def generate_cache_key(sort_by: str, category: str = "All", user_id: Optional[str] = None) -> str:
+def generate_cache_key(sort_by: str, category: str = "All", user_id: Optional[str] = None, flagged: bool = False) -> str:
     """
     Create unique cache keys based on feed parameters.
-    
-    Args:
-        sort_by: Sorting method (hot, top, new, for-you)
-        category: Post category filter
-        user_id: User ID for personalized feeds
-    
-    Returns:
-        Unique cache key string
     """
+    if flagged:
+        return f"feed:flagged:{category}"
     if sort_by == "for-you" and user_id:
         return f"feed:for-you:{user_id}:{category}"
     return f"feed:{sort_by}:{category}"

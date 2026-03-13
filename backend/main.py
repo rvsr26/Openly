@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
+from time_utils import get_now_iso
 import shutil
 from dotenv import load_dotenv
 load_dotenv()  # Load environment variables early
@@ -174,9 +175,11 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:3002",
+        "http://localhost:3030",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
         "http://127.0.0.1:3002",
+        "http://127.0.0.1:3030",
         "https://openlytalk.netlify.app",
         "https://openly-frontend.vercel.app",
         os.getenv("FRONTEND_URL", "http://localhost:3000")
@@ -203,15 +206,9 @@ if cloudinary_url:
 else:
     print("[WARNING] CLOUDINARY_URL not found in environment")
 
-UPLOAD_DIR = "uploads"
-if not os.path.exists(UPLOAD_DIR):
-    os.makedirs(UPLOAD_DIR)
-
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
-
 @app.post("/upload")
 @app.post("/upload/image")
-async def upload_file(file: UploadFile = File(...)):
+async def upload_file(folder: Optional[str] = Query("openly_uploads"), file: UploadFile = File(...)):
     """
     Upload a file to Cloudinary.
     Returns the secure URL of the uploaded file.
@@ -222,7 +219,7 @@ async def upload_file(file: UploadFile = File(...)):
         file_content = await file.read()
         result = cloudinary.uploader.upload(
             file_content,
-            folder="openly_uploads",
+            folder=folder,
             resource_type="auto"
         )
         
@@ -232,7 +229,7 @@ async def upload_file(file: UploadFile = File(...)):
         if not file_url:
             raise Exception("Failed to get secure URL from Cloudinary")
             
-        print(f"[SUCCESS] File uploaded to Cloudinary: {file_url}")
+        print(f"[SUCCESS] File uploaded to Cloudinary folder '{folder}': {file_url}")
         return {"url": file_url}
     except Exception as e:
         print(f"[ERROR] Cloudinary upload failed: {e}")
@@ -315,8 +312,9 @@ async def keep_alive_task():
     import httpx
     import asyncio
     
-    url = "http://localhost:8000/"  # Ping itself via localhost
-    # Alternatively, use a configuration for the public URL if needed
+    # Parse port from env if available
+    port = os.getenv("PORT", "8000")
+    url = f"http://127.0.0.1:{port}/"  # Ping itself via 127.0.0.1 (Windows compat)
     
     print("[INFO] Starting keep-alive background task...")
     
@@ -412,13 +410,25 @@ class ChatRequest(BaseModel):
 
 # --- 3. HELPER FUNCTIONS ---
 
-def serialize_doc(doc):
+def serialize_doc(doc, requester_id=None):
     if not doc: return None
     doc["id"] = str(doc["_id"])
     del doc["_id"]
+    
+    # Helped Me Metadata
+    doc["helped_count"] = doc.get("helped_count", 0)
+    if requester_id and "helped_by" in doc:
+        doc["has_helped"] = requester_id in doc["helped_by"]
+    else:
+        doc["has_helped"] = False
+
     # Frontend Compatibility: Map user_name to author
     if "user_name" in doc and "author" not in doc:
         doc["author"] = doc["user_name"]
+        
+    # Map photoURL to user_pic for user docs
+    if "photoURL" in doc and "user_pic" not in doc:
+        doc["user_pic"] = doc["photoURL"]
     return doc
 
 def classify_category(content: str):
@@ -453,6 +463,35 @@ async def get_user_by_any_id(user_id: str):
         # 4. Try match on username as last resort
         user = await users_collection.find_one({"username": user_id.lower()})
     return user
+
+async def enhance_post_with_user(doc):
+    """Enrich a post document with latest user profile data."""
+    if not doc: return doc
+    if not doc.get("is_anonymous", False) and doc.get("user_id"):
+        user_info = await get_user_by_any_id(doc["user_id"])
+        if user_info:
+            doc["user_name"] = user_info.get("display_name") or user_info.get("username") or doc.get("user_name")
+            doc["user_pic"] = user_info.get("photoURL") or doc.get("user_pic")
+            doc["username"] = "@" + user_info.get("username", "user")
+            doc["author"] = doc["user_name"]
+    elif doc.get("is_anonymous", False):
+        doc["user_id"] = None
+        doc["user_pic"] = "/assets/ghost_avatar.png"
+        doc["username"] = "@ghost"
+        doc["user_name"] = "Anonymous"
+        doc["author"] = "Anonymous"
+    return doc
+
+async def enhance_comment_with_user(doc):
+    """Enrich a comment document with latest user profile data."""
+    if not doc: return doc
+    if doc.get("user_id"):
+        user_info = await get_user_by_any_id(doc["user_id"])
+        if user_info:
+            doc["user_name"] = user_info.get("display_name") or user_info.get("username") or doc.get("user_name")
+            doc["user_pic"] = user_info.get("photoURL") or doc.get("user_pic")
+            doc["author"] = doc["user_name"]
+    return doc
 
 # --- 4. CORE ROUTES ---
 
@@ -629,7 +668,7 @@ async def api_sync_user(req: UserSyncRequest):
     # Check if user exists
     user = await get_user_by_any_id(req.uid)
     
-    now = datetime.now(timezone.utc).isoformat()
+    now = get_now_iso()
     
     if user:
         # Update metadata
@@ -640,9 +679,18 @@ async def api_sync_user(req: UserSyncRequest):
         # Only update photoURL if it's a valid external URL (not a local /uploads/ path)
         if req.photoURL and (req.photoURL.startswith("http") or req.photoURL.startswith("https")):
             old_photo = user.get("photoURL", "")
-            update_data["photoURL"] = req.photoURL
-            # Propagate to all this user's posts only if the URL actually changed
-            if old_photo != req.photoURL:
+            
+            # PROTECT Cloudinary: If current photo is Cloudinary, and new one isn't, DON'T overwrite
+            is_new_cloudinary = "cloudinary.com" in req.photoURL
+            is_old_cloudinary = old_photo and "cloudinary.com" in old_photo
+            
+            should_update = True
+            if is_old_cloudinary and not is_new_cloudinary:
+                should_update = False
+                
+            if should_update and old_photo != req.photoURL:
+                update_data["photoURL"] = req.photoURL
+                # Propagate to all this user's posts
                 await posts_collection.update_many(
                     {"user_id": req.uid, "is_anonymous": {"$ne": True}},
                     {"$set": {"user_pic": req.photoURL}}
@@ -702,6 +750,7 @@ async def api_get_current_user(user = Depends(get_current_user)):
         "username": user.get("username"),
         "display_name": user.get("display_name"),
         "photoURL": user.get("photoURL"),
+        "user_pic": user.get("photoURL"), # Added for frontend field compatibility
         "email_verified": user.get("email_verified", False),
         "two_factor_enabled": user.get("two_factor_enabled", False),
         "role": user.get("role", "user")
@@ -794,8 +843,8 @@ async def api_get_activity_log(user = Depends(get_current_user)):
     """Get recent account activity (mock for now or real if available)"""
     # In a real app, we'd query an audit log collection
     return [
-        {"action": "Login", "date": datetime.now(timezone.utc).isoformat(), "details": "Successful login"},
-        {"action": "Profile Update", "date": (datetime.now(timezone.utc) - timedelta(days=2)).isoformat(), "details": "Updated bio"}
+        {"action": "Login", "date": get_now_iso(), "details": "Successful login"},
+        {"action": "Profile Update", "date": (datetime.now(timezone(timedelta(hours=5, minutes=30))) - timedelta(days=2)).isoformat(), "details": "Updated bio"}
     ]
 
 
@@ -1086,7 +1135,7 @@ async def create_post(post: PostRequest):
             "user_id": post.user_id,
             "content": post.content,
             "is_rejected": True,
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": get_now_iso()
         })
         return {"status": "rejected_for_toxicity"}
 
@@ -1114,13 +1163,14 @@ async def create_post(post: PostRequest):
         "tags": post.tags,
         "sentiment": get_sentiment(post.content),
         "image_url": post.image_url,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": get_now_iso(),
         "is_anonymous": post.is_anonymous,
         "is_professional_inquiry": post.is_professional_inquiry,
         "reaction_count": 0,
         "comment_count": 0,
-        "endorsements_count": 0,
-        "endorsements_by": [],
+        "helped_count": 0,
+        "helped_by": [],
+        "helped_feedback": [],
         "views_count": 0,
         "report_count": 0,
         "downvote_count": 0,
@@ -1172,15 +1222,23 @@ async def create_post(post: PostRequest):
     return {"id": str(result.inserted_id), "status": "posted"}
 
 @app.get("/feed/")
-async def get_feed(request: Request, category: Optional[str] = None, sort_by: str = "new", user_id: Optional[str] = None):
+async def get_feed(request: Request, category: Optional[str] = None, sort_by: str = "new", user_id: Optional[str] = None, flagged: bool = False):
     # Check cache first (skip for personalized "for-you" feed)
     if sort_by != "for-you":
-        cache_key = generate_cache_key(sort_by, category or "All", user_id)
+        cache_key = generate_cache_key(sort_by, category or "All", user_id, flagged=flagged)
         cached_feed = await get_cached_feed(cache_key)
         if cached_feed:
             return cached_feed
     
     query = {"is_rejected": False, "is_archived": False}
+    if flagged:
+        query = {
+            "$and": [
+                {"is_rejected": False},
+                {"is_archived": False},
+                {"$or": [{"is_flagged": True}, {"report_count": {"$gt": 0}}]}
+            ]
+        }
 
     # Restrict Hub Visibility
     followed_hubs = []
@@ -1192,12 +1250,14 @@ async def get_feed(request: Request, category: Optional[str] = None, sort_by: st
     query["$or"] = [
         {"hubs": {"$in": followed_hubs}},
         {"hubs": {"$size": 0}},
-        {"hubs": {"$exists": False}}
+        {"hubs": {"$exists": False}},
+        {"hubs": None}
     ]
-
     if category and category != "All":
         query["category"] = category
         
+    feed = []
+    
     if sort_by == "for-you" and user_id:
         # Collaborative Filtering Algorithm:
         # 1. Find posts liked by the current user
@@ -1233,17 +1293,13 @@ async def get_feed(request: Request, category: Optional[str] = None, sort_by: st
             
             reco_cursor = reactions_collection.aggregate(pipeline)
             reco_post_ids = [ObjectId(doc["_id"]) async for doc in reco_cursor if ObjectId.is_valid(doc["_id"])]
-
+            
             if not reco_post_ids:
+                # Fallback to general Trending
                 sort_by = "hot"
             else:
-                # Fetch actual posts, maintaining order from reco_post_ids
+                # Fetch specifically these posts and maintain order
                 posts_query = {"_id": {"$in": reco_post_ids}, "is_rejected": False, "is_archived": False}
-                posts_query["$or"] = [
-                    {"hub": {"$in": followed_hubs}},
-                    {"hub": {"$exists": False}},
-                    {"hub": None}
-                ]
                 if category and category != "All":
                     posts_query["category"] = category
                 
@@ -1252,27 +1308,17 @@ async def get_feed(request: Request, category: Optional[str] = None, sort_by: st
                 posts_map = {str(doc["_id"]): doc for doc in [d async for d in cursor]}
                 feed_data = [posts_map[str(pid)] for pid in reco_post_ids if str(pid) in posts_map]
                 
-                # If we don't have enough recommendations, supplement with Hot
-                if len(feed_data) < 5:
-                    # Supplement logic... for now just use what we have or fallback if empty
-                    pass
-                
                 if not feed_data:
                     sort_by = "hot"
                 else:
-                    return [serialize_doc(d) for d in feed_data] # Return early for for-you success
+                    return [serialize_doc(d, requester_id=user_id) for d in feed_data] # Return early for for-you success
 
     if sort_by == "top":
         # Wilson Score Interval (Top Rated) Algorithm
-        # n = reaction_count + report_count (ignore posts with 0 reactions/reports)
-        # p_hat = reaction_count / n
-        # z = 1.96 (95% confidence)
         z = 1.96
         z2 = z * z
         pipeline = [
             {"$match": query},
-            # Filter out posts with no signals to avoid division by zero or nonsensical scores
-            # Or just default them to 0. Let's use 0.
             {
                 "$addFields": {
                     "n": {"$add": ["$reaction_count", {"$ifNull": ["$report_count", 0]}]}
@@ -1320,14 +1366,20 @@ async def get_feed(request: Request, category: Optional[str] = None, sort_by: st
             {"$match": query},
             {
                 "$addFields": {
-                    "ts": {"$toLong": {"$dateFromString": {"dateString": "$created_at"}}}
+                    "ts": {
+                        "$cond": {
+                            "if": {"$eq": [{"$type": "$created_at"}, "date"]},
+                            "then": {"$toLong": "$created_at"},
+                            "else": {"$toLong": {"$dateFromString": {"dateString": {"$ifNull": ["$created_at", "2024-01-01T00:00:00Z"]}}}}
+                        }
+                    }
                 }
             },
             {
                 "$addFields": {
                     "hot_score": {
                         "$add": [
-                            {"$log10": {"$max": ["$reaction_count", 1]}},
+                            {"$log10": {"$max": [{"$ifNull": ["$reaction_count", 0]}, 1]}},
                             {"$divide": ["$ts", 100000000]} 
                         ]
                     }
@@ -1341,57 +1393,23 @@ async def get_feed(request: Request, category: Optional[str] = None, sort_by: st
         # Default: Newest first
         cursor = posts_collection.find(query).sort("created_at", -1).limit(100)
 
-    feed = []
-    
     async for doc in cursor:
-        data = serialize_doc(doc)
-        
-        # 🛠️ DYNAMIC PROFILE UPDATE
-        if not data.get("is_anonymous", False) and data.get("user_id"):
-            user_info = await users_collection.find_one({"_id": data["user_id"]})
-            if user_info:
-                data["user_name"] = user_info.get("display_name") or user_info.get("username") or data["user_name"]
-                data["user_pic"] = user_info.get("photoURL") or data["user_pic"]
-                data["username"] = "@" + user_info.get("username", "user")
-
-        # 🛡️ PRIVACY SHIELD
-        if data.get("is_anonymous", False):
-            data["user_id"] = None
-            data["user_pic"] = "/assets/ghost_avatar.png"
-            data["username"] = "@ghost"
-            data["user_name"] = "Anonymous"
-        
+        data = serialize_doc(doc, requester_id=user_id)
+        await enhance_post_with_user(data)
         feed.append(data)
     
     # Cache the feed (with appropriate TTL based on sort type)
     if sort_by != "for-you":
-        cache_key = generate_cache_key(sort_by, category or "All", user_id)
+        cache_key = generate_cache_key(sort_by, category or "All", user_id, flagged=flagged)
         ttl = 15 if sort_by == "new" else 30  # New feeds are more volatile
         await set_cached_feed(cache_key, feed, ttl)
         
     return feed
 
-@app.get("/api/v1/hubs/{industry}")
-async def get_hub_posts(industry: str, limit: int = 20):
-    """Fetch posts belonging to a specific industry hub."""
-    # Convert 'technology' to 'Technology', etc.
-    hub_name = industry.capitalize()
-    
-    query = {
-        "is_rejected": False,
-        "is_archived": False,
-        "hubs": hub_name
-    }
-    
-    cursor = posts_collection.find(query).sort("created_at", -1).limit(limit)
-    posts = []
-    async for post in cursor:
-        posts.append(serialize_doc(post))
-        
-    return posts
+
 
 @app.get("/posts/{post_id}")
-async def get_post(post_id: str):
+async def get_post(post_id: str, user_id: Optional[str] = None):
     try:
         oid = ObjectId(post_id)
     except:
@@ -1400,7 +1418,9 @@ async def get_post(post_id: str):
     doc = await posts_collection.find_one({"_id": oid, "is_archived": False})
     if not doc:
         raise HTTPException(404, "Post not found")
-    return serialize_doc(doc)
+    data = serialize_doc(doc, requester_id=user_id)
+    await enhance_post_with_user(data)
+    return data
 
 @app.get("/posts/{post_id}/related")
 async def get_related_posts(post_id: str, limit: int = 4):
@@ -1430,12 +1450,7 @@ async def get_related_posts(post_id: str, limit: int = 4):
     
     async for doc in cursor:
         data = serialize_doc(doc)
-        if data.get("user_id"):
-            u_info = await users_collection.find_one({"_id": data["user_id"]})
-            if u_info:
-                data["user_name"] = u_info.get("display_name") or u_info.get("username") or data["user_name"]
-                data["user_pic"] = u_info.get("photoURL") or data["user_pic"]
-                data["username"] = "@" + u_info.get("username", "user")
+        await enhance_post_with_user(data)
         feed.append(data)
         
     return feed
@@ -1451,15 +1466,27 @@ async def delete_post(post_id: str, user_id: str):
     
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
+
+    # Check if caller is admin FIRST before enforcing ownership
+    admin_user = await get_user_by_any_id(user_id)
+    is_admin = admin_user and (admin_user.get("role") == "admin" or admin_user.get("username") == "admin")
         
-    if post.get("user_id") != user_id:
+    if not is_admin and post.get("user_id") != user_id:
         raise HTTPException(status_code=403, detail="Permission denied")
         
     await posts_collection.delete_one({"_id": oid})
+    
+    # Invalidate ALL feed caches so deleted post disappears immediately everywhere
+    try:
+        from cache_utils import invalidate_feed_cache
+        await invalidate_feed_cache("feed:*")
+    except Exception as e:
+        print(f"Cache invalidation error on delete: {e}")
+        
     return {"status": "deleted"}
 
 
-# ─── POST EDITING ───────────────────────────────────────────────────────────
+# --- POST EDITING ---
 
 class PostEditRequest(BaseModel):
     user_id: str
@@ -1478,7 +1505,7 @@ async def edit_post(post_id: str, req: PostEditRequest):
     if post.get("user_id") != req.user_id:
         raise HTTPException(403, "Permission denied")
 
-    updates: dict = {"edited_at": datetime.now(timezone.utc).isoformat()}
+    updates: dict = {"edited_at": get_now_iso()}
     if req.content is not None:
         updates["content"] = req.content
     if req.title is not None:
@@ -1532,14 +1559,25 @@ async def get_admin_stats(user_id: str):
     total_users = await users_collection.count_documents({})
     total_posts = await posts_collection.count_documents({})
     flagged_posts = await posts_collection.count_documents({"is_flagged": True})
-    total_reports = await reports_collection.count_documents({})
     
-    # We could also get community count if we imported communities_collection, let's keep it simple
+    # Reports statistics
+    reports_raised = await reports_collection.count_documents({})
+    # Count as solved if status is Resolved OR action is set to anything other than Pending Review
+    reports_solved = await reports_collection.count_documents({
+        "$or": [
+            {"status": "Resolved"},
+            {"status": "resolved"},
+            {"action": {"$exists": True, "$nin": ["Pending Review", "pending", None, ""]}}
+        ]
+    })
+    
     return {
         "total_users": total_users,
         "total_posts": total_posts,
         "flagged_posts": flagged_posts,
-        "total_reports": total_reports
+        "reports_raised": reports_raised,
+        "reports_solved": reports_solved,
+        "total_reports": reports_raised # Keep for backward compatibility
     }
 
 @app.get("/admin/users")
@@ -1617,11 +1655,20 @@ async def unflag_post(post_id: str, admin_id: str = Query(...)):
         
     result = await posts_collection.update_one(
         {"_id": oid}, 
-        {"$set": {"is_flagged": False, "is_rejected": False}, "$set": {"report_count": 0}}
+        {"$set": {"is_flagged": False, "is_rejected": False, "report_count": 0}}
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Post not found")
         
+    # Cache Invalidation
+    try:
+        post = await posts_collection.find_one({"_id": oid})
+        if post:
+            from cache_utils import invalidate_category_cache
+            await invalidate_category_cache(post.get("category", "All"))
+    except Exception as e:
+        print(f"Cache invalidation error on unflag: {e}")
+
     return {"status": "success", "message": "Post unflagged and approved"}
 
 
@@ -1663,19 +1710,7 @@ async def update_system_settings(updates: SystemSettingsUpdate, admin_id: str = 
     if not admin or (admin.get("role") != "admin" and admin.get("username") != "admin"):
         raise HTTPException(status_code=403, detail="Admin access required")
         
-    update_data = {}
-    if updates.maintenance_mode is not None:
-        update_data["maintenance_mode"] = updates.maintenance_mode
-    if updates.broadcast_message is not None:
-        update_data["broadcast_message"] = updates.broadcast_message
-    if updates.read_only_mode is not None:
-        update_data["read_only_mode"] = updates.read_only_mode
-    if updates.pause_registrations is not None:
-        update_data["pause_registrations"] = updates.pause_registrations
-    if updates.disable_dms is not None:
-        update_data["disable_dms"] = updates.disable_dms
-    if updates.require_verified_email is not None:
-        update_data["require_verified_email"] = updates.require_verified_email
+    update_data = updates.dict(exclude_unset=True)
         
     if update_data:
         await settings_collection.update_one(
@@ -1703,7 +1738,9 @@ async def get_posts_by_tag(tag: str, sort_by: str = "new", limit: int = 50):
 
     posts = []
     async for doc in cursor:
-        posts.append(serialize_doc(doc))
+        data = serialize_doc(doc)
+        await enhance_post_with_user(data)
+        posts.append(data)
     return posts
 
 
@@ -1807,7 +1844,9 @@ async def get_trending_posts(limit: int = 5):
     cursor = posts_collection.aggregate(pipeline)
     results = []
     async for doc in cursor:
-        results.append(serialize_doc(doc))
+        data = serialize_doc(doc)
+        await enhance_post_with_user(data)
+        results.append(data)
     return results
 
 @app.get("/api/v1/trending/tags")
@@ -1864,10 +1903,14 @@ async def suggest_tags(content: str = Query(..., min_length=10)):
     tags = extract_keywords(content)
     return {"tags": tags}
 
-@app.post("/api/v1/posts/{post_id}/endorse")
-async def endorse_post(post_id: str, user_id: str = Query(...)):
+class HelpedRequest(BaseModel):
+    user_id: str
+    message: Optional[str] = None
+
+@app.post("/api/v1/posts/{post_id}/helped")
+async def helped_post(post_id: str, data: HelpedRequest):
     """
-    Allows professionals to endorse a post for its insight.
+    Allows users to share how a post helped them.
     """
     try:
         oid = ObjectId(post_id)
@@ -1878,19 +1921,35 @@ async def endorse_post(post_id: str, user_id: str = Query(...)):
     if not post:
         raise HTTPException(404, "Post not found")
         
-    # Check if user is expert (optional: could check profile info)
-    # For now, we allow anyone but track it as endorsement
-    if user_id in post.get("endorsements_by", []):
-        return {"msg": "Already endorsed", "endorsements_count": post.get("endorsements_count", 0)}
+    # Check if already marked as helped
+    if data.user_id in post.get("helped_by", []):
+        return {"msg": "Already marked as helped", "helped_count": post.get("helped_count", 0)}
+        
+    # Store feedback in a separate collection or inside the post
+    feedback = {
+        "user_id": data.user_id,
+        "message": data.message,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
         
     await posts_collection.update_one(
         {"_id": oid},
         {
-            "$inc": {"endorsements_count": 1},
-            "$push": {"endorsements_by": user_id}
+            "$inc": {"helped_count": 1},
+            "$push": {
+                "helped_by": data.user_id,
+                "helped_feedback": feedback
+            }
         }
     )
-    return {"msg": "Post endorsed", "endorsements_count": post.get("endorsements_count", 0) + 1}
+    
+    # Optional: Increase user's phoenix score for being helpful
+    await users_collection.update_one(
+        {"id": post.get("user_id")},
+        {"$inc": {"phoenix_score": 5}}
+    )
+    
+    return {"msg": "Experience shared", "helped_count": post.get("helped_count", 0) + 1}
 
 @app.get("/api/v1/hubs/{industry}")
 async def get_hub_posts(industry: str, limit: int = 10, offset: int = 0):
@@ -1903,17 +1962,20 @@ async def get_hub_posts(industry: str, limit: int = 10, offset: int = 0):
         "is_archived": False,
         "$or": [
             {"category": industry.capitalize()},
-            {"tags": industry.lower()}
+            {"tags": industry.lower()},
+            {"hubs": industry.capitalize()}
         ]
     }
     cursor = posts_collection.find(query).sort("created_at", -1).skip(offset).limit(limit)
     results = []
     async for doc in cursor:
-        results.append(serialize_doc(doc))
+        data = serialize_doc(doc)
+        await enhance_post_with_user(data)
+        results.append(data)
     return results
 
 
-# ─── CONTENT WARNINGS ────────────────────────────────────────────────────────
+# --- CONTENT WARNINGS ---
 
 class ContentWarningRequest(BaseModel):
     user_id: str
@@ -1938,7 +2000,7 @@ async def set_content_warning(post_id: str, req: ContentWarningRequest):
     return {"status": "updated", "content_warning": req.content_warning}
 
 
-# ─── BLOCK / MUTE SYSTEM ─────────────────────────────────────────────────────
+# --- BLOCK / MUTE SYSTEM ---
 
 from database import blocks_collection, mutes_collection
 
@@ -1952,7 +2014,7 @@ async def block_user(target_id: str, req: BlockMuteRequest):
     await blocks_collection.update_one(
         {"blocker_id": req.user_id, "blocked_id": target_id},
         {"$set": {"blocker_id": req.user_id, "blocked_id": target_id,
-                  "created_at": datetime.now(timezone.utc).isoformat()}},
+                  "created_at": get_now_iso()}},
         upsert=True
     )
     return {"status": "blocked"}
@@ -1969,7 +2031,7 @@ async def mute_user(target_id: str, req: BlockMuteRequest):
     await mutes_collection.update_one(
         {"muter_id": req.user_id, "muted_id": target_id},
         {"$set": {"muter_id": req.user_id, "muted_id": target_id,
-                  "created_at": datetime.now(timezone.utc).isoformat()}},
+                  "created_at": get_now_iso()}},
         upsert=True
     )
     return {"status": "muted"}
@@ -2005,7 +2067,7 @@ async def create_report(report: ReportRequest):
         "target_type": report.target_type,
         "reason": report.reason,
         "details": report.details,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": get_now_iso(),
         "status": "pending"
     }
     result = await reports_collection.insert_one(new_report)
@@ -2013,14 +2075,24 @@ async def create_report(report: ReportRequest):
     # Increment report_count on target if it's a post
     if report.target_type == "post":
         try:
-            from bson import ObjectId
-            target_oid = ObjectId(report.target_id)
+            # Robust lookup for target post (slug or ObjectId)
+            post_query = {
+                "$or": [
+                    {"id": report.target_id},
+                    {"$expr": {
+                        "$gt": [
+                            {"$indexOfCP": [{"$toString": "$_id"}, report.target_id]},
+                            -1
+                        ]
+                    }}
+                ]
+            }
             await posts_collection.update_one(
-                {"_id": target_oid},
-                {"$inc": {"report_count": 1}}
+                post_query,
+                {"$inc": {"report_count": 1}, "$set": {"is_flagged": True}}
             )
         except Exception as e:
-            print(f"Error incrementing report_count: {e}")
+            print(f"Error updating post stats for report: {e}")
 
     return {"id": str(result.inserted_id), "status": "reported"}
 
@@ -2099,14 +2171,7 @@ async def search_mixed(
     post_cursor = posts_collection.find(post_query)
     async for doc in post_cursor:
         data = serialize_doc(doc)
-        
-        # 🛠️ DYNAMIC PROFILE UPDATE
-        if not data.get("is_anonymous", False) and data.get("user_id"):
-            u_info = await users_collection.find_one({"_id": data["user_id"]})
-            if u_info:
-                data["user_name"] = u_info.get("display_name") or u_info.get("username") or data["user_name"]
-                data["user_pic"] = u_info.get("photoURL") or data["user_pic"]
-                data["username"] = "@" + u_info.get("username", "user")
+        await enhance_post_with_user(data)
 
         author_handle = data.get("username", "").lower()
 
@@ -2135,80 +2200,76 @@ async def get_user_profile_v2(user_id: str, requester_id: Optional[str] = None):
     if not user_data:
         raise HTTPException(404, "User not found")
 
-    # Check if requester follows this user (check both id and uid formats)
-    is_following = False
-    follow_status = "not_following"
-    if requester_id:
-        # Build list of all possible IDs this user might be stored under
-        target_all_ids = [str(user_data["_id"])]
-        if user_data.get("uid"):
-            target_all_ids.append(user_data["uid"])
+    try:
+        # Check if requester follows this user (check both id and uid formats)
+        is_following = False
+        follow_status = "not_following"
+        if requester_id:
+            # Build list of all possible IDs this user might be stored under
+            target_all_ids = [str(user_data["_id"])]
+            if user_data.get("uid"):
+                target_all_ids.append(user_data["uid"])
 
-        follow_record = await follows_collection.find_one({
-            "follower_id": requester_id,
-            "following_id": {"$in": target_all_ids}
-        })
-        if follow_record:
-            follow_status = follow_record.get("status", "accepted")
-            is_following = follow_status == "accepted"
+            follow_record = await follows_collection.find_one({
+                "follower_id": requester_id,
+                "following_id": {"$in": target_all_ids}
+            })
+            if follow_record:
+                follow_status = follow_record.get("status", "accepted")
+                is_following = follow_status == "accepted"
 
-    # Fetch posts
-    cursor = posts_collection.find({"user_id": user_id}).sort("created_at", -1)
-    
-    user_posts = []
-    total_views = 0
-    total_posts = 0
-    
-    # Determine the best photoURL
-    best_photo_url = user_data.get("photoURL")
-    
-    async for doc in cursor:
-        data = serialize_doc(doc)
+        # Fetch posts
+        cursor = posts_collection.find({"user_id": user_id}).sort("created_at", -1)
         
-        # 🛠️ DYNAMIC PROFILE UPDATE (Keep it fresh)
-        if not data.get("is_anonymous", False):
-            data["user_name"] = user_data.get("display_name") or user_data.get("username") or data["user_name"]
-            data["user_pic"] = user_data.get("photoURL") or data["user_pic"]
-            data["username"] = "@" + user_data.get("username", "user")
-            
+        user_posts = []
+        total_views = 0
+        total_posts = 0
+        
+        # Determine the best photoURL
+        best_photo_url = user_data.get("photoURL")
+        async for doc in cursor:
+            data = serialize_doc(doc, requester_id=requester_id)
+            await enhance_post_with_user(data)
+                
             # Legacy fallback: If the user has no photoURL but one of their posts does, use it
             if not best_photo_url and data.get("user_pic") and "/assets/default" not in data.get("user_pic"):
                 best_photo_url = data["user_pic"]
 
-        total_views += data.get("view_count", 0)
-        total_posts += 1
-        user_posts.append(data)
-    
-    # Build list of IDs for this user (both MongoDB _id string and Firebase uid)
-    user_ids_list = [str(user_data["_id"])]
-    if user_data.get("uid"):
-        user_ids_list.append(user_data["uid"])
+            total_views += data.get("view_count", 0)
+            total_posts += 1
+            user_posts.append(data)
+        
+        # Build list of IDs for this user (both MongoDB _id string and Firebase uid)
+        user_ids_list = [str(user_data["_id"])]
+        if user_data.get("uid"):
+            user_ids_list.append(user_data["uid"])
 
-    # Count unique followers and following (group by user ID to avoid counting duplicates)
-    accepted_cond = {"$or": [{"status": "accepted"}, {"status": {"$exists": False}}]}
+        # Count unique followers and following (group by user ID to avoid counting duplicates)
+        accepted_cond = {"$or": [{"status": "accepted"}, {"status": {"$exists": False}}]}
 
-    followers_pipeline = [
-        {"$match": {"following_id": {"$in": user_ids_list}, **accepted_cond}},
-        {"$group": {"_id": "$follower_id"}},
-        {"$count": "total"}
-    ]
-    following_pipeline = [
-        {"$match": {"follower_id": {"$in": user_ids_list}, **accepted_cond}},
-        {"$group": {"_id": "$following_id"}},
-        {"$count": "total"}
-    ]
+        followers_pipeline = [
+            {"$match": {"following_id": {"$in": user_ids_list}, **accepted_cond}},
+            {"$group": {"_id": "$follower_id"}},
+            {"$count": "total"}
+        ]
+        following_pipeline = [
+            {"$match": {"follower_id": {"$in": user_ids_list}, **accepted_cond}},
+            {"$group": {"_id": "$following_id"}},
+            {"$count": "total"}
+        ]
 
-    followers_res = await follows_collection.aggregate(followers_pipeline).to_list(1)
-    following_res = await follows_collection.aggregate(following_pipeline).to_list(1)
-    followers_count = followers_res[0]["total"] if followers_res else 0
-    following_count = following_res[0]["total"] if following_res else 0
+        followers_res = await follows_collection.aggregate(followers_pipeline).to_list(1)
+        following_res = await follows_collection.aggregate(following_pipeline).to_list(1)
+        followers_count = followers_res[0]["total"] if followers_res else 0
+        following_count = following_res[0]["total"] if following_res else 0
 
-    return {
-        "user_info": {
-            "id": str(user_data.get("_id")),
-            "username": user_data.get("username", None),
-            "display_name": user_data.get("display_name", "Anonymous"),
-            "photoURL": best_photo_url,
+        return {
+            "user_info": {
+                "id": str(user_data.get("_id")),
+                "username": user_data.get("username", None),
+                "display_name": user_data.get("display_name", "Anonymous"),
+                "photoURL": best_photo_url,
+                "user_pic": best_photo_url, # Compatibility
             "role": user_data.get("role", "user"),
             "is_banned": user_data.get("is_banned", False),
             "headline": user_data.get("headline", None),
@@ -2232,6 +2293,11 @@ async def get_user_profile_v2(user_id: str, requester_id: Optional[str] = None):
         },
         "posts": user_posts
     }
+    except Exception as e:
+        import traceback
+        print(f"[ERROR] Profile crash for user {user_id}: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(500, detail=f"Profile error: {str(e)}")
 
 @app.post("/users/{user_id}/insights/send")
 async def send_weekly_insights(user_id: str):
@@ -2341,7 +2407,7 @@ async def set_username(req: UsernameRequest):
         {"_id": req.user_id},
         {"$set": {
             "username": username, 
-            "updated_at": datetime.now(timezone.utc).isoformat()
+            "updated_at": get_now_iso()
         }},
         upsert=True
     )
@@ -2397,7 +2463,7 @@ async def update_profile(req: ProfileUpdateRequest):
     if not update_data:
         return {"status": "no_changes"}
 
-    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    update_data["updated_at"] = get_now_iso()
     
     result = await users_collection.update_one(
         {"_id": req.user_id},
@@ -2431,7 +2497,7 @@ async def increment_view(post_id: str, req: ViewRequest):
         await views_collection.insert_one({
             "post_id": post_id,
             "user_id": req.user_id,
-            "ts": datetime.now(timezone.utc).isoformat()
+            "ts": get_now_iso()
         })
 
     await posts_collection.update_one(
@@ -2472,7 +2538,7 @@ async def toggle_reaction(post_id: str, req: ViewRequest):
         await reactions_collection.insert_one({
             "post_id": post_id,
             "user_id": req.user_id,
-            "ts": datetime.now(timezone.utc).isoformat()
+            "ts": get_now_iso()
         })
         await posts_collection.update_one({"_id": oid}, {"$inc": {"reaction_count": 1}})
         status = "added"
@@ -2588,11 +2654,7 @@ async def get_user_bookmarks(user_id: str):
     posts_dict = {}
     async for doc in posts_cursor:
         data = serialize_doc(doc)
-        # Privacy Shield
-        if data.get("is_anonymous", False):
-            data["user_id"] = None
-            data["user_pic"] = "/assets/ghost_avatar.png"
-            data["username"] = "@ghost"
+        await enhance_post_with_user(data)
         posts_dict[data["id"]] = data
         
     # Return in order of bookmark timestamp
@@ -2605,7 +2667,9 @@ async def get_comments(post_id: str):
     cursor = comments_collection.find({"post_id": post_id}).sort("created_at", 1)
     comments = []
     async for doc in cursor:
-        comments.append(serialize_doc(doc))
+        data = serialize_doc(doc)
+        await enhance_comment_with_user(data)
+        comments.append(data)
     return comments
 
 @app.post("/posts/{post_id}/comments")
@@ -2862,6 +2926,7 @@ async def get_suggested_users(user_id: Optional[str] = None):
     return suggested
 
 @app.get("/users/{user_id}")
+@app.get("/users/{user_id}/profile")
 async def get_user_profile(user_id: str):
     user = await get_user_by_any_id(user_id)
     if not user:
@@ -2880,6 +2945,7 @@ async def get_user_profile(user_id: str):
         "display_name": user.get("display_name"),
         "email": user.get("email"),
         "photoURL": user.get("photoURL"),
+        "user_pic": user.get("photoURL"), # Added for frontend field compatibility
         "role": user.get("role", "user"),
         "is_banned": user.get("is_banned", False),
         "bio": user.get("bio", ""),
@@ -3208,16 +3274,16 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
     print(f"📥 [WS] Attempting to connect user {user_id}")
     try:
         await manager.connect(user_id, websocket)
-        print(f"✅ [WS] User {user_id} connected successfully")
+        print(f"OK [WS] User {user_id} connected successfully")
     except Exception as e:
-        print(f"❌ [WS] Connection failed for {user_id}: {e}")
+        print(f"ERR [WS] Connection failed for {user_id}: {e}")
         return
         
     try:
         while True:
             # Keep connection alive and listen for messages
             data = await websocket.receive_text()
-            print(f"📩 [WS] Received data from {user_id}: {data}")
+            print(f"MSG [WS] Received data from {user_id}: {data}")
             # Handle incoming WebSocket messages (typing indicators, etc.)
             try:
                 message_data = json.loads(data)
@@ -3230,12 +3296,12 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                             other_user = [p for p in conv["participants"] if p != user_id][0]
                             await manager.send_typing_indicator(other_user, conversation_id, message_data.get("is_typing", False))
             except Exception as e:
-                print(f"⚠️ [WS] Error processing message: {e}")
+                print(f"WARN [WS] Error processing message: {e}")
     except WebSocketDisconnect:
-        print(f"🔌 [WS] User {user_id} disconnected normally")
+        print(f"INFO [WS] User {user_id} disconnected normally")
         manager.disconnect(user_id)
     except Exception as e:
-        print(f"❌ [WS] Unexpected error for user {user_id}: {e}")
+        print(f"ERR [WS] Unexpected error for user {user_id}: {e}")
         manager.disconnect(user_id)
 
 @app.patch("/posts/{post_id}")
@@ -3594,7 +3660,7 @@ async def create_story(story_data: StoryCreate):
     
     story = story_data.dict()
     story["id"] = f"story_{uuid.uuid4().hex[:12]}"
-    story["created_at"] = datetime.utcnow().isoformat()
+    story["created_at"] = get_now_iso()
     story["viewers"] = []
     
     user = await users_collection.find_one({"_id": story_data.user_id})
@@ -3616,7 +3682,8 @@ async def get_stories_feed(user_id: str = Query(...)):
     followed_ids = [doc["following_id"] for doc in following_docs]
     followed_ids.append(user_id)
     
-    time_threshold = (datetime.utcnow() - timedelta(hours=24)).isoformat()
+    ist_tz = timezone(timedelta(hours=5, minutes=30))
+    time_threshold = (datetime.now(ist_tz) - timedelta(hours=24)).isoformat()
     
     stories_cursor = stories_collection.find({
         "user_id": {"$in": followed_ids},
@@ -3627,20 +3694,34 @@ async def get_stories_feed(user_id: str = Query(...)):
     for s in stories:
         s.pop("_id", None)
         
+    # Batch fetch user info for all unique user_ids in stories
+    uids = list(set(s["user_id"] for s in stories))
+    users_cursor = users_collection.find({"_id": {"$in": uids}})
+    users_list = await users_cursor.to_list(length=100)
+    users_map = {str(u["_id"]): u for u in users_list}
+    
     grouped_stories = {}
     for story in stories:
         uid = story["user_id"]
+        user_info = users_map.get(uid, {})
+        
         if uid not in grouped_stories:
             grouped_stories[uid] = {
                 "user_id": uid,
-                "user_name": story.get("user_name", "User"),
-                "user_pic": story.get("user_pic", ""),
-                "has_unseen": user_id not in story.get("viewers", []),
+                "user_name": user_info.get("display_name") or user_info.get("username") or story.get("user_name", "User"),
+                "user_pic": user_info.get("photoURL") or story.get("user_pic", ""),
+                "has_unseen": False,
                 "stories": []
             }
+        
+        # Determine if this specific story is unseen
+        is_unseen = user_id not in story.get("viewers", [])
+        
+        # Keep track of has_unseen for the group
+        if is_unseen:
+            grouped_stories[uid]["has_unseen"] = True
+            
         grouped_stories[uid]["stories"].append(story)
-        if user_id not in story.get("viewers", []):
-             grouped_stories[uid]["has_unseen"] = True
              
     result_list = list(grouped_stories.values())
     result_list.sort(key=lambda x: (not x["has_unseen"], -len(x["stories"])))

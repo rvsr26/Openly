@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000',
+    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8080',
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
@@ -32,7 +32,7 @@ export const getAbsUrl = (path?: string | null) => {
     }
 
     // 3. Backend uploads
-    const base = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, "");
+    const base = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8080').replace(/\/$/, "");
 
     if (path.startsWith("/uploads/") || path.startsWith("uploads/")) {
         const cleanPath = path.startsWith("/") ? path : `/${path}`;
@@ -47,10 +47,10 @@ export const getAbsUrl = (path?: string | null) => {
     return path;
 };
 
-export const uploadImage = async (file: File) => {
+export const uploadImage = async (file: File, folder: string = "openly_uploads") => {
     const formData = new FormData();
     formData.append("file", file);
-    const res = await api.post("/upload/image", formData, {
+    const res = await api.post(`/upload/image?folder=${folder}`, formData, {
         headers: { "Content-Type": "multipart/form-data" }
     });
     return res.data.url;

@@ -198,7 +198,7 @@ function CreatePost({
         if (e.target.files && e.target.files[0]) {
             setUploading(true);
             try {
-                const url = await uploadImage(e.target.files[0]);
+                const url = await uploadImage(e.target.files[0], "posts");
                 setImageUrl(url);
             } catch (err) {
                 console.error("Upload failed", err);

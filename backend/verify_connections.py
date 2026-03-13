@@ -14,30 +14,30 @@ async def verify():
     try:
         mongo_url = os.getenv("MONGODB_URL")
         if not mongo_url:
-            print("❌ MONGODB_URL not found in .env")
+            print("ERR MONGODB_URL not found in .env")
         else:
             client = AsyncIOMotorClient(mongo_url, serverSelectionTimeoutMS=5000)
             # Ping
             await client.admin.command('ping')
-            print("✅ MongoDB Connection Successful")
+            print("OK MongoDB Connection Successful")
             results["MongoDB"] = True
     except Exception as e:
-        print(f"❌ MongoDB Failed: {e}")
+        print(f"ERR MongoDB Failed: {e}")
 
     # 2. Redis
     print("\n--- Checking Redis ---")
     try:
         redis_url = os.getenv("REDIS_URL")
         if not redis_url:
-            print("❌ REDIS_URL not found in .env")
+            print("ERR REDIS_URL not found in .env")
         else:
             redis = aioredis.from_url(redis_url, encoding="utf-8", decode_responses=True, socket_timeout=5.0)
             await redis.ping()
-            print("✅ Redis Connection Successful")
+            print("OK Redis Connection Successful")
             results["Redis"] = True
             await redis.close()
     except Exception as e:
-        print(f"❌ Redis Failed: {e}")
+        print(f"ERR Redis Failed: {e}")
 
     # 3. SMTP
     print("\n--- Checking SMTP ---")
@@ -48,21 +48,21 @@ async def verify():
         password = os.getenv("SMTP_PASSWORD")
         
         if not user or not password:
-            print("❌ SMTP credentials missing in .env")
+            print("ERR SMTP credentials missing in .env")
         else:
             server = smtplib.SMTP(host, port, timeout=5)
             server.starttls()
             server.login(user, password)
-            print("✅ SMTP Login Successful")
+            print("OK SMTP Login Successful")
             results["SMTP"] = True
             server.quit()
     except Exception as e:
-        print(f"❌ SMTP Failed: {e}")
+        print(f"ERR SMTP Failed: {e}")
 
     print("\n=== SUMMARY ===")
     all_passed = True
     for service, status in results.items():
-        icon = '✅' if status else '❌'
+        icon = 'OK' if status else 'ERR'
         print(f"{service}: {icon} {'OK' if status else 'FAILED'}")
         if not status: all_passed = False
     

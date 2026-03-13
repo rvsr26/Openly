@@ -7,6 +7,7 @@ import time
 import hashlib
 from collections import defaultdict
 from datetime import datetime, timezone
+from time_utils import get_now_iso
 from typing import Callable
 from fastapi import Request, HTTPException, Response
 from fastapi.responses import JSONResponse
@@ -114,7 +115,7 @@ class RequestLoggingMiddleware:
         start_time = time.time()
         request = Request(scope, receive)
         client_host = request.client.host if request.client else "unknown"
-        print(f"📥 {request.method} {request.url.path} - {client_host}")
+        print(f"--> {request.method} {request.url.path} - {client_host}")
         
         status_code = [500]
         async def send_wrapper(message):
@@ -125,10 +126,10 @@ class RequestLoggingMiddleware:
         try:
             await self.app(scope, receive, send_wrapper)
             duration = time.time() - start_time
-            print(f"📤 {request.method} {request.url.path} - {status_code[0]} ({duration:.2f}s)")
+            print(f"<-- {request.method} {request.url.path} - {status_code[0]} ({duration:.2f}s)")
         except Exception as e:
             duration = time.time() - start_time
-            print(f"❌ {request.method} {request.url.path} - ERROR ({duration:.2f}s): {str(e)}")
+            print(f"ERR {request.method} {request.url.path} - ERROR ({duration:.2f}s): {str(e)}")
             raise
 
 class CSRFMiddleware:

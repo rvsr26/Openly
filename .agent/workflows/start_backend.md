@@ -5,7 +5,7 @@ description: Start the Backend server locally
 1. Open a new terminal
 2. Navigate to the backend directory
    ```powershell
-   cd failure-backend
+   cd backend
    ```
 3. Activate the virtual environment
    ```powershell

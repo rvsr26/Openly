@@ -20,7 +20,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }));
 
   const noNavbarRoutes = ['/', '/landing', '/login', '/signup', '/forgot-password', '/reset-password', '/verify-email', '/setup-username', '/auth/mfa'];
-  const showNavbar = !noNavbarRoutes.includes(pathname);
+  const isNoNavbarRoute = noNavbarRoutes.includes(pathname);
+  const isAdminRoute = pathname.startsWith('/admin');
+  const showNavbar = !isNoNavbarRoute && !isAdminRoute;
 
   return (
     <QueryClientProvider client={queryClient}>

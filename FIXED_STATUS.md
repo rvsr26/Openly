@@ -3,7 +3,7 @@
 ## Status: ALL SYSTEMS OPERATIONAL
 
 ### Backend ✅
-- **API Server**: Running on http://localhost:8000
+- **API Server**: Running on http://localhost:8080
 - **All Core Features**: Working perfectly
 - **Database**: Connected
 - **Redis Cache**: Active

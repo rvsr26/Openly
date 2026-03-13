@@ -17,6 +17,7 @@ Each post can optionally have an embedded 'poll' sub-document:
 """
 
 from datetime import datetime, timezone
+from time_utils import get_now, get_now_iso
 from typing import Optional, List
 from pydantic import BaseModel
 from bson import ObjectId
@@ -91,7 +92,7 @@ async def cast_vote(post_id: str, option_id: str, voter_id: str) -> dict:
     if poll.get("ends_at"):
         try:
             ends = datetime.fromisoformat(poll["ends_at"])
-            if datetime.now(timezone.utc) > ends:
+            if get_now() > ends:
                 raise ValueError("This poll has ended.")
         except ValueError as ve:
             if "ended" in str(ve):

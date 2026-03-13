@@ -42,13 +42,14 @@ export interface Post {
     content_warning?: string;
     tags?: string[];
     is_professional_inquiry?: boolean;
-    endorsements_count?: number;
     poll?: Poll;
     community_id?: string;
     specific_reactions?: Record<string, number>;
     user_reactions?: Record<string, string>;
     user_reaction?: string;
     has_downvoted?: boolean;
+    helped_count?: number;
+    has_helped?: boolean;
 }
 
 export interface ProfessionalExperience {

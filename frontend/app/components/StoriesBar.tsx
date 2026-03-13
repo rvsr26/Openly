@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import api, { getAbsUrl } from "../lib/api";
-import { auth } from "../firebase";
+import api, { getAbsUrl, uploadImage } from "../lib/api";
+import { useAuth } from "@/context/AuthContext";
 import { StoryGroup } from "../types";
 import { Plus, X, Camera, Loader2, Play } from "lucide-react";
 import { toast } from "sonner";
 
 export default function StoriesBar() {
+    const { user } = useAuth();
     const [storyGroups, setStoryGroups] = useState<StoryGroup[]>([]);
     const [loading, setLoading] = useState(true);
     const [isCreating, setIsCreating] = useState(false);
@@ -20,9 +21,9 @@ export default function StoriesBar() {
     const [viewerInitialGroupIndex, setViewerInitialGroupIndex] = useState(0);
 
     const fetchStories = async () => {
-        if (!auth.currentUser) return;
+        if (!user) return;
         try {
-            const res = await api.get(`/stories/feed?user_id=${auth.currentUser.uid}`);
+            const res = await api.get(`/stories/feed?user_id=${user.uid}`);
             setStoryGroups(res.data);
         } catch (e) {
             console.error("Failed to fetch stories", e);
@@ -32,19 +33,16 @@ export default function StoriesBar() {
     };
 
     useEffect(() => {
-        const unsubscribe = auth.onAuthStateChanged((user) => {
-            if (user) {
-                fetchStories();
-            } else {
-                setLoading(false);
-            }
-        });
-        return () => unsubscribe();
-    }, []);
+        if (user) {
+            fetchStories();
+        } else {
+            setLoading(false);
+        }
+    }, [user]);
 
     const handleCreateStory = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file || !auth.currentUser) return;
+        if (!file || !user) return;
 
         if (file.size > 5 * 1024 * 1024) {
             toast.error("File too large. Max 5MB.");
@@ -54,16 +52,11 @@ export default function StoriesBar() {
         setUploading(true);
         try {
             // 1. Upload media
-            const formData = new FormData();
-            formData.append("file", file);
-            const uploadRes = await api.post("/posts/upload", formData, {
-                headers: { "Content-Type": "multipart/form-data" }
-            });
-            const imageUrl = uploadRes.data.url;
+            const imageUrl = await uploadImage(file, "stories");
 
             // 2. Create Story
             await api.post("/stories", {
-                user_id: auth.currentUser.uid,
+                user_id: user.uid,
                 image_url: imageUrl,
                 background_color: "#000000"
             });
@@ -86,9 +79,9 @@ export default function StoriesBar() {
     };
 
     const handleStoryViewed = async (storyId: string) => {
-        if (!auth.currentUser) return;
+        if (!user) return;
         try {
-            await api.post(`/stories/${storyId}/view?viewer_id=${auth.currentUser.uid}`);
+            await api.post(`/stories/${storyId}/view?viewer_id=${user.uid}`);
             // Optimistically update local state so ring goes gray
             setStoryGroups(prev => [...prev]);
         } catch (e) {
@@ -109,8 +102,8 @@ export default function StoriesBar() {
         );
     }
 
-    const myGroup = storyGroups.find(g => g.user_id === auth.currentUser?.uid);
-    const otherGroups = storyGroups.filter(g => g.user_id !== auth.currentUser?.uid);
+    const myGroup = storyGroups.find(g => g.user_id === user?.uid);
+    const otherGroups = storyGroups.filter(g => g.user_id !== user?.uid);
 
     return (
         <div className="relative">
@@ -120,14 +113,14 @@ export default function StoriesBar() {
                 <div className="flex flex-col items-center gap-2 shrink-0 relative">
                     <button
                         onClick={() => myGroup ? openViewer(0) : setIsCreating(true)}
-                        className={`relative w-16 h-16 rounded-full p-[3px] transition-transform active:scale-95 ${myGroup ? (myGroup.has_unseen ? "bg-gradient-to-tr from-primary to-purple-500" : "bg-border") : "bg-secondary"}`}
+                        className={`relative w-16 h-16 rounded-full p-[3.5px] transition-all hover:scale-105 active:scale-95 ${myGroup ? (myGroup.has_unseen ? "bg-gradient-to-tr from-[#ff0080] via-[#7928ca] to-[#ff0080] shadow-[0_0_15px_rgba(121,40,202,0.4)] animate-gradient-xy" : "bg-muted") : "bg-muted"}`}
                     >
                         <div className="w-full h-full rounded-full border-2 border-background overflow-hidden bg-background flex items-center justify-center">
                             {uploading ? (
                                 <Loader2 size={24} className="animate-spin text-muted-foreground" />
                             ) : (
                                 <img
-                                    src={getAbsUrl(auth.currentUser?.photoURL || "")}
+                                    src={getAbsUrl(myGroup?.user_pic || user?.photoURL || "")}
                                     className="w-full h-full object-cover"
                                     onError={(e) => { e.currentTarget.src = "/assets/default_avatar.png" }}
                                     alt="Me"
@@ -148,7 +141,7 @@ export default function StoriesBar() {
                     <div key={group.user_id} className="flex flex-col items-center gap-2 shrink-0">
                         <button
                             onClick={() => openViewer(myGroup ? idx + 1 : idx)} // Offset index if myGroup exists at 0
-                            className={`w-16 h-16 rounded-full p-[3px] transition-transform active:scale-95 ${group.has_unseen ? "bg-gradient-to-tr from-primary to-purple-500" : "bg-border"}`}
+                            className={`w-16 h-16 rounded-full p-[3.5px] transition-all hover:scale-105 active:scale-95 ${group.has_unseen ? "bg-gradient-to-tr from-[#ff0080] via-[#7928ca] to-[#ff0080] shadow-[0_0_15px_rgba(121,40,202,0.4)] animate-gradient-xy" : "bg-muted"}`}
                         >
                             <div className="w-full h-full rounded-full border-2 border-background overflow-hidden bg-background">
                                 <img

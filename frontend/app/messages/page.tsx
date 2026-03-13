@@ -282,7 +282,7 @@ function MessagesContent() {
 
         try {
             setIsLoadingMessages(true); // Show loading state during upload
-            const response = await fetch(`${API_URL}/upload/image`, {
+            const response = await fetch(`${API_URL}/upload/image?folder=messages`, {
                 method: 'POST',
                 body: formData
             });

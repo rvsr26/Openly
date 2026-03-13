@@ -179,8 +179,12 @@ function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: strin
   const [commentText, setCommentText] = useState("");
 
   const commentTree = useMemo(() => buildCommentTree(comments), [comments]);
-
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isHelped, setIsHelped] = useState(post.has_helped || false);
+  const [helpedCount, setHelpedCount] = useState(post.helped_count || 0);
+  const [showHelpedInput, setShowHelpedInput] = useState(false);
+  const [helpedText, setHelpedText] = useState("");
+  const [isSubmittingHelped, setIsSubmittingHelped] = useState(false);
 
   const [reportModalConfig, setReportModalConfig] = useState<{
     isOpen: boolean;
@@ -433,6 +437,34 @@ function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: strin
       window.location.reload();
     } catch (error) {
       toast.error("Failed to delete post");
+    }
+  };
+
+  const handleHelped = async () => {
+    if (!currentUser) {
+      toast.error("Please login to share your experience");
+      return;
+    }
+    if (isHelped) return;
+    setShowHelpedInput(true);
+  };
+
+  const submitHelpedFeedback = async () => {
+    if (!currentUser || isSubmittingHelped) return;
+    setIsSubmittingHelped(true);
+    try {
+      await api.post(`/api/v1/posts/${post.id}/helped`, {
+        user_id: currentUser.uid,
+        message: helpedText
+      });
+      setIsHelped(true);
+      setHelpedCount(prev => prev + 1);
+      setShowHelpedInput(false);
+      toast.success("Thank you for sharing your experience!");
+    } catch (error) {
+      toast.error("Failed to submit feedback");
+    } finally {
+      setIsSubmittingHelped(false);
     }
   };
 
@@ -824,22 +856,15 @@ function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: strin
           )}
 
           {/* AI Summarize */}
-          {/* Endorse Button */}
+          {/* Helped Me Button */}
           <button
-            onClick={async () => {
-              try {
-                const res = await api.post(`/api/v1/posts/${post.id}/endorse?user_id=${currentUser?.uid || "guest"}`);
-                toast.success(res.data.msg);
-              } catch (err) {
-                toast.error("Failed to endorse");
-              }
-            }}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all text-xs font-bold bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 active:scale-95`}
-            title="Expert Endorsement"
+            onClick={handleHelped}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all text-xs font-bold ${isHelped ? "bg-primary/20 text-primary" : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 active:scale-95"}`}
+            title="This helped me"
           >
-            <Trophy size={14} />
-            <span className="hidden sm:inline">Endorse</span>
-            {(post.endorsements_count ?? 0) > 0 && <span>({post.endorsements_count})</span>}
+            <Sparkles size={14} className={isHelped ? "fill-primary" : ""} />
+            <span className="hidden sm:inline">{isHelped ? "Helped" : "Helped Me"}</span>
+            {helpedCount > 0 && <span>({helpedCount})</span>}
           </button>
 
           {post.content.length > 200 && (
@@ -912,6 +937,58 @@ function PostItem({ post, highlightQuery }: { post: Post; highlightQuery?: strin
           )}
         </motion.div>
       )}
+      {/* HELPED FEEDBACK INPUT */}
+      <AnimatePresence>
+        {showHelpedInput && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4 p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 relative overflow-hidden"
+          >
+            <h4 className="text-[10px] font-black text-emerald-500 uppercase tracking-widest mb-3">How did this help you?</h4>
+            
+            <div className="flex flex-wrap gap-2 mb-4">
+              {[
+                "Gained so much experience",
+                "Helped me in getting a job",
+                "Learned a lesson",
+                "Inspired my journey",
+                "Technical clarity"
+              ].map(chip => (
+                <button
+                  key={chip}
+                  onClick={() => setHelpedText(prev => prev ? `${prev} ${chip}` : chip)}
+                  className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-bold text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all"
+                >
+                  + {chip}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={helpedText}
+              onChange={(e) => setHelpedText(e.target.value)}
+              placeholder="e.g. This helped me in getting my first job and I gained so much experience through this..."
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50 min-h-[60px] resize-none mb-3"
+            />
+            <div className="flex justify-end gap-2">
+              <button 
+                onClick={() => setShowHelpedInput(false)}
+                className="px-3 py-1.5 rounded-lg text-[10px] font-bold text-muted-foreground hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={submitHelpedFeedback}
+                disabled={!helpedText.trim() || isSubmittingHelped}
+                className="px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-[10px] font-bold hover:bg-emerald-600 disabled:opacity-50 transition-all"
+              >
+                {isSubmittingHelped ? "Sharing..." : "Share Experience"}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* COMMENTS SECTION */}
       {showComments && (

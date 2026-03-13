@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { LayoutGrid, LayoutList, Maximize2, Minimize2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { getScopedKey } from '@/app/lib/accountUtils';
 
 type ViewMode = 'compact' | 'comfortable' | 'spacious' | 'grid';
 
@@ -10,13 +12,15 @@ interface ViewModeToggleProps {
 }
 
 export default function ViewModeToggle({ onViewModeChange }: ViewModeToggleProps) {
-    const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    const { user } = useAuth();
+    const [viewMode, setViewMode] = useState<ViewMode>('comfortable');
+
+    useEffect(() => {
         if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('view_mode');
-            if (saved) return saved as ViewMode;
+            const saved = localStorage.getItem(getScopedKey('view_mode', user?.uid));
+            if (saved) setViewMode(saved as ViewMode);
         }
-        return 'comfortable';
-    });
+    }, [user?.uid]);
 
     const applyViewMode = (mode: ViewMode) => {
         if (typeof window === 'undefined') return;
@@ -29,7 +33,7 @@ export default function ViewModeToggle({ onViewModeChange }: ViewModeToggleProps
 
     const changeViewMode = (mode: ViewMode) => {
         setViewMode(mode);
-        localStorage.setItem('view_mode', mode);
+        localStorage.setItem(getScopedKey('view_mode', user?.uid), mode);
         applyViewMode(mode);
         onViewModeChange?.(mode);
     };

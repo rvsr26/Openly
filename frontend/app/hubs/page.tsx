@@ -40,55 +40,69 @@ export default function HubsPage() {
         <div className="min-h-screen bg-background text-foreground">
 
             <main className="pt-28 max-w-6xl mx-auto px-4 pb-24">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-                    <div>
-                        <Link href="/feed" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors mb-4 text-xs font-black uppercase tracking-widest">
-                            <ArrowLeft size={14} /> Back to Feed
-                        </Link>
-                        <h1 className="text-4xl font-black text-foreground">Industry Hubs</h1>
-                        <p className="text-muted-foreground mt-2 max-w-md">
-                            Connect with professionals and students in your specific field.
-                            Validated insights and industry-specific discussions.
+                {/* HERO HEADER */}
+                <div className="text-center py-12 mb-8">
+                    <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-xs font-bold mb-6 border border-primary/20">
+                            <Briefcase size={12} /> Industry Hubs
+                        </div>
+                        <h1 className="text-4xl md:text-5xl font-black text-foreground mb-4">
+                            Connect by <span className="text-primary">Industry</span>
+                        </h1>
+                        <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+                            Connect with professionals and students in your specific field through validated insights and discussions.
                         </p>
-                    </div>
+                    </motion.div>
+                </div>
 
-                    <div className="relative w-full md:w-80">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground/40" size={18} />
+                {/* SEARCH */}
+                <div className="flex flex-col sm:flex-row gap-3 mb-10 max-w-2xl mx-auto">
+                    <div className="relative flex-1">
+                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <input
-                            type="text"
                             value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            onChange={e => setSearch(e.target.value)}
                             placeholder="Search industries..."
-                            className="w-full bg-white/5 border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all shadow-2xl"
+                            className="w-full pl-11 pr-4 py-3 bg-card border border-border rounded-2xl text-sm text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all font-medium"
                         />
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {filteredHubs.map((hub, idx) => (
-                        <Link key={hub.name} href={`/hubs/${hub.name.toLowerCase()}`}>
+                        <Link key={hub.name} href={`/hubs/${hub.name.toLowerCase()}`} className="group">
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: idx * 0.05 }}
-                                className={`p-6 rounded-[2rem] bg-white/5 border ${hub.border} hover:bg-white/10 transition-all group cursor-pointer h-full flex flex-col`}
+                                className={`h-full flex flex-col rounded-[2.5rem] bg-card border ${hub.border} hover:border-primary/40 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5 p-2 overflow-hidden`}
                             >
-                                <div className={`w-14 h-14 rounded-2xl ${hub.bg} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-                                    <hub.icon className={hub.color} size={28} />
+                                <div className={`aspect-[4/3] rounded-[2rem] ${hub.bg} flex items-center justify-center relative overflow-hidden group-hover:scale-[1.02] transition-transform duration-700`}>
+                                    <hub.icon className={`${hub.color} group-hover:scale-110 transition-transform duration-500 w-16 h-16`} />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
-                                <h3 className="text-xl font-black text-foreground mb-2 flex items-center justify-between">
-                                    {hub.name}
-                                    <ChevronRight className="w-5 h-5 text-muted-foreground/0 group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                                </h3>
-                                <p className="text-sm text-muted-foreground line-clamp-2">
-                                    {hub.desc}
-                                </p>
-                                <div className="mt-auto pt-6 flex items-center justify-between">
-                                    <span className="text-[10px] font-black text-primary uppercase tracking-widest">Explore Hub</span>
-                                    <div className="flex -space-x-2">
-                                        {[1, 2, 3].map(i => (
-                                            <div key={i} className="w-6 h-6 rounded-full bg-secondary border-2 border-background" />
-                                        ))}
+                                
+                                <div className="p-6 flex flex-col flex-1">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-xl font-black text-foreground group-hover:text-primary transition-colors">
+                                            {hub.name}
+                                        </h3>
+                                        <ChevronRight className="w-5 h-5 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                                    </div>
+                                    
+                                    <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-6 flex-1">
+                                        {hub.desc}
+                                    </p>
+                                    
+                                    <div className="pt-4 border-t border-border/50 flex items-center justify-between">
+                                        <div className="flex -space-x-2">
+                                            {[1, 2, 3].map(i => (
+                                                <div key={i} className="w-7 h-7 rounded-full bg-secondary border-2 border-card shadow-sm" />
+                                            ))}
+                                        </div>
+                                        <span className="text-[10px] font-black text-primary uppercase tracking-widest bg-primary/10 px-3 py-1.5 rounded-full">
+                                            Explore Hub
+                                        </span>
                                     </div>
                                 </div>
                             </motion.div>

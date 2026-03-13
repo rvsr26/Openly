@@ -3,6 +3,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from bson import ObjectId
 from database import posts_collection, follows_collection, users_collection
+from auth import send_email
 
 async def get_most_engaged_post(user_id: str, since: datetime) -> dict:
     """Find the user's post with the highest engagement (reactions + comments) since the given date."""
@@ -238,8 +239,12 @@ async def send_insight_report(user_id: str, email: str, user_name: str) -> dict:
     with open(filename, "w", encoding="utf-8") as f:
         f.write(html_content)
         
+    # Send the real email using the core utility
+    subject = f"Your Weekly Insights - {user_name}"
+    send_email(email, subject, "Please view the HTML version for your insights.", html_content)
+    
     return {
         "status": "success", 
-        "message": f"Report generated! Saved locally to {filename} (Simulation mode)",
+        "message": f"Report generated and sent to {email}! (Also saved locally to {filename})",
         "file": filename
     }

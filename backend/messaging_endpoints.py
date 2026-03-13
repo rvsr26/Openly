@@ -2,6 +2,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Ba
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone
+from time_utils import get_now_iso
 import json
 import httpx
 from bson import ObjectId
@@ -110,9 +111,9 @@ async def create_or_get_conversation(req: ConversationRequest):
             req.target_user_id: req.target_community_url
         } if req.target_community_url else {},
         "last_message": "",
-        "last_message_at": datetime.now(timezone.utc).isoformat(),
+        "last_message_at": get_now_iso(),
         "unread_count": {req.user_id: 0, req.target_user_id: 0},
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "created_at": get_now_iso()
     }
     
     result = await conversations_collection.insert_one(new_conversation)
@@ -239,7 +240,7 @@ async def send_message(conversation_id: str, req: MessageRequest, background_tas
         "content": req.content,
         "type": req.type or "text",
         "media_url": req.media_url,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": get_now_iso(),
         "is_read": False,
         "is_deleted": False
     }
@@ -328,7 +329,7 @@ async def receive_remote_message(req: RemoteMessageRequest):
             "last_message": req.content[:100],
             "last_message_at": req.timestamp,
             "unread_count": {req.sender_id: 0, req.receiver_id: 1},
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": get_now_iso()
         }
         res = await conversations_collection.insert_one(new_conv)
         conversation_id = str(res.inserted_id)
@@ -396,7 +397,7 @@ async def receive_remote_message(req: RemoteMessageRequest):
             "resource_id": conversation_id,
             "message": f"New message from {req.sender_name}",
             "is_read": False,
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": get_now_iso()
         }
         await notifications_collection.insert_one(notification)
     except Exception as e:

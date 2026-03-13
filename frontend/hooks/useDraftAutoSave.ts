@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { getScopedKey } from '../app/lib/accountUtils';
 
 interface DraftData {
     content: string;
@@ -13,6 +14,7 @@ const DRAFT_KEY = 'post_draft';
 const AUTO_SAVE_INTERVAL = 5000; // 5 seconds
 
 export function useDraftAutoSave(
+    user_id: string | undefined,
     content: string,
     imageUrl: string,
     isAnonymous: boolean,
@@ -27,7 +29,7 @@ export function useDraftAutoSave(
     const saveDraft = () => {
         if (!content.trim() && !imageUrl) {
             // Don't save empty drafts
-            localStorage.removeItem(DRAFT_KEY);
+            localStorage.removeItem(getScopedKey(DRAFT_KEY, user_id));
             return;
         }
 
@@ -42,7 +44,7 @@ export function useDraftAutoSave(
         };
 
         try {
-            localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+            localStorage.setItem(getScopedKey(DRAFT_KEY, user_id), JSON.stringify(draft));
             setLastSaved(new Date());
         } catch (error) {
             console.error('Failed to save draft:', error);
@@ -54,7 +56,7 @@ export function useDraftAutoSave(
     // Load draft from localStorage
     const loadDraft = (): DraftData | null => {
         try {
-            const saved = localStorage.getItem(DRAFT_KEY);
+            const saved = localStorage.getItem(getScopedKey(DRAFT_KEY, user_id));
             if (saved) {
                 return JSON.parse(saved);
             }
@@ -66,7 +68,7 @@ export function useDraftAutoSave(
 
     // Clear draft
     const clearDraft = () => {
-        localStorage.removeItem(DRAFT_KEY);
+        localStorage.removeItem(getScopedKey(DRAFT_KEY, user_id));
         setLastSaved(null);
     };
 

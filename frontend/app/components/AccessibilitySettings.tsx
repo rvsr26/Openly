@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Eye, EyeOff, Type, Contrast, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { getScopedKey } from '@/app/lib/accountUtils';
 
 interface AccessibilitySettings {
     fontSize: 'small' | 'medium' | 'large' | 'x-large';
@@ -12,19 +14,20 @@ interface AccessibilitySettings {
 }
 
 export default function AccessibilitySettings() {
-    const [settings, setSettings] = useState<AccessibilitySettings>(() => {
-        const defaults: AccessibilitySettings = {
-            fontSize: 'medium',
-            highContrast: false,
-            reduceMotion: false,
-            screenReaderOptimized: false,
-        };
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('accessibility_settings');
-            if (saved) return JSON.parse(saved);
-        }
-        return defaults;
+    const { user } = useAuth();
+    const [settings, setSettings] = useState<AccessibilitySettings>({
+        fontSize: 'medium',
+        highContrast: false,
+        reduceMotion: false,
+        screenReaderOptimized: false,
     });
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem(getScopedKey('accessibility_settings', user?.uid));
+            if (saved) setSettings(JSON.parse(saved));
+        }
+    }, [user?.uid]);
 
     const applySettings = (newSettings: AccessibilitySettings) => {
         if (typeof window === 'undefined') return;
@@ -62,7 +65,7 @@ export default function AccessibilitySettings() {
     const updateSettings = (updates: Partial<AccessibilitySettings>) => {
         const newSettings = { ...settings, ...updates };
         setSettings(newSettings);
-        localStorage.setItem('accessibility_settings', JSON.stringify(newSettings));
+        localStorage.setItem(getScopedKey('accessibility_settings', user?.uid), JSON.stringify(newSettings));
         applySettings(newSettings);
         toast.success('Accessibility settings updated');
     };

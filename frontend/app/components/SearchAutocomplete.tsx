@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { Search, Clock, TrendingUp, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { getScopedKey } from '@/app/lib/accountUtils';
 import Link from 'next/link';
 
 interface SearchSuggestion {
@@ -16,15 +18,18 @@ const RECENT_SEARCHES_KEY = 'recent_searches';
 const MAX_RECENT = 5;
 
 export default function SearchAutocomplete() {
+    const { user } = useAuth();
     const [query, setQuery] = useState('');
     const [isOpen, setIsOpen] = useState(false);
-    const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    const [recentSearches, setRecentSearches] = useState<string[]>([]);
+
+    useEffect(() => {
         if (typeof window !== 'undefined') {
-            const recent = localStorage.getItem(RECENT_SEARCHES_KEY);
-            if (recent) return JSON.parse(recent);
+            const recent = localStorage.getItem(getScopedKey(RECENT_SEARCHES_KEY, user?.uid));
+            if (recent) setRecentSearches(JSON.parse(recent));
+            else setRecentSearches([]);
         }
-        return [];
-    });
+    }, [user?.uid]);
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
@@ -62,7 +67,7 @@ export default function SearchAutocomplete() {
     const saveRecentSearch = (searchText: string) => {
         const updated = [searchText, ...recentSearches.filter(s => s !== searchText)].slice(0, MAX_RECENT);
         setRecentSearches(updated);
-        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+        localStorage.setItem(getScopedKey(RECENT_SEARCHES_KEY, user?.uid), JSON.stringify(updated));
     };
 
     const handleSearch = (searchText: string) => {
@@ -85,7 +90,7 @@ export default function SearchAutocomplete() {
 
     const clearRecentSearches = () => {
         setRecentSearches([]);
-        localStorage.removeItem(RECENT_SEARCHES_KEY);
+        localStorage.removeItem(getScopedKey(RECENT_SEARCHES_KEY, user?.uid));
     };
 
     return (

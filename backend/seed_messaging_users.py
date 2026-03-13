@@ -2,6 +2,7 @@ import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 from datetime import datetime, timezone
+from time_utils import get_now_iso
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,7 +20,7 @@ async def seed_messaging_users():
             "display_name": "Local Test User",
             "photoURL": "https://api.dicebear.com/7.x/avataaars/svg?seed=Local",
             "email": "local@example.com",
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": get_now_iso()
         },
         {
             "_id": "remote_test_user",
@@ -27,7 +28,7 @@ async def seed_messaging_users():
             "display_name": "Remote Test User",
             "photoURL": "https://api.dicebear.com/7.x/avataaars/svg?seed=Remote",
             "email": "remote@example.com",
-            "created_at": datetime.now(timezone.utc).isoformat()
+            "created_at": get_now_iso()
         }
     ]
 

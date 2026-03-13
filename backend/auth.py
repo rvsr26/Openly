@@ -107,7 +107,7 @@ async def get_current_user(authorization: str = Header(None)):
 def send_email(to_email: str, subject: str, body: str, html_body: str = None):
     """Send email via SMTP"""
     if not SMTP_USER or not SMTP_PASSWORD:
-        print(f"⚠️ Email not configured. Would send to {to_email}: {subject}")
+        print(f"WARN Email not configured. Would send to {to_email}: {subject}")
         return
     
     try:
@@ -127,9 +127,9 @@ def send_email(to_email: str, subject: str, body: str, html_body: str = None):
             server.login(SMTP_USER, SMTP_PASSWORD)
             server.send_message(msg)
         
-        print(f"✅ Email sent to {to_email}")
+        print(f"OK Email sent to {to_email}")
     except Exception as e:
-        print(f"❌ Failed to send email: {e}")
+        print(f"ERR Failed to send email: {e}")
 
 # Email Verification
 async def send_verification_email(email: str, user_id: str):

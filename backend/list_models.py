@@ -1,12 +1,20 @@
-import google.generativeai as genai
+
 import os
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY")
+key = os.getenv("GEMINI_API_KEY")
+url = f"https://generativelanguage.googleapis.com/v1beta/models?key={key}"
 
-genai.configure(api_key=API_KEY)
-models = [m for m in genai.list_models() if "generateContent" in m.supported_generation_methods]
-print(f"Available generateContent models:")
-for m in models:
-    print(f"- {m.name}")
+try:
+    response = requests.get(url)
+    print(f"Status: {response.status_code}")
+    if response.status_code == 200:
+        models = response.json().get('models', [])
+        for m in models:
+            print(f"Model: {m['name']}")
+    else:
+        print(f"Error: {response.text}")
+except Exception as e:
+    print(f"Exception: {e}")

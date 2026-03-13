@@ -6,7 +6,7 @@ This workflow starts the application using Docker Compose.
 
 1. Navigate to the project root:
    ```powershell
-   cd d:\PROJECTS\Upcomming\Failure-Sharing-Site
+    cd d:\PROJECTS\Openly
    ```
 
 2. Start the services (builds if necessary):

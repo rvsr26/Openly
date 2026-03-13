@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, useRef } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "../app/firebase";
 import { useQueryClient } from "@tanstack/react-query";
+import { saveAccount } from "../app/lib/accountUtils";
 
 interface AuthContextType {
     user: any | null;
@@ -152,6 +153,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                             twoFactorEnabled: data.two_factor_enabled,
                             role: data.role
                         });
+
+                        // Save this account for the switcher
+                        saveAccount({
+                            uid: fbUser.uid,
+                            displayName: fbUser.displayName,
+                            email: fbUser.email,
+                            photoURL: fbUser.photoURL
+                        }, data.access_token);
                     } else {
                         console.error("Failed to sync with backend");
                     }

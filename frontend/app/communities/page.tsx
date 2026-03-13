@@ -28,20 +28,24 @@ interface Community {
     created_at: string;
 }
 
-function CommunityCard({ community, myRole, onJoin }: { community: Community; myRole?: string; onJoin: (slug: string) => void }) {
-    const [joining, setJoining] = useState(false);
+function CommunityCard({ community, myRole, onJoin, onLeave }: { community: Community; myRole?: string; onJoin: (slug: string) => void; onLeave: (slug: string) => void }) {
+    const [loading, setLoading] = useState(false);
     const { user } = useAuth();
     const router = useRouter();
 
-    const handleJoin = async (e: React.MouseEvent) => {
+    const handleAction = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
         if (!user) { router.push("/login"); return; }
-        setJoining(true);
+        setLoading(true);
         try {
-            await onJoin(community.slug);
+            if (myRole === "member") {
+                await onLeave(community.slug);
+            } else {
+                await onJoin(community.slug);
+            }
         } finally {
-            setJoining(false);
+            setLoading(false);
         }
     };
 
@@ -52,31 +56,31 @@ function CommunityCard({ community, myRole, onJoin }: { community: Community; my
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="group relative bg-card border border-border rounded-3xl overflow-hidden hover:border-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5"
+            className="group relative bg-card border border-border rounded-[2rem] overflow-hidden hover:border-primary/40 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5 h-full flex flex-col"
         >
             {/* Banner */}
-            <div className="h-24 relative overflow-hidden bg-gradient-to-br from-primary/20 via-primary/10 to-background">
+            <div className="h-28 relative overflow-hidden bg-gradient-to-br from-primary/20 via-primary/10 to-background group-hover:scale-105 transition-transform duration-700">
                 {community.banner_url && (
                     <img src={community.banner_url} alt="banner" className="w-full h-full object-cover opacity-60" />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
             </div>
 
-            <Link href={`/communities/${community.slug}`} className="block p-5 -mt-6 relative">
+            <Link href={`/communities/${community.slug}`} className="flex-1 flex flex-col p-6 -mt-8 relative">
                 {/* Icon */}
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 border-4 border-card flex items-center justify-center text-2xl mb-3 shadow-lg">
+                <div className="w-16 h-16 rounded-2xl bg-card border-4 border-background flex items-center justify-center text-3xl mb-4 shadow-xl group-hover:scale-110 transition-transform duration-500 overflow-hidden">
                     {community.icon_url ? (
-                        <img src={community.icon_url} className="w-full h-full rounded-xl object-cover" alt="icon" />
+                        <img src={community.icon_url} className="w-full h-full object-cover" alt="icon" />
                     ) : (
-                        <span>{community.name.charAt(0).toUpperCase()}</span>
+                        <span className="font-black text-primary">{community.name.charAt(0).toUpperCase()}</span>
                     )}
                 </div>
 
-                <div className="flex items-start justify-between gap-3 mb-2">
-                    <div>
-                        <h3 className="font-black text-sm text-foreground group-hover:text-primary transition-colors">{community.name}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground px-2 py-0.5 bg-muted/50 rounded-full">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex-1">
+                        <h3 className="font-black text-base text-foreground group-hover:text-primary transition-colors line-clamp-1">{community.name}</h3>
+                        <div className="flex items-center gap-2 mt-1.5">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-2 py-0.5 bg-muted/50 rounded-lg">
                                 {community.category}
                             </span>
                             {community.privacy === "private" ? (
@@ -90,29 +94,31 @@ function CommunityCard({ community, myRole, onJoin }: { community: Community; my
                             )}
                         </div>
                     </div>
-
-                    <button
-                        onClick={handleJoin}
-                        disabled={joining || isMember}
-                        className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 ${isMember
-                                ? isPending
-                                    ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
-                                    : "bg-primary/10 text-primary border border-primary/20"
-                                : "bg-primary text-white shadow-lg shadow-primary/20 hover:brightness-110"
-                            } ${joining ? "opacity-60" : ""}`}
-                    >
-                        {joining ? <Loader2 size={12} className="animate-spin" /> : null}
-                        {isMember ? (isPending ? "Pending" : "Joined") : "Join"}
-                    </button>
                 </div>
 
-                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 mb-3">
-                    {community.description || "No description yet."}
+                <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-6 flex-1">
+                    {community.description || "No description yet. Explore more details about this community."}
                 </p>
 
-                <div className="flex items-center gap-4 text-[11px] text-muted-foreground font-semibold">
-                    <span className="flex items-center gap-1"><Users size={11} /> {community.member_count.toLocaleString()} members</span>
-                    <span>{community.post_count} posts</span>
+                <div className="flex items-center justify-between pt-4 border-t border-border/50">
+                    <div className="flex items-center gap-4 text-[11px] text-muted-foreground font-bold">
+                        <span className="flex items-center gap-1"><Users size={12} className="text-primary" /> {community.member_count.toLocaleString()}</span>
+                        <span>{community.post_count} posts</span>
+                    </div>
+
+                    <button
+                        onClick={handleAction}
+                        disabled={loading || isPending}
+                        className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 ${isMember
+                            ? isPending
+                                ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                                : "bg-white/5 text-muted-foreground border border-white/10 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                            : "bg-primary text-white shadow-xl shadow-primary/20 hover:brightness-110"
+                            } ${loading ? "opacity-60" : ""}`}
+                    >
+                        {loading ? <Loader2 size={12} className="animate-spin" /> : null}
+                        {isMember ? (isPending ? "Pending" : "Leave") : "Join"}
+                    </button>
                 </div>
             </Link>
         </motion.div>
@@ -147,16 +153,23 @@ export default function CommunitiesPage() {
 
     useEffect(() => { fetchCommunities(); }, [fetchCommunities]);
 
-    useEffect(() => {
-        if (!user) return;
-        api.get(`/api/v1/users/${user.uid}/communities`).then(res => {
+    const fetchMyCommunities = useCallback(async () => {
+        if (!user) {
+            setMyCommunities([]);
+            setMembershipMap({});
+            return;
+        }
+        try {
+            const res = await api.get(`/api/v1/users/${user.uid}/communities`);
             const comms: Community[] = res.data.communities || [];
             setMyCommunities(comms);
             const map: Record<string, string> = {};
             comms.forEach(c => { map[c.id] = "member"; });
             setMembershipMap(map);
-        }).catch(() => { });
+        } catch (e) { }
     }, [user]);
+
+    useEffect(() => { fetchMyCommunities(); }, [fetchMyCommunities]);
 
     const handleJoin = async (slug: string) => {
         try {
@@ -164,13 +177,21 @@ export default function CommunitiesPage() {
             const status = res.data.status;
             toast.success(status === "active" ? "Joined successfully!" : "Join request sent!");
             fetchCommunities();
-            if (user) {
-                const comRes = await api.get(`/api/v1/communities/${slug}`);
-                const comm = comRes.data;
-                setMembershipMap(prev => ({ ...prev, [comm.id]: status }));
-            }
+            fetchMyCommunities();
         } catch (e: any) {
             toast.error(e?.response?.data?.detail || "Failed to join");
+        }
+    };
+
+    const handleLeave = async (slug: string) => {
+        if (!confirm("Leave this community?")) return;
+        try {
+            await api.post(`/api/v1/communities/${slug}/leave`);
+            toast.success("Left community");
+            fetchCommunities();
+            fetchMyCommunities();
+        } catch (e: any) {
+            toast.error(e?.response?.data?.detail || "Failed to leave");
         }
     };
 
@@ -249,7 +270,7 @@ export default function CommunitiesPage() {
                         </h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                             {myCommunities.slice(0, 4).map((c, i) => (
-                                <CommunityCard key={c.id} community={c} myRole={membershipMap[c.id]} onJoin={handleJoin} />
+                                <CommunityCard key={c.id} community={c} myRole={membershipMap[c.id]} onJoin={handleJoin} onLeave={handleLeave} />
                             ))}
                         </div>
                     </div>
@@ -282,7 +303,7 @@ export default function CommunitiesPage() {
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: i * 0.04 }}
                                 >
-                                    <CommunityCard community={c} myRole={membershipMap[c.id]} onJoin={handleJoin} />
+                                    <CommunityCard community={c} myRole={membershipMap[c.id]} onJoin={handleJoin} onLeave={handleLeave} />
                                 </motion.div>
                             ))}
                         </div>

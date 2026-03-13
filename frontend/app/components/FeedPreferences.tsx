@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Filter, X, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { getScopedKey } from '@/app/lib/accountUtils';
 import api from '../lib/api';
 
 interface FeedPreference {
@@ -26,19 +28,20 @@ const SORT_OPTIONS = [
 ];
 
 export default function FeedPreferences() {
+    const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
-    const [preferences, setPreferences] = useState<FeedPreference>(() => {
-        const defaults: FeedPreference = {
-            contentTypes: ['posts', 'images', 'polls', 'links'],
-            topics: [],
-            sortBy: 'hot',
-        };
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('feed_preferences');
-            if (saved) return JSON.parse(saved);
-        }
-        return defaults;
+    const [preferences, setPreferences] = useState<FeedPreference>({
+        contentTypes: ['posts', 'images', 'polls', 'links'],
+        topics: [],
+        sortBy: 'hot',
     });
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem(getScopedKey('feed_preferences', user?.uid));
+            if (saved) setPreferences(JSON.parse(saved));
+        }
+    }, [user?.uid]);
 
     const availableTopics = [
         'Career', 'Startup', 'Technology', 'Life Lessons', 'Failure Stories', 'Growth'
@@ -50,7 +53,7 @@ export default function FeedPreferences() {
 
     const savePreferences = async (newPrefs: FeedPreference) => {
         setPreferences(newPrefs);
-        localStorage.setItem('feed_preferences', JSON.stringify(newPrefs));
+        localStorage.setItem(getScopedKey('feed_preferences', user?.uid), JSON.stringify(newPrefs));
 
         try {
             // TODO: Save to backend

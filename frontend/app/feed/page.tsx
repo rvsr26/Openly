@@ -41,7 +41,12 @@ export default function Home() {
   const [sortBy, setSortBy] = useState<"new" | "hot" | "top" | "for-you">("hot");
 
   const { saveDraft, loadDraft, clearDraft, lastSaved, isSaving } = useDraftAutoSave(
-    content, imageUrl, isAnonymous, selectedTimelineId, collaborators
+    user?.uid,
+    content,
+    imageUrl,
+    isAnonymous,
+    selectedTimelineId,
+    collaborators
   );
 
   const [isPrefetching, setIsPrefetching] = useState(false);

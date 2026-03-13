@@ -51,3 +51,12 @@ export const removeAccount = (uid: string) => {
     const updated = accounts.filter((a) => a.uid !== uid);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 };
+
+/**
+ * Returns a user-specific storage key to prevent data merging between accounts.
+ * If no UID is provided, it returns the base key.
+ */
+export const getScopedKey = (key: string, uid?: string | null): string => {
+    if (!uid) return key;
+    return `${uid}_${key}`;
+};
